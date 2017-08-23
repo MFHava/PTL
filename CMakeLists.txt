@@ -1,0 +1,38 @@
+
+#          Copyright Michael Florian Hava.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+CMAKE_MINIMUM_REQUIRED(VERSION 3.6)
+PROJECT(PTL CXX)
+
+OPTION(PTL_USE_STATIC_BOOST "Use static or dynamic Boost libraries (initially selects platform default)" ${WIN32})
+
+INCLUDE_DIRECTORIES(inc)
+
+SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/static)
+SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+SET(CMAKE_CXX_EXTENSIONS OFF)
+INCLUDE(WriteCompilerDetectionHeader)
+WRITE_COMPILER_DETECTION_HEADER(
+	FILE "${CMAKE_CURRENT_SOURCE_DIR}/inc/ptl/internal/compiler_detection.hpp"
+	PREFIX PTL
+	COMPILERS MSVC GNU Intel
+	FEATURES
+		cxx_relaxed_constexpr
+)
+
+SET(Boost_USE_STATIC_LIBS ${PTL_USE_STATIC_BOOST})
+SET(Boost_USE_MULTITHREADED ON)
+FIND_PACKAGE(Boost 1.59.0 REQUIRED unit_test_framework)
+
+FILE(GLOB_RECURSE HEADERS "inc/*")
+FILE(GLOB_RECURSE SOURCES "test/*")
+ADD_EXECUTABLE(tests ${HEADERS} ${SOURCES})
+IF(NOT PTL_USE_STATIC_BOOST)
+	TARGET_COMPILE_DEFINITIONS(tests PRIVATE -DBOOST_TEST_DYN_LINK)
+ENDIF()
+TARGET_LINK_LIBRARIES(tests ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})

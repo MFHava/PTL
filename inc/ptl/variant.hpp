@@ -73,7 +73,7 @@ namespace ptl {
 
 		template<typename Head, typename Tail>
 		struct is_unique<TL::type_list<Head, Tail>> final {
-			enum { value = (TL::find_if<Tail, Head, std::is_same>::value == -1) && is_unique<Tail>::value };
+			enum { value = (TL::find<Tail, Head>::value == -1) && is_unique<Tail>::value };
 		};
 
 		template<>

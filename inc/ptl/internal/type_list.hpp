@@ -34,87 +34,6 @@ namespace ptl {
 				>;
 			};
 
-			template<typename TypeList, typename Type>
-			struct append;
-
-			template<>
-			struct append<empty_type_list, empty_type_list> {
-				using type = empty_type_list;
-			};
-
-			template<typename Type>
-			struct append<empty_type_list, Type> {
-				using type = type_list<
-					Type,
-					empty_type_list
-				>;
-			};
-
-			template<typename Head, typename Tail>
-			struct append<empty_type_list, type_list<Head, Tail>> {
-				using type = type_list<
-					Head,
-					Tail
-				>;
-			};
-
-			template<typename Head, typename Tail, typename Type>
-			struct append<type_list<Head, Tail>, Type> {
-				using type = type_list<
-					Head,
-					typename append<
-						Tail,
-						Type
-					>::type
-				>;
-			};
-
-			template<typename TypeList, typename Type>
-			struct erase_all;
-
-			template<typename Type>
-			struct erase_all<empty_type_list, Type> {
-				using type = empty_type_list;
-			};
-
-			template<typename Head, typename Tail>
-			struct erase_all<type_list<Head, Tail>, Head> {
-				using type = typename erase_all<
-					Tail,
-					Head
-				>::type;
-			};
-
-			template<typename Head, typename Tail, typename Type>
-			struct erase_all<type_list<Head, Tail>, Type> {
-				using type = type_list<
-					Head,
-					typename erase_all<
-						Tail,
-						Type
-					>::type
-				>;
-			};
-
-			template<typename TypeList>
-			struct unique;
-
-			template<>
-			struct unique<empty_type_list> {
-				using type = empty_type_list;
-			};
-
-			template<typename Head, typename Tail>
-			struct unique<type_list<Head, Tail>> {
-				using type = type_list<
-					Head,
-					typename erase_all<
-						typename unique<Tail>::type,
-						Head
-					>::type
-				>;
-			};
-
 			template<typename TypeList, typename Type, template<typename, typename> class BinaryPredicate>
 			struct find_if;
 
@@ -166,19 +85,6 @@ namespace ptl {
 					Tail,
 					Index - 1
 				>::type;
-			};
-
-			template<typename TypeList>
-			struct size;
-
-			template<>
-			struct size<empty_type_list> {
-				enum { value = 0 };
-			};
-
-			template<typename Head, typename Tail>
-			struct size<type_list<Head, Tail>> {
-				enum { value = 1 + size<Tail>::value };
 			};
 		}
 	}

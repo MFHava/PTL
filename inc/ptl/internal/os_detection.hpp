@@ -29,7 +29,7 @@
 #endif
 
 #if PTL_COMPILER_CXX_RELAXED_CONSTEXPR
-	#define PTL_CXX_RELAXED_CONSTEXPR constexpr
+	#define PTL_RELAXED_CONSTEXPR constexpr
 #else
-	#define PTL_CXX_RELAXED_CONSTEXPR
+	#define PTL_RELAXED_CONSTEXPR
 #endif

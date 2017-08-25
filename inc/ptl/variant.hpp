@@ -39,14 +39,14 @@ namespace ptl {
 		template<typename ResultType, typename TypeList>
 		struct visit final {
 			template<typename Visitor>
-			PTL_CXX_RELAXED_CONSTEXPR
+			PTL_RELAXED_CONSTEXPR
 			static auto dispatch(unsigned char index,       void * ptr, Visitor && visitor) -> ResultType {
 				return index ? visit<ResultType, typename TypeList::tail>::dispatch(index - 1, ptr, std::forward<Visitor>(visitor))
 				             : visitor(*reinterpret_cast<      typename TypeList::head *>(ptr));
 			}
 
 			template<typename Visitor>
-			PTL_CXX_RELAXED_CONSTEXPR
+			PTL_RELAXED_CONSTEXPR
 			static auto dispatch(unsigned char index, const void * ptr, Visitor && visitor) -> ResultType {
 				return index ? visit<ResultType, typename TypeList::tail>::dispatch(index - 1, ptr, std::forward<Visitor>(visitor))
 				             : visitor(*reinterpret_cast<const typename TypeList::head *>(ptr));
@@ -56,7 +56,7 @@ namespace ptl {
 		template<typename ResultType>
 		struct visit<ResultType, TL::empty_type_list> final {
 			template<typename Visitor>
-			PTL_CXX_RELAXED_CONSTEXPR
+			PTL_RELAXED_CONSTEXPR
 			static auto dispatch(unsigned char index, const void * ptr, Visitor && visitor) -> ResultType { throw std::logic_error{"DESIGN-ERROR: invalid dispatch in visit detected (please report this)"}; }
 		};
 
@@ -100,7 +100,7 @@ namespace ptl {
 
 		static const signed char variant_npos{-1};
 
-		PTL_CXX_RELAXED_CONSTEXPR
+		PTL_RELAXED_CONSTEXPR
 		variant() : type{0} { new(data) default_type{}; }
 
 		variant(const variant & other) : type{other.type} { if(!valueless_by_exception()) other.visit(copy_ctor{data}); }
@@ -151,19 +151,19 @@ namespace ptl {
 
 		~variant() noexcept { reset(); }
 
-		PTL_CXX_RELAXED_CONSTEXPR
+		PTL_RELAXED_CONSTEXPR
 		auto index() const noexcept -> signed char { return type; }
-		PTL_CXX_RELAXED_CONSTEXPR
+		PTL_RELAXED_CONSTEXPR
 		auto valueless_by_exception() const noexcept -> bool { return type == variant_npos; }
 
 		template<typename Visitor>
-		PTL_CXX_RELAXED_CONSTEXPR
+		PTL_RELAXED_CONSTEXPR
 		auto visit(Visitor && visitor) const -> decltype(std::declval<Visitor>()(std::declval<const default_type &>())) {
 			if(valueless_by_exception()) throw bad_variant_access{};
 			return internal::visit<decltype(visit(std::forward<Visitor>(visitor))), all_types>::dispatch(type, data, std::forward<Visitor>(visitor));
 		}
 		template<typename Visitor>
-		PTL_CXX_RELAXED_CONSTEXPR
+		PTL_RELAXED_CONSTEXPR
 		auto visit(Visitor && visitor)       -> decltype(std::declval<Visitor>()(std::declval<      default_type &>())) {
 			if(valueless_by_exception()) throw bad_variant_access{};
 			return internal::visit<decltype(visit(std::forward<Visitor>(visitor))), all_types>::dispatch(type, data, std::forward<Visitor>(visitor));
@@ -177,7 +177,7 @@ namespace ptl {
 		}
 
 		friend
-		PTL_CXX_RELAXED_CONSTEXPR
+		PTL_RELAXED_CONSTEXPR
 		auto operator==(const variant & lhs, const variant & rhs) -> bool {
 			if(lhs.type != rhs.type) return false;
 			if(lhs.valueless_by_exception()) return true;
@@ -185,7 +185,7 @@ namespace ptl {
 		}
 
 		friend
-		PTL_CXX_RELAXED_CONSTEXPR
+		PTL_RELAXED_CONSTEXPR
 		auto operator!=(const variant & lhs, const variant & rhs) -> bool {
 			if(lhs.type != rhs.type) return true;
 			if(lhs.valueless_by_exception()) return false;
@@ -193,7 +193,7 @@ namespace ptl {
 		}
 
 		friend
-		PTL_CXX_RELAXED_CONSTEXPR
+		PTL_RELAXED_CONSTEXPR
 		auto operator< (const variant & lhs, const variant & rhs) -> bool {
 			if(rhs.valueless_by_exception()) return false;
 			if(lhs.valueless_by_exception()) return true;
@@ -203,7 +203,7 @@ namespace ptl {
 		}
 
 		friend
-		PTL_CXX_RELAXED_CONSTEXPR
+		PTL_RELAXED_CONSTEXPR
 		auto operator<=(const variant & lhs, const variant & rhs) -> bool {
 			if(lhs.valueless_by_exception()) return true;
 			if(rhs.valueless_by_exception()) return false;
@@ -213,7 +213,7 @@ namespace ptl {
 		}
 
 		friend
-		PTL_CXX_RELAXED_CONSTEXPR
+		PTL_RELAXED_CONSTEXPR
 		auto operator> (const variant & lhs, const variant & rhs) -> bool {
 			if(lhs.valueless_by_exception()) return false;
 			if(rhs.valueless_by_exception()) return true;
@@ -223,7 +223,7 @@ namespace ptl {
 		}
 
 		friend
-		PTL_CXX_RELAXED_CONSTEXPR
+		PTL_RELAXED_CONSTEXPR
 		auto operator>=(const variant & lhs, const variant & rhs) -> bool {
 			if(rhs.valueless_by_exception()) return true;
 			if(lhs.valueless_by_exception()) return false;
@@ -341,7 +341,7 @@ namespace ptl {
 	PTL_PACK_END
 
 	template<typename Type, typename... Types>
-	PTL_CXX_RELAXED_CONSTEXPR
+	PTL_RELAXED_CONSTEXPR
 	auto holds_alternative(const variant<Types...> & self) noexcept -> bool {
 		using Variant = variant<Types...>;
 		const auto tmp{Variant::template type_index<Type>::value};
@@ -350,35 +350,35 @@ namespace ptl {
 	}
 
 	template<typename Type, typename... Types>
-	PTL_CXX_RELAXED_CONSTEXPR
+	PTL_RELAXED_CONSTEXPR
 	auto get_if(const variant<Types...> & self) noexcept -> const Type * {
 		if(self.valueless_by_exception()) return nullptr;
 		return self.visit(internal::get_if_visitor<const Type>{});
 	}
 	template<typename Type, typename... Types>
-	PTL_CXX_RELAXED_CONSTEXPR
+	PTL_RELAXED_CONSTEXPR
 	auto get_if(      variant<Types...> & self) noexcept ->       Type * {
 		if(self.valueless_by_exception()) return nullptr;
 		return self.visit(internal::get_if_visitor<      Type>{});
 	}
 
 	template<typename Type, typename... Types>
-	PTL_CXX_RELAXED_CONSTEXPR
+	PTL_RELAXED_CONSTEXPR
 	auto get(const variant<Types...> & self) -> const Type & {
 		if(auto ptr = get_if<Type>(self)) return *ptr;
 		throw bad_variant_access{};
 	}
 	template<typename Type, typename... Types>
-	PTL_CXX_RELAXED_CONSTEXPR
+	PTL_RELAXED_CONSTEXPR
 	auto get(      variant<Types...> & self) ->       Type & {
 		if(auto ptr = get_if<Type>(self)) return *ptr;
 		throw bad_variant_access{};
 	}
 
 	template<typename Visitor, typename... Types>
-	PTL_CXX_RELAXED_CONSTEXPR
+	PTL_RELAXED_CONSTEXPR
 	auto visit(Visitor && visitor, const variant<Types...> & self) -> decltype(std::declval<Visitor>()(std::declval<const typename variant<Types...>::default_type &>())) { return self.visit(std::forward<Visitor>(visitor)); }
 	template<typename Visitor, typename... Types>
-	PTL_CXX_RELAXED_CONSTEXPR
+	PTL_RELAXED_CONSTEXPR
 	auto visit(Visitor && visitor,       variant<Types...> & self) -> decltype(std::declval<Visitor>()(std::declval<      typename variant<Types...>::default_type &>())) { return self.visit(std::forward<Visitor>(visitor)); }
 }

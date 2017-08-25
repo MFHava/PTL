@@ -45,19 +45,24 @@ namespace ptl {
 		~array() noexcept =default;
 
 		PTL_CXX_RELAXED_CONSTEXPR
-		auto operator[](size_type index)       noexcept ->       reference { assert(Size); return values[index]; }
-		PTL_CXX_RELAXED_CONSTEXPR
-		auto operator[](size_type index) const noexcept -> const_reference { assert(Size); return values[index]; }
-
-		PTL_CXX_RELAXED_CONSTEXPR
 		auto at(size_type index)       ->       reference { return validate_index(index), (*this)[index]; }
 		PTL_CXX_RELAXED_CONSTEXPR
 		auto at(size_type index) const -> const_reference { return validate_index(index), (*this)[index]; }
 
 		PTL_CXX_RELAXED_CONSTEXPR
-		auto size()  const noexcept -> size_type { return Size; }
+		auto operator[](size_type index)       noexcept ->       reference { assert(index < Size); return values[index]; }
 		PTL_CXX_RELAXED_CONSTEXPR
-		auto empty() const noexcept -> bool { return size() == 0; }
+		auto operator[](size_type index) const noexcept -> const_reference { assert(index < Size); return values[index]; }
+
+		PTL_CXX_RELAXED_CONSTEXPR
+		auto front()       ->       reference { return (*this)[0]; }
+		PTL_CXX_RELAXED_CONSTEXPR
+		auto front() const -> const_reference { return (*this)[0]; }
+
+		PTL_CXX_RELAXED_CONSTEXPR
+		auto back()       ->       reference { return (*this)[Size - 1]; }
+		PTL_CXX_RELAXED_CONSTEXPR
+		auto back() const -> const_reference { return (*this)[Size - 1]; }
 
 		PTL_CXX_RELAXED_CONSTEXPR
 		auto data()       noexcept ->       pointer { return values; }
@@ -70,12 +75,13 @@ namespace ptl {
 		auto begin()  const noexcept -> const_iterator { return values; }
 		PTL_CXX_RELAXED_CONSTEXPR
 		auto cbegin() const noexcept -> const_iterator { return values; }
+
 		PTL_CXX_RELAXED_CONSTEXPR
-		auto end()          noexcept ->       iterator { return values + Size; }
+		auto end()        noexcept ->       iterator { return values + Size; }
 		PTL_CXX_RELAXED_CONSTEXPR
-		auto end()    const noexcept -> const_iterator { return values + Size; }
+		auto end()  const noexcept -> const_iterator { return values + Size; }
 		PTL_CXX_RELAXED_CONSTEXPR
-		auto cend()   const noexcept -> const_iterator { return values + Size; }
+		auto cend() const noexcept -> const_iterator { return values + Size; }
 
 		PTL_CXX_RELAXED_CONSTEXPR
 		auto rbegin()        noexcept ->       reverse_iterator { return reverse_iterator{end()}; }
@@ -83,12 +89,20 @@ namespace ptl {
 		auto rbegin()  const noexcept -> const_reverse_iterator { return const_reverse_iterator{end()}; }
 		PTL_CXX_RELAXED_CONSTEXPR
 		auto crbegin() const noexcept -> const_reverse_iterator { return const_reverse_iterator{cend()}; }
+
 		PTL_CXX_RELAXED_CONSTEXPR
-		auto rend()          noexcept ->       reverse_iterator { return reverse_iterator{begin()}; }
+		auto rend()        noexcept ->       reverse_iterator { return reverse_iterator{begin()}; }
 		PTL_CXX_RELAXED_CONSTEXPR
-		auto rend()    const noexcept -> const_reverse_iterator { return const_reverse_iterator{begin()}; }
+		auto rend()  const noexcept -> const_reverse_iterator { return const_reverse_iterator{begin()}; }
 		PTL_CXX_RELAXED_CONSTEXPR
-		auto crend()   const noexcept -> const_reverse_iterator { return const_reverse_iterator{cbegin()}; }
+		auto crend() const noexcept -> const_reverse_iterator { return const_reverse_iterator{cbegin()}; }
+
+		PTL_CXX_RELAXED_CONSTEXPR
+		auto empty() const noexcept -> bool { return size() == 0; }
+		PTL_CXX_RELAXED_CONSTEXPR
+		auto size() const noexcept -> size_type { return Size; }
+		PTL_CXX_RELAXED_CONSTEXPR
+		auto max_size() const noexcept -> size_type { return Size; }
 
 		void fill(const_reference value) { for(auto & v : values) v = value; }
 

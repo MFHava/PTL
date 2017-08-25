@@ -86,7 +86,7 @@ namespace ptl {
 	//! @brief a type-safe union, storing one of multiple types
 	//! @tparam Types all types that may be stored in the variant
 	template<typename... Types>
-	struct variant final {
+	struct variant final {//TODO: evaluate differences to the standard! 
 		using all_types = typename internal::TL::make_type_list<Types...>::type;
 		using default_type = typename internal::TL::at<all_types, 0>::type;
 

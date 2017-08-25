@@ -38,7 +38,7 @@ namespace ptl {
 	//! @brief non-owning reference to array
 	//! @tparam Type type of the referenced array
 	template<typename Type>
-	struct array_ref final {
+	struct array_ref final {//TODO: evaluate differences to the standard!  
 		static_assert(internal::is_abi_compatible<Type>::value, "Type does not fulfill ABI requirements");
 
 		using value_type             = Type;

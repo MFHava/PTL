@@ -23,7 +23,7 @@ namespace ptl {
 	//! @brief an optional value
 	//! @tparam Type type of the potentially contained object
 	template<typename Type>
-	struct optional final {
+	struct optional final {//TODO: evaluate differences to the standard!  
 		static_assert(internal::is_abi_compatible<Type>::value, "Type does not fulfill ABI requirements");
 
 		optional() noexcept =default;

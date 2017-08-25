@@ -19,7 +19,7 @@ namespace ptl {
 	//! @tparam Type type of the stored array
 	//! @tparam Size size of the stored array
 	template<typename Type, std::size_t Size>
-	struct array final {
+	struct array final {//TODO: evaluate differences to the standard!  
 		static_assert(internal::is_abi_compatible<Type>::value, "Type does not fulfill ABI requirements");
 
 		using value_type             = Type;

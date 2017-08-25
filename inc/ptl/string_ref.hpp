@@ -17,7 +17,7 @@
 namespace ptl {
 	PTL_PACK_BEGIN
 	//! @brief a readonly, non-owning reference to a null-terminated string
-	struct string_ref final {
+	struct string_ref final {//TODO: evaluate differences to the standard!  
 		using value_type             = const char;
 		using size_type              = std::size_t;
 		using difference_type        = std::ptrdiff_t;

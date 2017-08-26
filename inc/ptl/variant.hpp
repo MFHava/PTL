@@ -6,8 +6,6 @@
 
 #pragma once
 #include "internal/type_checks.hpp"
-#include "internal/type_list.hpp"
-
 #include <ostream>
 #include <utility>
 #include <stdexcept>
@@ -19,42 +17,45 @@ namespace ptl {
 	};
 
 	namespace internal {
-		template<typename TypeList>
+		template<typename... Types>
 		struct biggest_type;
 
-		template<typename Head, typename Tail>
-		struct biggest_type<TL::type_list<Head, Tail>> final {
+		template<typename Type, typename... Types>
+		struct biggest_type<Type, Types...> final {
 			using type = typename std::conditional<
-				(sizeof(Head) > sizeof(typename biggest_type<Tail>::type)),
-				Head,
-				typename biggest_type<Tail>::type
+				(sizeof(Type) > sizeof(typename biggest_type<Types...>::type)),
+				Type,
+				typename biggest_type<Types...>::type
 			>::type;
 		};
 
 		template<typename Type>
-		struct biggest_type<TL::type_list<Type, TL::empty_type_list>> final {
+		struct biggest_type<Type> final {
 			using type = Type;
 		};
 
-		template<typename ResultType, typename TypeList>
-		struct visit final {
+		template<typename ResultType, typename... Types>
+		struct visit;
+
+		template<typename ResultType, typename Type, typename... Types>
+		struct visit<ResultType, Type, Types...> final {
 			template<typename Visitor>
 			PTL_RELAXED_CONSTEXPR
 			static auto dispatch(unsigned char index,       void * ptr, Visitor && visitor) -> ResultType {
-				return index ? visit<ResultType, typename TypeList::tail>::dispatch(index - 1, ptr, std::forward<Visitor>(visitor))
-				             : visitor(*reinterpret_cast<      typename TypeList::head *>(ptr));
+				return index ? visit<ResultType, Types...>::dispatch(index - 1, ptr, std::forward<Visitor>(visitor))
+				             : visitor(*reinterpret_cast<      Type *>(ptr));
 			}
 
 			template<typename Visitor>
 			PTL_RELAXED_CONSTEXPR
 			static auto dispatch(unsigned char index, const void * ptr, Visitor && visitor) -> ResultType {
-				return index ? visit<ResultType, typename TypeList::tail>::dispatch(index - 1, ptr, std::forward<Visitor>(visitor))
-				             : visitor(*reinterpret_cast<const typename TypeList::head *>(ptr));
+				return index ? visit<ResultType, Types...>::dispatch(index - 1, ptr, std::forward<Visitor>(visitor))
+				             : visitor(*reinterpret_cast<const Type *>(ptr));
 			}
 		};
 
 		template<typename ResultType>
-		struct visit<ResultType, TL::empty_type_list> final {
+		struct visit<ResultType> final {
 			template<typename Visitor>
 			PTL_RELAXED_CONSTEXPR
 			static auto dispatch(unsigned char index, const void * ptr, Visitor && visitor) -> ResultType { throw std::logic_error{"DESIGN-ERROR: invalid dispatch in visit detected (please report this)"}; }
@@ -68,40 +69,64 @@ namespace ptl {
 			auto operator()(Type &) const noexcept -> TargetType * { return nullptr; }
 		};
 
-		template<typename TypeList>
-		struct is_unique;
+		template<typename TypeToFind, typename... Types>
+		struct find;
 
-		template<typename Head, typename Tail>
-		struct is_unique<TL::type_list<Head, Tail>> final {
-			enum { value = (TL::find<Tail, Head>::value == -1) && is_unique<Tail>::value };
+		template<typename TypeToFind, typename Type, typename... Types>
+		struct find<TypeToFind, Type, Types...> final {
+		private:
+			enum { match = std::is_same<TypeToFind, Type>::value };
+			enum { tmp = find<TypeToFind, Types...>::value };
+		public:
+			enum {
+				value = match
+					? 0
+					: tmp == -1
+						? -1
+						: 1 + tmp
+			};
 		};
 
-		template<>
-		struct is_unique<TL::empty_type_list> final {
+		template<typename TypeToFind>
+		struct find<TypeToFind> final {
+			enum { value = -1 };
+		};
+
+		template<typename TypeToFind, typename... Types>
+		struct contains final {
+			enum { value = find<TypeToFind, Types...>::value != -1 };
+		};
+
+		template<typename... Types>
+		struct is_unique final {
 			enum { value = 1 };
+		};
+
+		template<typename Type, typename... Types>
+		struct is_unique<Type, Types...> final {
+			enum { value = !contains<Type, Types...>::value && is_unique<Types...>::value };
 		};
 	}
 
 	PTL_PACK_BEGIN
 	//! @brief a type-safe union, storing one of multiple types
-	//! @tparam Types all types that may be stored in the variant
-	template<typename... Types>
+	//! @tparam DefaultType type that will be stored in the variant by default
+	//! @tparam Types all additional types that may be stored in the variant
+	template<typename DefaultType, typename... Types>
 	struct variant final {//TODO: evaluate differences to the standard! 
-		using all_types = typename internal::TL::make_type_list<Types...>::type;
-		using default_type = typename internal::TL::at<all_types, 0>::type;
+		using default_type = DefaultType;
 
-		template<typename Type>
-		using type_index = internal::TL::find<all_types, Type>;
+		template<typename TypeToFind>
+		using type_index = internal::find<TypeToFind, DefaultType, Types...>;
 
-		static_assert(internal::are_abi_compatible<Types...>::value, "Types do not fulfill ABI requirements");
-		static_assert(sizeof...(Types) >   0, "A variant cannot store 0 types");
-		static_assert(sizeof...(Types) < 128, "A variant stores at most 127 different types");
-		static_assert(internal::is_unique<all_types>::value, "variant does not support duplicated types");
+		static_assert(internal::are_abi_compatible<DefaultType, Types...>::value, "Types do not fulfill ABI requirements");
+		static_assert(sizeof...(Types) < 127, "A variant stores at most 127 different types");
+		static_assert(internal::is_unique<DefaultType, Types...>::value, "variant does not support duplicated types");
 
 		static const signed char variant_npos{-1};
 
 		PTL_RELAXED_CONSTEXPR
-		variant() : type{0} { new(data) default_type{}; }
+		variant() : type{0} { new(data) DefaultType{}; }
 
 		variant(const variant & other) : type{other.type} { if(!valueless_by_exception()) other.visit(copy_ctor{data}); }
 		variant(variant && other) noexcept : type{other.type} { if(!valueless_by_exception()) other.visit(move_ctor{data}); }
@@ -158,15 +183,15 @@ namespace ptl {
 
 		template<typename Visitor>
 		PTL_RELAXED_CONSTEXPR
-		auto visit(Visitor && visitor) const -> decltype(std::declval<Visitor>()(std::declval<const default_type &>())) {
+		auto visit(Visitor && visitor) const -> decltype(std::declval<Visitor>()(std::declval<const DefaultType &>())) {
 			if(valueless_by_exception()) throw bad_variant_access{};
-			return internal::visit<decltype(visit(std::forward<Visitor>(visitor))), all_types>::dispatch(type, data, std::forward<Visitor>(visitor));
+			return internal::visit<decltype(visit(std::forward<Visitor>(visitor))), DefaultType, Types...>::dispatch(type, data, std::forward<Visitor>(visitor));
 		}
 		template<typename Visitor>
 		PTL_RELAXED_CONSTEXPR
-		auto visit(Visitor && visitor)       -> decltype(std::declval<Visitor>()(std::declval<      default_type &>())) {
+		auto visit(Visitor && visitor)       -> decltype(std::declval<Visitor>()(std::declval<      DefaultType &>())) {
 			if(valueless_by_exception()) throw bad_variant_access{};
-			return internal::visit<decltype(visit(std::forward<Visitor>(visitor))), all_types>::dispatch(type, data, std::forward<Visitor>(visitor));
+			return internal::visit<decltype(visit(std::forward<Visitor>(visitor))), DefaultType, Types...>::dispatch(type, data, std::forward<Visitor>(visitor));
 		}
 
 		friend
@@ -335,7 +360,7 @@ namespace ptl {
 			std::ostream & os;
 		};
 
-		unsigned char data[sizeof(typename internal::biggest_type<all_types>::type)];
+		unsigned char data[sizeof(typename internal::biggest_type<DefaultType, Types...>::type)];
 		signed char type{variant_npos};
 	};
 	PTL_PACK_END

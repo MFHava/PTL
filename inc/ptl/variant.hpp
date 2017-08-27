@@ -17,48 +17,43 @@ namespace ptl {
 	};
 
 	namespace internal {
-		template<typename... Types>
-		struct biggest_type;
-
 		template<typename Type, typename... Types>
-		struct biggest_type<Type, Types...> final {
-			using type = typename std::conditional<
-				(sizeof(Type) > sizeof(typename biggest_type<Types...>::type)),
-				Type,
-				typename biggest_type<Types...>::type
-			>::type;
+		struct max_sizeof final {
+			enum { value = sizeof(Type) > max_sizeof<Types...>::value ? sizeof(Type) : max_sizeof<Types...>::value };
 		};
 
 		template<typename Type>
-		struct biggest_type<Type> final {
-			using type = Type;
+		struct max_sizeof<Type> final {
+			enum { value = sizeof(Type) };
 		};
 
 		template<typename ResultType, typename... Types>
-		struct visit;
+		struct visit final {
+			template<typename Visitor>
+			PTL_RELAXED_CONSTEXPR
+			static
+			auto dispatch(unsigned char index, const void * ptr, Visitor && visitor) -> ResultType {
+				throw std::logic_error{"DESIGN-ERROR: invalid dispatch in visit detected (please report this)"};
+			}
+		}; 
 
 		template<typename ResultType, typename Type, typename... Types>
 		struct visit<ResultType, Type, Types...> final {
 			template<typename Visitor>
 			PTL_RELAXED_CONSTEXPR
-			static auto dispatch(unsigned char index,       void * ptr, Visitor && visitor) -> ResultType {
+			static
+			auto dispatch(unsigned char index,       void * ptr, Visitor && visitor) -> ResultType {
 				return index ? visit<ResultType, Types...>::dispatch(index - 1, ptr, std::forward<Visitor>(visitor))
 				             : visitor(*reinterpret_cast<      Type *>(ptr));
 			}
 
 			template<typename Visitor>
 			PTL_RELAXED_CONSTEXPR
-			static auto dispatch(unsigned char index, const void * ptr, Visitor && visitor) -> ResultType {
+			static
+			auto dispatch(unsigned char index, const void * ptr, Visitor && visitor) -> ResultType {
 				return index ? visit<ResultType, Types...>::dispatch(index - 1, ptr, std::forward<Visitor>(visitor))
 				             : visitor(*reinterpret_cast<const Type *>(ptr));
 			}
-		};
-
-		template<typename ResultType>
-		struct visit<ResultType> final {
-			template<typename Visitor>
-			PTL_RELAXED_CONSTEXPR
-			static auto dispatch(unsigned char index, const void * ptr, Visitor && visitor) -> ResultType { throw std::logic_error{"DESIGN-ERROR: invalid dispatch in visit detected (please report this)"}; }
 		};
 
 		template<typename TargetType>
@@ -70,16 +65,17 @@ namespace ptl {
 		};
 
 		template<typename TypeToFind, typename... Types>
-		struct find;
+		struct find final {
+			enum { value = -1 };
+		}; 
 
 		template<typename TypeToFind, typename Type, typename... Types>
 		struct find<TypeToFind, Type, Types...> final {
 		private:
-			enum { match = std::is_same<TypeToFind, Type>::value };
 			enum { tmp = find<TypeToFind, Types...>::value };
 		public:
 			enum {
-				value = match
+				value = std::is_same<TypeToFind, Type>::value
 					? 0
 					: tmp == -1
 						? -1
@@ -87,24 +83,14 @@ namespace ptl {
 			};
 		};
 
-		template<typename TypeToFind>
-		struct find<TypeToFind> final {
-			enum { value = -1 };
-		};
-
-		template<typename TypeToFind, typename... Types>
-		struct contains final {
-			enum { value = find<TypeToFind, Types...>::value != -1 };
-		};
-
 		template<typename... Types>
-		struct is_unique final {
+		struct are_unique final {
 			enum { value = 1 };
 		};
 
 		template<typename Type, typename... Types>
-		struct is_unique<Type, Types...> final {
-			enum { value = !contains<Type, Types...>::value && is_unique<Types...>::value };
+		struct are_unique<Type, Types...> final {
+			enum { value = find<Type, Types...>::value == -1 && are_unique<Types...>::value };
 		};
 	}
 
@@ -120,8 +106,8 @@ namespace ptl {
 		using type_index = internal::find<TypeToFind, DefaultType, Types...>;
 
 		static_assert(internal::are_abi_compatible<DefaultType, Types...>::value, "Types do not fulfill ABI requirements");
-		static_assert(sizeof...(Types) < 127, "A variant stores at most 127 different types");
-		static_assert(internal::is_unique<DefaultType, Types...>::value, "variant does not support duplicated types");
+		static_assert(1 + sizeof...(Types) < 128, "A variant stores at most 127 different types");
+		static_assert(internal::are_unique<DefaultType, Types...>::value, "variant does not support duplicated types");
 
 		static const signed char variant_npos{-1};
 
@@ -360,7 +346,7 @@ namespace ptl {
 			std::ostream & os;
 		};
 
-		unsigned char data[sizeof(typename internal::biggest_type<DefaultType, Types...>::type)];
+		unsigned char data[internal::max_sizeof<DefaultType, Types...>::value];
 		signed char type{variant_npos};
 	};
 	PTL_PACK_END

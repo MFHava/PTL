@@ -42,26 +42,17 @@ namespace ptl {
 			template<typename Visitor>
 			PTL_RELAXED_CONSTEXPR
 			static
-			auto dispatch(unsigned char index,       void * ptr, Visitor && visitor) -> ResultType {
-				return index ? visit<ResultType, Types...>::dispatch(index - 1, ptr, std::forward<Visitor>(visitor))
-				             : visitor(*reinterpret_cast<      Type *>(ptr));
-			}
-
-			template<typename Visitor>
-			PTL_RELAXED_CONSTEXPR
-			static
 			auto dispatch(unsigned char index, const void * ptr, Visitor && visitor) -> ResultType {
 				return index ? visit<ResultType, Types...>::dispatch(index - 1, ptr, std::forward<Visitor>(visitor))
 				             : visitor(*reinterpret_cast<const Type *>(ptr));
 			}
-		};
-
-		template<typename TargetType>
-		struct get_if_visitor final {
-			auto operator()(TargetType & val) const noexcept -> TargetType * { return &val; }
-
-			template<typename Type>
-			auto operator()(Type &) const noexcept -> TargetType * { return nullptr; }
+			template<typename Visitor>
+			PTL_RELAXED_CONSTEXPR
+			static
+			auto dispatch(unsigned char index,       void * ptr, Visitor && visitor) -> ResultType {
+				return index ? visit<ResultType, Types...>::dispatch(index - 1, ptr, std::forward<Visitor>(visitor))
+				             : visitor(*reinterpret_cast<      Type *>(ptr));
+			}
 		};
 
 		template<typename TypeToFind, typename... Types>
@@ -180,6 +171,26 @@ namespace ptl {
 			return internal::visit<decltype(visit(std::forward<Visitor>(visitor))), DefaultType, Types...>::dispatch(type, data, std::forward<Visitor>(visitor));
 		}
 
+		template<typename Type>
+		PTL_RELAXED_CONSTEXPR
+		auto get_if() const noexcept -> const Type * {
+			if(valueless_by_exception() || type_index<Type>::value != index()) return nullptr;
+			return reinterpret_cast<const Type *>(data);
+		}
+		template<typename Type>
+		PTL_RELAXED_CONSTEXPR
+		auto get_if()       noexcept ->       Type * { return const_cast<Type *>(static_cast<const variant *>(this)->get_if<Type>()); }
+
+		template<typename Type>
+		PTL_RELAXED_CONSTEXPR
+		auto get() const -> const Type & {
+			if(auto ptr = get_if<Type>()) return *ptr;
+			throw bad_variant_access{};
+		}
+		template<typename Type>
+		PTL_RELAXED_CONSTEXPR
+		auto get()       ->       Type & { return const_cast<Type &>(static_cast<const variant *>(this)->get<Type>()); }
+
 		friend
 		void swap(variant & lhs, variant & rhs) noexcept {
 			if(lhs.valueless_by_exception() && rhs.valueless_by_exception()) return;
@@ -257,93 +268,59 @@ namespace ptl {
 		}
 
 		struct copy_ctor final {
-			copy_ctor(void * data) : data{data} {}
+			void * data;
 
 			template<typename Type>
 			void operator()(const Type & value) const { new(data) Type{value}; }
-		private:
-			void * data;
 		};
 		struct move_ctor final {
-			move_ctor(void * data) : data{data} {}
+			void * data;
 
 			template<typename Type>
-			void operator()(Type & value) const { new(data) Type{std::move(value)}; }
-		private:
-			void * data;
+			void operator()(Type & value) const noexcept { new(data) Type{std::move(value)}; }
 		};
 
 		struct copy_assign final {
-			copy_assign(void * data) : data{data} {}
+			void * data;
 
 			template<typename Type>
 			void operator()(const Type & value) const { *reinterpret_cast<Type *>(data) = value; }
-		private:
-			void * data;
 		};
 		struct move_assign final {
-			move_assign(void * data) : data{data} {}
+			void * data;
 
 			template<typename Type>
-			void operator()(Type & value) const { *reinterpret_cast<Type *>(data) = std::move(value); }
-		private:
-			void * data;
+			void operator()(Type & value) const noexcept { *reinterpret_cast<Type *>(data) = std::move(value); }
 		};
 
 		struct dtor final {
 			template<typename Type>
-			void operator()(Type & value) const { value.~Type(); }
+			void operator()(Type & value) const noexcept { value.~Type(); }
 		};
 
 		template<template<typename> class Comparator>
 		struct compare final {
-			compare(const variant & other) : other{other} {}
+			const variant & other;
 
 			template<typename Type>
-			auto operator()(const Type & value) const -> bool { return other.visit(subcompare<Type>{value}); }
-		private:
-			template<typename ValueType>
-			struct subcompare final {
-				subcompare(const ValueType & lhs) : lhs{lhs} {}
-
-				template<typename Type>
-				auto operator()(const Type &) const -> bool { throw std::logic_error{"DESIGN-ERROR: invalid dispatch in subcompare detected (please report this)"}; }
-				auto operator()(const ValueType & rhs) const -> bool { return Comparator<ValueType>{}(lhs, rhs); }
-			private:
-				const ValueType & lhs;
-			};
-			const variant & other;
+			auto operator()(const Type & value) const -> bool { return Comparator<Type>{}(value, other.template get<Type>()); }
 		};
 
 		struct swapper final {
-			swapper(variant & other) : other{other} {}
+			variant & other;
 
 			template<typename Type>
-			void operator()(Type & value) { return other.visit(subswapper<Type>{value}); }
-		private:
-			template<typename ValueType>
-			struct subswapper final {
-				subswapper(ValueType & lhs) : lhs{lhs} {}
-
-				template<typename Type>
-				void operator()(Type &) { throw std::logic_error{"DESIGN-ERROR: invalid dispatch in subswapper detected (please report this)"}; }
-				void operator()(ValueType & rhs) {
-					using std::swap;
-					swap(lhs, rhs);
-				}
-			private:
-				ValueType & lhs;
-			};
-			variant & other;
+			void operator()(Type & value) noexcept { 
+				using std::swap;
+				swap(value, other.template get<Type>());
+			}
 		};
 
 		struct printer final {
-			printer(std::ostream & os) : os{os} {}
+			std::ostream & os;
 
 			template<typename Type>
 			void operator()(const Type & value) const { os << value; }
-		private:
-			std::ostream & os;
 		};
 
 		unsigned char data[internal::max_sizeof<DefaultType, Types...>::value];
@@ -353,38 +330,21 @@ namespace ptl {
 
 	template<typename Type, typename... Types>
 	PTL_RELAXED_CONSTEXPR
-	auto holds_alternative(const variant<Types...> & self) noexcept -> bool {
-		using Variant = variant<Types...>;
-		const auto tmp{Variant::template type_index<Type>::value};
-		if(tmp == Variant::variant_npos) return false;
-		return self.index() == tmp;
-	}
+	auto get_if(const variant<Types...> & self) noexcept -> const Type * { return self.template get_if<Type>(); }
+	template<typename Type, typename... Types>
+	PTL_RELAXED_CONSTEXPR
+	auto get_if(      variant<Types...> & self) noexcept ->       Type * { return self.template get_if<Type>(); }
 
 	template<typename Type, typename... Types>
 	PTL_RELAXED_CONSTEXPR
-	auto get_if(const variant<Types...> & self) noexcept -> const Type * {
-		if(self.valueless_by_exception()) return nullptr;
-		return self.visit(internal::get_if_visitor<const Type>{});
-	}
+	auto get(const variant<Types...> & self) -> const Type & { return self.template get<Type>(); }
 	template<typename Type, typename... Types>
 	PTL_RELAXED_CONSTEXPR
-	auto get_if(      variant<Types...> & self) noexcept ->       Type * {
-		if(self.valueless_by_exception()) return nullptr;
-		return self.visit(internal::get_if_visitor<      Type>{});
-	}
+	auto get(      variant<Types...> & self) ->       Type & { return self.template get<Type>(); }
 
 	template<typename Type, typename... Types>
 	PTL_RELAXED_CONSTEXPR
-	auto get(const variant<Types...> & self) -> const Type & {
-		if(auto ptr = get_if<Type>(self)) return *ptr;
-		throw bad_variant_access{};
-	}
-	template<typename Type, typename... Types>
-	PTL_RELAXED_CONSTEXPR
-	auto get(      variant<Types...> & self) ->       Type & {
-		if(auto ptr = get_if<Type>(self)) return *ptr;
-		throw bad_variant_access{};
-	}
+	auto holds_alternative(const variant<Types...> & self) noexcept -> bool { return get_if<Type>(self); }
 
 	template<typename Visitor, typename... Types>
 	PTL_RELAXED_CONSTEXPR

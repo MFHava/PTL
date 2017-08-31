@@ -48,7 +48,4 @@ Temporary Items
 
 # Ignore SVN & local build details
 .vs
-.svn*
 build*
-*.patch
-inc/ptl/internal/compiler_detection.hpp

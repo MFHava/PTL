@@ -12,7 +12,7 @@ namespace ptl {
 	namespace internal {
 		template<typename Type>
 		class is_abi_compatible final {
-			using type = typename std::remove_cv<Type>::type;
+			using type = typename std::remove_cv_t<Type>;
 			enum {
 				is_standard_layout            = std::is_standard_layout<type>::value,
 				is_default_constructible      = std::is_default_constructible<type>::value,

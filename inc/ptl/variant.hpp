@@ -108,9 +108,9 @@ namespace ptl {
 		variant(const variant & other) : type{other.type} { if(!valueless_by_exception()) other.visit(copy_ctor{data}); }
 		variant(variant && other) noexcept : type{other.type} { if(!valueless_by_exception()) other.visit(move_ctor{data}); }
 
-		template<typename Type, typename = typename std::enable_if<!std::is_same<typename std::decay<Type>::type, variant>::value>::type>
+		template<typename Type, typename = std::enable_if_t<!std::is_same<std::decay_t<Type>, variant>::value>>
 		variant(Type && value) noexcept {
-			using DecayedType = typename std::decay<Type>::type;
+			using DecayedType = std::decay_t<Type>;
 			static_assert(type_index<DecayedType>::value != variant_npos, "Type is not stored in variant");
 			new(data) DecayedType{std::forward<Type>(value)};
 			type = type_index<DecayedType>::value;
@@ -138,8 +138,8 @@ namespace ptl {
 		}
 
 		template<typename Type>
-		auto operator=(Type && value) -> typename std::enable_if<!std::is_same<typename std::decay<Type>::type, variant>::value, variant &>::type {
-			using DecayedType = typename std::decay<Type>::type;
+		auto operator=(Type && value) -> std::enable_if_t<!std::is_same<std::decay_t<Type>, variant>::value, variant &> {
+			using DecayedType = std::decay_t<Type>;
 			static_assert(type_index<DecayedType>::value != variant_npos, "Type is not stored in variant");
 			if(type == type_index<DecayedType>::value) {
 				*reinterpret_cast<DecayedType *>(data) = std::forward<Type>(value);

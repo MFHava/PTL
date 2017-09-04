@@ -81,55 +81,40 @@ namespace ptl {
 
 		friend
 		auto operator==(const string_ref & lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs.c_str()) == 0; }
-
 		friend
 		auto operator!=(const string_ref & lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs.c_str()) != 0; }
-
 		friend
 		auto operator< (const string_ref & lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs.c_str()) <  0; }
-
 		friend
 		auto operator<=(const string_ref & lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs.c_str()) <= 0; }
-
 		friend
 		auto operator> (const string_ref & lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs.c_str()) >  0; }
-
 		friend
 		auto operator>=(const string_ref & lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs.c_str()) >= 0; }
 
 		friend
 		auto operator==(const_pointer lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs, rhs.c_str()) == 0; }
-
 		friend
 		auto operator!=(const_pointer lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs, rhs.c_str()) != 0; }
-
 		friend
 		auto operator< (const_pointer lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs, rhs.c_str()) <  0; }
-
 		friend
 		auto operator<=(const_pointer lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs, rhs.c_str()) <= 0; }
-
 		friend
 		auto operator> (const_pointer lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs, rhs.c_str()) >  0; }
-
 		friend
 		auto operator>=(const_pointer lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs, rhs.c_str()) >= 0; }
 
 		friend
 		auto operator==(const string_ref & lhs, const_pointer rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs) == 0; }
-
 		friend
 		auto operator!=(const string_ref & lhs, const_pointer rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs) != 0; }
-
 		friend
 		auto operator< (const string_ref & lhs, const_pointer rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs) <  0; }
-
 		friend
 		auto operator<=(const string_ref & lhs, const_pointer rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs) <= 0; }
-
 		friend
 		auto operator> (const string_ref & lhs, const_pointer rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs) >  0; }
-
 		friend
 		auto operator>=(const string_ref & lhs, const_pointer rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs) >= 0; }
 

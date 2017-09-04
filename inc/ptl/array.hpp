@@ -120,10 +120,8 @@ namespace ptl {
 					return false;
 			return true;
 		}
-
 		friend
 		auto operator!=(const array & lhs, const array & rhs) noexcept -> bool { return !(lhs == rhs); }
-
 		friend
 		auto operator< (const array & lhs, const array & rhs) noexcept -> bool {
 			for(size_type i{0}; i < Size; ++i)
@@ -131,13 +129,10 @@ namespace ptl {
 					return false;
 			return true;
 		}
-
 		friend
 		auto operator<=(const array & lhs, const array & rhs) noexcept -> bool { return !(rhs < lhs); }
-
 		friend
 		auto operator> (const array & lhs, const array & rhs) noexcept -> bool { return rhs < lhs; }
-
 		friend
 		auto operator>=(const array & lhs, const array & rhs) noexcept -> bool { return !(lhs < rhs); }
 

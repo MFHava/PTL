@@ -19,14 +19,14 @@ namespace ptl {
 	};
 
 	namespace internal {
-		template<typename Type, typename... Types>
+		template<typename... Types>
 		struct max_sizeof final {
-			enum { value = sizeof(Type) > max_sizeof<Types...>::value ? sizeof(Type) : max_sizeof<Types...>::value };
+			enum { value = 0 };
 		};
 
-		template<typename Type>
-		struct max_sizeof<Type> final {
-			enum { value = sizeof(Type) };
+		template<typename Type, typename... Types>
+		struct max_sizeof<Type, Types...> final {
+			enum { value = sizeof(Type) > max_sizeof<Types...>::value ? sizeof(Type) : max_sizeof<Types...>::value };
 		};
 
 		template<typename ResultType, typename... Types>
@@ -34,9 +34,7 @@ namespace ptl {
 			template<typename Visitor>
 			constexpr
 			static
-			auto dispatch(std::uint8_t, const void *, Visitor &) -> ResultType {
-				throw std::logic_error{"DESIGN-ERROR: invalid dispatch in visit detected (please report this)"};
-			}
+			auto dispatch(std::uint8_t, const void *, Visitor &) -> ResultType { throw bad_variant_access{}; }
 		};
 
 		template<typename ResultType, typename Type, typename... Types>
@@ -105,53 +103,20 @@ namespace ptl {
 		constexpr
 		variant() : type{0} { new(data) DefaultType{}; }
 
-		variant(const variant & other) : type{other.type} {
-			if(valueless_by_exception()) return;
-			other.visit([&](const auto & value) {
-				using Type = std::decay_t<decltype(value)>;
-				new(data) Type(value);
-			});
-		}
-		variant(variant && other) noexcept : type{other.type} {
-			if(valueless_by_exception()) return;
-			other.visit([&](      auto & value) {
-				using Type = std::decay_t<decltype(value)>;
-				new(data) Type{std::move(value)};
-			});
-		}
+		variant(const variant & other) { *this = other; }
+		variant(variant && other) noexcept { *this = std::move(other); }
 
 		template<typename Type, typename = std::enable_if_t<!std::is_same<std::decay_t<Type>, variant>::value>>
-		variant(Type && value) noexcept {
-			using DecayedType = std::decay_t<Type>;
-			static_assert(type_index<DecayedType>::value != npos, "Type is not stored in variant");
-			new(data) DecayedType{std::forward<Type>(value)};
-			type = type_index<DecayedType>::value;
-		}
+		variant(Type && value) { *this = std::forward<Type>(value); }
 
 		auto operator=(const variant & other) -> variant & {
 			if(other.valueless_by_exception()) reset();
-			else if(type == other.type) other.visit([&](const auto & value) { *reinterpret_cast<std::decay_t<decltype(value)> *>(data) = value; });
-			else {
-				reset();
-				other.visit([&](const auto & value) {
-					using Type = std::decay_t<decltype(value)>;
-					new(data) Type{value};
-				});
-				type = other.type;
-			}
+			else other.visit([&](auto & value) { *this = value; });
 			return *this;
 		}
 		auto operator=(variant && other) noexcept -> variant & {
 			if(other.valueless_by_exception()) reset();
-			else if(type == other.type) other.visit([&](      auto & value) { *reinterpret_cast<std::decay_t<decltype(value)> *>(data) = std::move(value); });
-			else {
-				reset();
-				other.visit([&](      auto & value) {
-					using Type = std::decay_t<decltype(value)>;
-					new(data) Type{std::move(value)};
-				});
-				type = other.type;
-			}
+			else other.visit([&](auto & value) { *this = std::move(value); });
 			return *this;
 		}
 
@@ -159,9 +124,8 @@ namespace ptl {
 		auto operator=(Type && value) -> std::enable_if_t<!std::is_same<std::decay_t<Type>, variant>::value, variant &> {
 			using DecayedType = std::decay_t<Type>;
 			static_assert(type_index<DecayedType>::value != npos, "Type is not stored in variant");
-			if(type == type_index<DecayedType>::value) {
-				*reinterpret_cast<DecayedType *>(data) = std::forward<Type>(value);
-			} else {
+			if(type == type_index<DecayedType>::value) *reinterpret_cast<DecayedType *>(data) = std::forward<Type>(value);
+			else {
 				reset();
 				new(data) DecayedType{std::forward<Type>(value)};
 				type = type_index<DecayedType>::value;
@@ -178,16 +142,10 @@ namespace ptl {
 
 		template<typename Visitor>
 		constexpr
-		auto visit(Visitor && visitor) const -> decltype(visitor(std::declval<DefaultType &>())) {
-			if(valueless_by_exception()) throw bad_variant_access{};
-			return internal::visit<decltype(visit(visitor)), DefaultType, Types...>::dispatch(type, data, visitor);
-		}
+		auto visit(Visitor && visitor) const -> decltype(auto) { return internal::visit<decltype(visitor(std::declval<DefaultType &>())), DefaultType, Types...>::dispatch(type, data, visitor); }
 		template<typename Visitor>
 		constexpr
-		auto visit(Visitor && visitor)       -> decltype(visitor(std::declval<DefaultType &>())) {
-			if(valueless_by_exception()) throw bad_variant_access{};
-			return internal::visit<decltype(visit(visitor)), DefaultType, Types...>::dispatch(type, data, visitor);
-		}
+		auto visit(Visitor && visitor)       -> decltype(auto) { return internal::visit<decltype(visitor(std::declval<DefaultType &>())), DefaultType, Types...>::dispatch(type, data, visitor); }
 
 		template<typename Type>
 		constexpr
@@ -228,7 +186,6 @@ namespace ptl {
 			if(lhs.valueless_by_exception()) return true;
 			return lhs.visit([&](const auto & value) { return value == rhs.template get<std::decay_t<decltype(value)>>(); });
 		}
-
 		friend
 		constexpr
 		auto operator!=(const variant & lhs, const variant & rhs) -> bool {
@@ -236,7 +193,6 @@ namespace ptl {
 			if(lhs.valueless_by_exception()) return false;
 			return lhs.visit([&](const auto & value) { return value != rhs.template get<std::decay_t<decltype(value)>>(); });
 		}
-
 		friend
 		constexpr
 		auto operator< (const variant & lhs, const variant & rhs) -> bool {
@@ -246,7 +202,6 @@ namespace ptl {
 			if(lhs.type > rhs.type) return false;
 			return lhs.visit([&](const auto & value) { return value <  rhs.template get<std::decay_t<decltype(value)>>(); });
 		}
-
 		friend
 		constexpr
 		auto operator<=(const variant & lhs, const variant & rhs) -> bool {
@@ -256,7 +211,6 @@ namespace ptl {
 			if(lhs.type > rhs.type) return false;
 			return lhs.visit([&](const auto & value) { return value <= rhs.template get<std::decay_t<decltype(value)>>(); });
 		}
-
 		friend
 		constexpr
 		auto operator> (const variant & lhs, const variant & rhs) -> bool {
@@ -266,7 +220,6 @@ namespace ptl {
 			if(lhs.type < rhs.type) return false;
 			return lhs.visit([&](const auto & value) { return value >  rhs.template get<std::decay_t<decltype(value)>>(); });
 		}
-
 		friend
 		constexpr
 		auto operator>=(const variant & lhs, const variant & rhs) -> bool {

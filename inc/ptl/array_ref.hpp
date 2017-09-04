@@ -145,10 +145,8 @@ namespace ptl {
 					return false;
 			return true;
 		}
-
 		friend
 		auto operator!=(const array_ref & lhs, const array_ref & rhs) noexcept -> bool { return !(lhs == rhs); }
-
 		friend
 		auto operator< (const array_ref & lhs, const array_ref & rhs) noexcept -> bool {
 			if(lhs.size() < rhs.size()) return true;
@@ -158,13 +156,10 @@ namespace ptl {
 					return false;
 			return true;
 		}
-
 		friend
 		auto operator<=(const array_ref & lhs, const array_ref & rhs) noexcept -> bool { return !(rhs < lhs); }
-
 		friend
 		auto operator> (const array_ref & lhs, const array_ref & rhs) noexcept -> bool { return rhs < lhs; }
-
 		friend
 		auto operator>=(const array_ref & lhs, const array_ref & rhs) noexcept -> bool { return !(lhs < rhs); }
 

@@ -6,6 +6,7 @@
 
 #pragma once
 #include "internal/type_checks.hpp"
+#include <limits>
 #include <cstdint>
 #include <ostream>
 #include <utility>
@@ -95,11 +96,11 @@ namespace ptl {
 		template<typename TypeToFind>
 		using type_index = internal::find<TypeToFind, DefaultType, Types...>;
 
-		static_assert(internal::are_abi_compatible<DefaultType, Types...>::value, "Types do not fulfill ABI requirements");
-		static_assert(1 + sizeof...(Types) < 128, "A variant stores at most 127 different types");
-		static_assert(internal::are_unique<DefaultType, Types...>::value, "variant does not support duplicated types");
+		static constexpr auto npos{std::numeric_limits<std::uint8_t>::max()};
 
-		static const std::int8_t variant_npos{-1};
+		static_assert(internal::are_abi_compatible<DefaultType, Types...>::value, "Types do not fulfill ABI requirements");
+		static_assert(1 + sizeof...(Types) < npos, "Too many types for variant specified");
+		static_assert(internal::are_unique<DefaultType, Types...>::value, "variant does not support duplicated types");
 
 		constexpr
 		variant() : type{0} { new(data) DefaultType{}; }
@@ -122,7 +123,7 @@ namespace ptl {
 		template<typename Type, typename = std::enable_if_t<!std::is_same<std::decay_t<Type>, variant>::value>>
 		variant(Type && value) noexcept {
 			using DecayedType = std::decay_t<Type>;
-			static_assert(type_index<DecayedType>::value != variant_npos, "Type is not stored in variant");
+			static_assert(type_index<DecayedType>::value != npos, "Type is not stored in variant");
 			new(data) DecayedType{std::forward<Type>(value)};
 			type = type_index<DecayedType>::value;
 		}
@@ -157,7 +158,7 @@ namespace ptl {
 		template<typename Type>
 		auto operator=(Type && value) -> std::enable_if_t<!std::is_same<std::decay_t<Type>, variant>::value, variant &> {
 			using DecayedType = std::decay_t<Type>;
-			static_assert(type_index<DecayedType>::value != variant_npos, "Type is not stored in variant");
+			static_assert(type_index<DecayedType>::value != npos, "Type is not stored in variant");
 			if(type == type_index<DecayedType>::value) {
 				*reinterpret_cast<DecayedType *>(data) = std::forward<Type>(value);
 			} else {
@@ -171,9 +172,9 @@ namespace ptl {
 		~variant() noexcept { reset(); }
 
 		constexpr
-		auto index() const noexcept -> std::int8_t { return type; }
+		auto index() const noexcept -> std::uint8_t { return type; }
 		constexpr
-		auto valueless_by_exception() const noexcept -> bool { return type == variant_npos; }
+		auto valueless_by_exception() const noexcept -> bool { return type == npos; }
 
 		template<typename Visitor>
 		constexpr
@@ -284,16 +285,15 @@ namespace ptl {
 		}
 	private:
 		void reset() noexcept {
-			if(type == variant_npos) return;
+			if(type == npos) return;
 			visit([](auto & value) {
 				using Type = std::decay_t<decltype(value)>;
 				value.~Type();
 			});
-			type = variant_npos;
+			type = npos;
 		}
 
-		std::uint8_t data[internal::max_sizeof<DefaultType, Types...>::value];
-		std::int8_t type{variant_npos};
+		std::uint8_t data[internal::max_sizeof<DefaultType, Types...>::value], type{npos};
 	};
 	PTL_PACK_END
 

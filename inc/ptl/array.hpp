@@ -45,55 +45,55 @@ namespace ptl {
 		~array() noexcept =default;
 
 		constexpr
-		auto at(size_type index)       ->       reference { return validate_index(index), (*this)[index]; }
-		constexpr
 		auto at(size_type index) const -> const_reference { return validate_index(index), (*this)[index]; }
-
 		constexpr
-		auto operator[](size_type index)       noexcept ->       reference { assert(index < Size); return values[index]; }
+		auto at(size_type index)       ->       reference { return validate_index(index), (*this)[index]; }
+
 		constexpr
 		auto operator[](size_type index) const noexcept -> const_reference { assert(index < Size); return values[index]; }
-
 		constexpr
-		auto front()       ->       reference { return (*this)[0]; }
+		auto operator[](size_type index)       noexcept ->       reference { assert(index < Size); return values[index]; }
+
 		constexpr
 		auto front() const -> const_reference { return (*this)[0]; }
-
 		constexpr
-		auto back()       ->       reference { return (*this)[Size - 1]; }
+		auto front()       ->       reference { return (*this)[0]; }
+
 		constexpr
 		auto back() const -> const_reference { return (*this)[Size - 1]; }
-
 		constexpr
-		auto data()       noexcept ->       pointer { return values; }
+		auto back()       ->       reference { return (*this)[Size - 1]; }
+
 		constexpr
 		auto data() const noexcept -> const_pointer { return values; }
+		constexpr
+		auto data()       noexcept ->       pointer { return values; }
 
 		constexpr
-		auto begin()        noexcept ->       iterator { return values; }
-		constexpr
 		auto begin()  const noexcept -> const_iterator { return values; }
+		constexpr
+		auto begin()        noexcept ->       iterator { return values; }
 		constexpr
 		auto cbegin() const noexcept -> const_iterator { return values; }
 
 		constexpr
-		auto end()        noexcept ->       iterator { return values + Size; }
-		constexpr
 		auto end()  const noexcept -> const_iterator { return values + Size; }
+		constexpr
+		auto end()        noexcept ->       iterator { return values + Size; }
 		constexpr
 		auto cend() const noexcept -> const_iterator { return values + Size; }
 
 		constexpr
-		auto rbegin()        noexcept ->       reverse_iterator { return reverse_iterator{end()}; }
-		constexpr
 		auto rbegin()  const noexcept -> const_reverse_iterator { return const_reverse_iterator{end()}; }
+		constexpr
+		auto rbegin()        noexcept ->       reverse_iterator { return reverse_iterator{end()}; }
 		constexpr
 		auto crbegin() const noexcept -> const_reverse_iterator { return const_reverse_iterator{cend()}; }
 
 		constexpr
-		auto rend()        noexcept ->       reverse_iterator { return reverse_iterator{begin()}; }
-		constexpr
 		auto rend()  const noexcept -> const_reverse_iterator { return const_reverse_iterator{begin()}; }
+		constexpr
+		auto rend()        noexcept ->       reverse_iterator { return reverse_iterator{begin()}; }
 		constexpr
 		auto crend() const noexcept -> const_reverse_iterator { return const_reverse_iterator{cbegin()}; }
 
@@ -161,14 +161,14 @@ namespace ptl {
 
 	template<std::size_t Index, typename Type, std::size_t Size>
 	constexpr
-	auto get(      array<Type, Size> & self) noexcept -> typename array<Type, Size>::      reference {
+	auto get(const array<Type, Size> & self) noexcept -> typename array<Type, Size>::const_reference {
 		static_assert(Index < Size, "index out of range");
 		return self[Index];
 	}
 
 	template<std::size_t Index, typename Type, std::size_t Size>
 	constexpr
-	auto get(const array<Type, Size> & self) noexcept -> typename array<Type, Size>::const_reference {
+	auto get(      array<Type, Size> & self) noexcept -> typename array<Type, Size>::      reference {
 		static_assert(Index < Size, "index out of range");
 		return self[Index];
 	}

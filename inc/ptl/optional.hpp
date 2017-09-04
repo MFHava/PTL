@@ -7,6 +7,7 @@
 #pragma once
 #include "internal/type_checks.hpp"
 #include <cassert>
+#include <cstdint>
 #include <utility>
 #include <ostream>
 
@@ -78,11 +79,11 @@ namespace ptl {
 
 		~optional() noexcept { reset(); }
 
-		auto operator->()       ->       Type * { return &**this; }
 		auto operator->() const -> const Type * { return &**this; }
+		auto operator->()       ->       Type * { return &**this; }
 
-		auto operator*()       ->       Type & { assert(initialized); return reinterpret_cast<      Type &>(data); }
 		auto operator*() const -> const Type & { assert(initialized); return reinterpret_cast<const Type &>(data); }
+		auto operator*()       ->       Type & { assert(initialized); return reinterpret_cast<      Type &>(data); }
 
 		explicit operator bool() const noexcept { return  initialized; }
 		auto operator!() const noexcept -> bool { return !initialized; }
@@ -229,7 +230,7 @@ namespace ptl {
 			return os << *self;
 		}
 	private:
-		unsigned char data[sizeof(Type)], initialized{false};
+		std::uint8_t data[sizeof(Type)], initialized{false};
 	};
 	PTL_PACK_END
 }

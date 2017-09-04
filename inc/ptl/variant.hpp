@@ -6,6 +6,7 @@
 
 #pragma once
 #include "internal/type_checks.hpp"
+#include <cstdint>
 #include <ostream>
 #include <utility>
 #include <stdexcept>
@@ -32,7 +33,7 @@ namespace ptl {
 			template<typename Visitor>
 			constexpr
 			static
-			auto dispatch(unsigned char index, const void * ptr, Visitor && visitor) -> ResultType {
+			auto dispatch(std::uint8_t, const void *, Visitor &) -> ResultType {
 				throw std::logic_error{"DESIGN-ERROR: invalid dispatch in visit detected (please report this)"};
 			}
 		};
@@ -42,15 +43,15 @@ namespace ptl {
 			template<typename Visitor>
 			constexpr
 			static
-			auto dispatch(unsigned char index, const void * ptr, Visitor && visitor) -> ResultType {
-				return index ? visit<ResultType, Types...>::dispatch(index - 1, ptr, std::forward<Visitor>(visitor))
+			auto dispatch(std::uint8_t index, const void * ptr, Visitor & visitor) -> ResultType {
+				return index ? visit<ResultType, Types...>::dispatch(index - 1, ptr, visitor)
 				             : visitor(*reinterpret_cast<const Type *>(ptr));
 			}
 			template<typename Visitor>
 			constexpr
 			static
-			auto dispatch(unsigned char index,       void * ptr, Visitor && visitor) -> ResultType {
-				return index ? visit<ResultType, Types...>::dispatch(index - 1, ptr, std::forward<Visitor>(visitor))
+			auto dispatch(std::uint8_t index,       void * ptr, Visitor & visitor) -> ResultType {
+				return index ? visit<ResultType, Types...>::dispatch(index - 1, ptr, visitor)
 				             : visitor(*reinterpret_cast<      Type *>(ptr));
 			}
 		};
@@ -98,7 +99,7 @@ namespace ptl {
 		static_assert(1 + sizeof...(Types) < 128, "A variant stores at most 127 different types");
 		static_assert(internal::are_unique<DefaultType, Types...>::value, "variant does not support duplicated types");
 
-		static const signed char variant_npos{-1};
+		static const std::int8_t variant_npos{-1};
 
 		constexpr
 		variant() : type{0} { new(data) DefaultType{}; }
@@ -170,21 +171,21 @@ namespace ptl {
 		~variant() noexcept { reset(); }
 
 		constexpr
-		auto index() const noexcept -> signed char { return type; }
+		auto index() const noexcept -> std::int8_t { return type; }
 		constexpr
 		auto valueless_by_exception() const noexcept -> bool { return type == variant_npos; }
 
 		template<typename Visitor>
 		constexpr
-		auto visit(Visitor && visitor) const -> decltype(visitor(std::declval<      DefaultType &>())) {
+		auto visit(Visitor && visitor) const -> decltype(visitor(std::declval<DefaultType &>())) {
 			if(valueless_by_exception()) throw bad_variant_access{};
-			return internal::visit<decltype(visit(visitor)), DefaultType, Types...>::dispatch(type, data, std::forward<Visitor>(visitor));
+			return internal::visit<decltype(visit(visitor)), DefaultType, Types...>::dispatch(type, data, visitor);
 		}
 		template<typename Visitor>
 		constexpr
-		auto visit(Visitor && visitor)       -> decltype(visitor(std::declval<      DefaultType &>())) {
+		auto visit(Visitor && visitor)       -> decltype(visitor(std::declval<DefaultType &>())) {
 			if(valueless_by_exception()) throw bad_variant_access{};
-			return internal::visit<decltype(visit(visitor)), DefaultType, Types...>::dispatch(type, data, std::forward<Visitor>(visitor));
+			return internal::visit<decltype(visit(visitor)), DefaultType, Types...>::dispatch(type, data, visitor);
 		}
 
 		template<typename Type>
@@ -291,10 +292,14 @@ namespace ptl {
 			type = variant_npos;
 		}
 
-		unsigned char data[internal::max_sizeof<DefaultType, Types...>::value];
-		signed char type{variant_npos};
+		std::uint8_t data[internal::max_sizeof<DefaultType, Types...>::value];
+		std::int8_t type{variant_npos};
 	};
 	PTL_PACK_END
+
+	template<typename Type, typename... Types>
+	constexpr
+	auto holds_alternative(const variant<Types...> & self) noexcept -> bool { return self.index() == variant<Types...>::template type_index<Type>::value; }
 
 	template<typename Type, typename... Types>
 	constexpr
@@ -309,10 +314,6 @@ namespace ptl {
 	template<typename Type, typename... Types>
 	constexpr
 	auto get(      variant<Types...> & self) ->       Type & { return self.template get<Type>(); }
-
-	template<typename Type, typename... Types>
-	constexpr
-	auto holds_alternative(const variant<Types...> & self) noexcept -> bool { return get_if<Type>(self); }
 
 	template<typename Visitor, typename... Types>
 	constexpr

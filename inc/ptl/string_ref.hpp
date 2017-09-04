@@ -41,33 +41,35 @@ namespace ptl {
 		//! @param[in] ptr string to reference
 		string_ref(const_pointer ptr) noexcept : first{ptr}, last{ptr + std::strlen(ptr)} {}
 
-		auto operator[](size_type index)       noexcept ->       reference { assert(!empty()); return first[index]; }
 		auto operator[](size_type index) const noexcept -> const_reference { assert(!empty()); return first[index]; }
+		auto operator[](size_type index)       noexcept ->       reference { assert(!empty()); return first[index]; }
 
-		auto at(size_type index)       ->       reference { return validate_index(index), (*this)[index]; }
 		auto at(size_type index) const -> const_reference { return validate_index(index), (*this)[index]; }
+		auto at(size_type index)       ->       reference { return validate_index(index), (*this)[index]; }
 
 		auto size()  const noexcept -> size_type { return last - first; }
 		auto empty() const noexcept -> bool { return size() == 0; }
 
-		auto data()       noexcept ->       pointer { return first; }
 		auto data() const noexcept -> const_pointer { return first; }
+		auto data()       noexcept ->       pointer { return first; }
 
-		auto c_str()       noexcept ->       pointer { return first; }
 		auto c_str() const noexcept -> const_pointer { return first; }
+		auto c_str()       noexcept ->       pointer { return first; }
 
-		auto begin()        noexcept ->       iterator { return first; }
 		auto begin()  const noexcept -> const_iterator { return first; }
+		auto begin()        noexcept ->       iterator { return first; }
 		auto cbegin() const noexcept -> const_iterator { return first; }
-		auto end()          noexcept ->       iterator { return last; }
+
 		auto end()    const noexcept -> const_iterator { return last; }
+		auto end()          noexcept ->       iterator { return last; }
 		auto cend()   const noexcept -> const_iterator { return last; }
 
-		auto rbegin()        noexcept ->       reverse_iterator { return       reverse_iterator{end()}; }
 		auto rbegin()  const noexcept -> const_reverse_iterator { return const_reverse_iterator{end()}; }
+		auto rbegin()        noexcept ->       reverse_iterator { return       reverse_iterator{end()}; }
 		auto crbegin() const noexcept -> const_reverse_iterator { return const_reverse_iterator{cend()}; }
-		auto rend()          noexcept ->       reverse_iterator { return       reverse_iterator{begin()}; }
+
 		auto rend()    const noexcept -> const_reverse_iterator { return const_reverse_iterator{begin()}; }
+		auto rend()          noexcept ->       reverse_iterator { return       reverse_iterator{begin()}; }
 		auto crend()   const noexcept -> const_reverse_iterator { return const_reverse_iterator{cbegin()}; }
 
 		friend

@@ -13,21 +13,36 @@
 #include <stdexcept>
 
 namespace ptl {
-	//TODO: documentation
+	//! @brief exception thrown when trying to access a variant in an invalid way
 	struct bad_variant_access : std::exception {
 		auto what() const noexcept -> const char * override { return "bad_variant_access"; }
 	};
 
 	namespace internal {
 		template<typename... Types>
-		struct max_sizeof final {
-			enum { value = 0 };
-		};
+		struct max_sizeof final : std::integral_constant<std::size_t, 0> {};
 
 		template<typename Type, typename... Types>
-		struct max_sizeof<Type, Types...> final {
-			enum { value = sizeof(Type) > max_sizeof<Types...>::value ? sizeof(Type) : max_sizeof<Types...>::value };
-		};
+		struct max_sizeof<Type, Types...> final : std::integral_constant<std::size_t, (sizeof(Type) > max_sizeof<Types...>::value ? sizeof(Type) : max_sizeof<Types...>::value)>{};
+
+		template<typename TypeToFind, typename... Types>
+		struct find final : std::integral_constant<std::uint8_t, std::numeric_limits<std::uint8_t>::max()> {};
+
+		constexpr auto not_found{find<void>::value};
+
+		template<typename TypeToFind, typename Type, typename... Types>
+		struct find<TypeToFind, Type, Types...> final : std::integral_constant<
+			std::uint8_t,
+			std::is_same<TypeToFind, Type>::value 
+				? 0 : find<TypeToFind, Types...>::value == not_found
+					? not_found : find<TypeToFind, Types...>::value + 1
+		>{};
+
+		template<typename... Types>
+		struct are_unique final : std::true_type {};
+
+		template<typename Type, typename... Types>
+		struct are_unique<Type, Types...> final : std::integral_constant<bool, (find<Type, Types...>::value == not_found && are_unique<Types...>::value)> {};
 
 		template<typename ResultType, typename... Types>
 		struct visit final {
@@ -54,35 +69,6 @@ namespace ptl {
 				             : visitor(*reinterpret_cast<      Type *>(ptr));
 			}
 		};
-
-		template<typename TypeToFind, typename... Types>
-		struct find final {
-			enum { value = -1 };
-		};
-
-		template<typename TypeToFind, typename Type, typename... Types>
-		struct find<TypeToFind, Type, Types...> final {
-		private:
-			enum { tmp = find<TypeToFind, Types...>::value };
-		public:
-			enum {
-				value = std::is_same<TypeToFind, Type>::value
-					? 0
-					: tmp == -1
-						? -1
-						: 1 + tmp
-			};
-		};
-
-		template<typename... Types>
-		struct are_unique final {
-			enum { value = 1 };
-		};
-
-		template<typename Type, typename... Types>
-		struct are_unique<Type, Types...> final {
-			enum { value = find<Type, Types...>::value == -1 && are_unique<Types...>::value };
-		};
 	}
 
 	PTL_PACK_BEGIN
@@ -90,23 +76,32 @@ namespace ptl {
 	//! @tparam DefaultType type that will be stored in the variant by default
 	//! @tparam Types all additional types that may be stored in the variant
 	template<typename DefaultType, typename... Types>
-	struct variant final {//TODO: evaluate differences to the standard!
-		template<typename TypeToFind>
-		using type_index = internal::find<TypeToFind, DefaultType, Types...>;
+	class variant final {
+		template<typename Type>
+		using parameter_validation = std::integral_constant<bool, !std::is_same<std::decay_t<Type>, variant>::value && internal::find<std::decay_t<Type>, DefaultType, Types...>::value != internal::not_found>;
 
-		static constexpr auto npos{std::numeric_limits<std::uint8_t>::max()};
+		std::uint8_t data[internal::max_sizeof<DefaultType, Types...>::value], type{internal::not_found};
+
+		void reset() noexcept {
+			if(type == internal::not_found) return;
+			visit([](auto & value) {
+				using Type = std::decay_t<decltype(value)>;
+				value.~Type();
+			});
+			type = internal::not_found;
+		}
 
 		static_assert(internal::are_abi_compatible<DefaultType, Types...>::value, "Types do not fulfill ABI requirements");
-		static_assert(1 + sizeof...(Types) < npos, "Too many types for variant specified");
+		static_assert(1 + sizeof...(Types) < internal::not_found, "Too many types for variant specified");
 		static_assert(internal::are_unique<DefaultType, Types...>::value, "variant does not support duplicated types");
-
+	public:
 		constexpr
 		variant() : type{0} { new(data) DefaultType{}; }
 
 		variant(const variant & other) { *this = other; }
 		variant(variant && other) noexcept { *this = std::move(other); }
 
-		template<typename Type, typename = std::enable_if_t<!std::is_same<std::decay_t<Type>, variant>::value>>
+		template<typename Type, typename = std::enable_if_t<parameter_validation<Type>::value>>
 		variant(Type && value) { *this = std::forward<Type>(value); }
 
 		auto operator=(const variant & other) -> variant & {
@@ -121,14 +116,14 @@ namespace ptl {
 		}
 
 		template<typename Type>
-		auto operator=(Type && value) -> std::enable_if_t<!std::is_same<std::decay_t<Type>, variant>::value, variant &> {
+		auto operator=(Type && value) -> std::enable_if_t<parameter_validation<Type>::value, variant &> {
 			using DecayedType = std::decay_t<Type>;
-			static_assert(type_index<DecayedType>::value != npos, "Type is not stored in variant");
-			if(type == type_index<DecayedType>::value) *reinterpret_cast<DecayedType *>(data) = std::forward<Type>(value);
+			constexpr auto tmp{internal::find<DecayedType, DefaultType, Types...>::value};
+			if(type == tmp) *reinterpret_cast<DecayedType *>(data) = std::forward<Type>(value);
 			else {
 				reset();
 				new(data) DecayedType{std::forward<Type>(value)};
-				type = type_index<DecayedType>::value;
+				type = tmp;
 			}
 			return *this;
 		}
@@ -136,9 +131,7 @@ namespace ptl {
 		~variant() noexcept { reset(); }
 
 		constexpr
-		auto index() const noexcept -> std::uint8_t { return type; }
-		constexpr
-		auto valueless_by_exception() const noexcept -> bool { return type == npos; }
+		auto valueless_by_exception() const noexcept -> bool { return type == internal::not_found; }
 
 		template<typename Visitor>
 		constexpr
@@ -149,19 +142,13 @@ namespace ptl {
 
 		template<typename Type>
 		constexpr
-		auto get_if() const noexcept -> const Type * {
-			if(valueless_by_exception() || type_index<Type>::value != index()) return nullptr;
-			return reinterpret_cast<const Type *>(data);
-		}
-		template<typename Type>
-		constexpr
-		auto get_if()       noexcept ->       Type * { return const_cast<Type *>(static_cast<const variant *>(this)->get_if<Type>()); }
+		auto holds_alternative() const noexcept -> bool { return !valueless_by_exception() && internal::find<Type, DefaultType, Types...>::value == type; }
 
 		template<typename Type>
 		constexpr
 		auto get() const -> const Type & {
-			if(auto ptr = get_if<Type>()) return *ptr;
-			throw bad_variant_access{};
+			if(!holds_alternative<Type>()) throw bad_variant_access{};
+			return *reinterpret_cast<const Type *>(data);
 		}
 		template<typename Type>
 		constexpr
@@ -236,42 +223,16 @@ namespace ptl {
 			self.visit([&](const auto & value) { os << value; });
 			return os;
 		}
-	private:
-		void reset() noexcept {
-			if(type == npos) return;
-			visit([](auto & value) {
-				using Type = std::decay_t<decltype(value)>;
-				value.~Type();
-			});
-			type = npos;
-		}
-
-		std::uint8_t data[internal::max_sizeof<DefaultType, Types...>::value], type{npos};
 	};
 	PTL_PACK_END
+}
 
-	template<typename Type, typename... Types>
-	constexpr
-	auto holds_alternative(const variant<Types...> & self) noexcept -> bool { return self.index() == variant<Types...>::template type_index<Type>::value; }
-
-	template<typename Type, typename... Types>
-	constexpr
-	auto get_if(const variant<Types...> & self) noexcept -> const Type * { return self.template get_if<Type>(); }
-	template<typename Type, typename... Types>
-	constexpr
-	auto get_if(      variant<Types...> & self) noexcept ->       Type * { return self.template get_if<Type>(); }
-
-	template<typename Type, typename... Types>
-	constexpr
-	auto get(const variant<Types...> & self) -> const Type & { return self.template get<Type>(); }
-	template<typename Type, typename... Types>
-	constexpr
-	auto get(      variant<Types...> & self) ->       Type & { return self.template get<Type>(); }
-
-	template<typename Visitor, typename... Types>
-	constexpr
-	auto visit(Visitor && visitor, const variant<Types...> & self) -> decltype(auto) { return self.visit(std::forward<Visitor>(visitor)); }
-	template<typename Visitor, typename... Types>
-	constexpr
-	auto visit(Visitor && visitor,       variant<Types...> & self) -> decltype(auto) { return self.visit(std::forward<Visitor>(visitor)); }
+namespace std {
+	template<typename... Types>
+	struct hash<ptl::variant<Types...>> final {
+		auto operator()(const ptl::variant<Types...> & self) const -> std::size_t {
+			if(self.valueless_by_exception()) return 0;
+			return self.visit([](const auto & value) { return std::hash<std::decay_t<decltype(value)>>{}(value); });
+		}
+	};
 }

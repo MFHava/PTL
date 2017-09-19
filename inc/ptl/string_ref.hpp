@@ -6,6 +6,7 @@
 
 #pragma once
 #include "internal/type_checks.hpp"
+#include "internal/operators.hpp"
 #include <string>
 #include <cassert>
 #include <cstddef>
@@ -18,13 +19,14 @@
 namespace ptl {
 	PTL_PACK_BEGIN
 	//! @brief a readonly, non-owning reference to a NUL-terminated string
-	struct string_ref final {
+	class string_ref final :
+		internal::comparison1<string_ref,
+			internal::comparison2_symmetric<string_ref, char *>
+		>
+	{
+		const char * first{nullptr}, * last{nullptr};
+	public:
 		string_ref() =default;
-		string_ref(const string_ref &) =default;
-		string_ref(string_ref &&) noexcept =default;
-		auto operator=(const string_ref &) -> string_ref & =default;
-		auto operator=(string_ref &&) noexcept -> string_ref & =default;
-		~string_ref() noexcept =default;
 
 		//! @brief construct string_ref from c-string
 		//! @param[in] ptr string to reference
@@ -56,54 +58,32 @@ namespace ptl {
 		void swap(string_ref & lhs, string_ref & rhs) noexcept {
 			using std::swap;
 			swap(lhs.first, rhs.first);
-			swap(lhs.last,  rhs.last);
+			swap(lhs.last, rhs.last);
 		}
 
 		friend
-		auto operator==(const string_ref & lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs.c_str()) == 0; }
+		auto operator==(const string_ref & lhs, const string_ref & rhs) noexcept { return std::strcmp(lhs.c_str(), rhs.c_str()) == 0; }
 		friend
-		auto operator!=(const string_ref & lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs.c_str()) != 0; }
-		friend
-		auto operator< (const string_ref & lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs.c_str()) <  0; }
-		friend
-		auto operator<=(const string_ref & lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs.c_str()) <= 0; }
-		friend
-		auto operator> (const string_ref & lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs.c_str()) >  0; }
-		friend
-		auto operator>=(const string_ref & lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs.c_str()) >= 0; }
+		auto operator< (const string_ref & lhs, const string_ref & rhs) noexcept { return std::strcmp(lhs.c_str(), rhs.c_str()) <  0; }
 
 		friend
-		auto operator==(const char * lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs, rhs.c_str()) == 0; }
+		auto operator==(const char * lhs, const string_ref & rhs) noexcept { return std::strcmp(lhs, rhs.c_str()) == 0; }
 		friend
-		auto operator!=(const char * lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs, rhs.c_str()) != 0; }
-		friend
-		auto operator< (const char * lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs, rhs.c_str()) <  0; }
-		friend
-		auto operator<=(const char * lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs, rhs.c_str()) <= 0; }
-		friend
-		auto operator> (const char * lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs, rhs.c_str()) >  0; }
-		friend
-		auto operator>=(const char * lhs, const string_ref & rhs) noexcept -> bool { return std::strcmp(lhs, rhs.c_str()) >= 0; }
+		auto operator< (const char * lhs, const string_ref & rhs) noexcept { return std::strcmp(lhs, rhs.c_str()) <  0; }
 
 		friend
-		auto operator==(const string_ref & lhs, const char * rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs) == 0; }
+		auto operator==(const string_ref & lhs, const char * rhs) noexcept { return std::strcmp(lhs.c_str(), rhs) == 0; }
 		friend
-		auto operator!=(const string_ref & lhs, const char * rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs) != 0; }
-		friend
-		auto operator< (const string_ref & lhs, const char * rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs) <  0; }
-		friend
-		auto operator<=(const string_ref & lhs, const char * rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs) <= 0; }
-		friend
-		auto operator> (const string_ref & lhs, const char * rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs) >  0; }
-		friend
-		auto operator>=(const string_ref & lhs, const char * rhs) noexcept -> bool { return std::strcmp(lhs.c_str(), rhs) >= 0; }
+		auto operator< (const string_ref & lhs, const char * rhs) noexcept { return std::strcmp(lhs.c_str(), rhs) <  0; }
 
 		friend
-		auto operator<<(std::ostream & os, const string_ref & self) -> std::ostream & { return os << self.c_str(); }
-	private:
-		const char * first{nullptr}, * last{nullptr};
+		decltype(auto) operator<<(std::ostream & os, const string_ref & self) {
+			for(auto & tmp : self) os << tmp;
+			return os;
+		}
 	};
 	PTL_PACK_END
+	static_assert(sizeof(string_ref) == 2 * sizeof(const char *), "invalid size of string_ref detected");
 
 	namespace literals {
 		inline

@@ -5,89 +5,294 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include "internal/type_checks.hpp"
+#include "internal/utility.hpp"
 #include "internal/operators.hpp"
-#include "internal/compiler_detection.hpp"
+#include "internal/type_checks.hpp"
 #include <string>
-#include <cassert>
-#include <cstddef>
-#include <cstring>
 #include <ostream>
-#include <utility>
-#include <iterator>
 #include <stdexcept>
+#include <functional>
 
 namespace ptl {
 	PTL_PACK_BEGIN
-	//! @brief a readonly, non-owning reference to a NUL-terminated string
-	class string_ref final :
-		internal::comparison1<string_ref,
-			internal::comparison2_symmetric<string_ref, char *>
+	//! @brief a read-only, non-owning reference to a string
+	//! @tparam Char character type referenced
+	//! @attention the referenced string is not necessarily null-terminated!
+	template<typename Char>
+	class basic_string_ref final :
+		internal::comparison1<basic_string_ref<Char>,
+			internal::comparison2_symmetric<basic_string_ref<Char>, Char *>
 		>
 	{
-		const char * first{nullptr}, * last{nullptr};
+		class c_str_iterator final : internal::postfix_inc<c_str_iterator> {
+			const Char * ptr{nullptr};
+		public:
+			using iterator_category = std::input_iterator_tag;
+			using value_type        = Char;
+			using difference_type   = std::ptrdiff_t;
+			using pointer           = const Char *;
+			using reference         = const Char &;
+
+			constexpr
+			c_str_iterator() {}
+			constexpr
+			c_str_iterator(const Char * ptr) : ptr{ptr} {}
+
+			constexpr
+			decltype(auto) operator++() noexcept {
+				if(ptr && !*ptr++) ptr = nullptr;
+				return *this;
+			}
+
+			constexpr
+			auto operator*() const -> reference {
+				PTL_REQUIRES(ptr);
+				return *ptr;
+			}
+
+			friend
+			constexpr
+			auto operator==(const c_str_iterator & lhs, const c_str_iterator & rhs) { return lhs.ptr == rhs.ptr; }
+			friend
+			constexpr
+			auto operator!=(const c_str_iterator & lhs, const c_str_iterator & rhs) { return !(lhs == rhs); }
+		};
+
+		template<typename InputIterator1, typename InputIterator2>
+		constexpr
+		static auto compare(InputIterator1 first1, InputIterator1 last1, InputIterator2 first2, InputIterator2 last2) noexcept -> int {
+			std::tie(first1, first2) = std::mismatch(first1, last1, first2, last2);
+			if(first1 == last1) {
+				if(first2 == last2) return 0;
+				else return -1;
+			} else {
+				if(first2 == last2) return +1;
+				else return *first1 - *first2;
+			}
+		}
+
+		const Char * first{nullptr}, * last{nullptr};
 	public:
-		string_ref() =default;
+		using value_type             = Char;
+		using size_type              = std::size_t;
+		using difference_type        = std::ptrdiff_t;
+		using pointer                =       Char *;
+		using const_pointer          = const Char *;
+		using reference              =       Char &;
+		using const_reference        = const Char &;
+		class iterator final :
+			internal::comparison1<iterator,
+				internal::postfix<iterator,
+					internal::additive2<iterator, std::ptrdiff_t,
+						internal::subtractive2<iterator, std::ptrdiff_t>
+					>
+				>
+			>
+		{
+			friend class basic_string_ref<Char>;
 
-		//! @brief construct string_ref from c-string
-		//! @param[in] ptr string to reference
-		string_ref(const char * ptr) noexcept : first{ptr}, last{first + std::strlen(ptr)} {}
+			const Char * ptr{nullptr};
+			
+			constexpr
+			explicit
+			iterator(const Char * ptr) : ptr{ptr} {}
+		public:
+			using iterator_category = std::random_access_iterator_tag;
+			using value_type        = Char;
+			using difference_type   = std::ptrdiff_t;
+			using pointer           = const Char *;
+			using reference         = const Char &;
 
-		//! @brief construct string_ref from string
+			constexpr
+			iterator() noexcept {}
+
+			constexpr
+			decltype(auto) operator++() noexcept {
+				PTL_REQUIRES(ptr);
+				++ptr;
+				return *this;
+			}
+			constexpr
+			decltype(auto) operator--() noexcept {
+				PTL_REQUIRES(ptr);
+				--ptr;
+				return *this;
+			}
+
+			constexpr
+			decltype(auto) operator*() const {
+				PTL_REQUIRES(ptr);
+				return *ptr;
+			}
+
+			constexpr
+			decltype(auto) operator+=(difference_type count) {
+				PTL_REQUIRES(ptr);
+				ptr += count;
+				return *this;
+			}
+			constexpr
+			decltype(auto) operator-=(difference_type count) {
+				PTL_REQUIRES(ptr);
+				ptr -= count;
+				return *this;
+			}
+
+			constexpr
+			decltype(auto) operator[](difference_type count) {
+				PTL_REQUIRES(ptr);
+				return ptr[count];
+			}
+
+			friend
+			constexpr
+			auto operator+(difference_type lhs, const iterator & rhs) { return rhs + lhs; }
+			friend
+			constexpr
+			auto operator-(const iterator & lhs, const iterator & rhs) { return lhs.ptr - rhs.ptr; }
+
+			friend
+			constexpr
+			auto operator==(const iterator & lhs, const iterator & rhs) { return lhs.ptr == rhs.ptr; }
+			friend
+			constexpr
+			auto operator< (const iterator & lhs, const iterator & rhs) { return lhs.ptr <  rhs.ptr; }
+		};
+		using const_iterator         = iterator;
+		using reverse_iterator       = std::reverse_iterator<iterator>;
+		using const_reverse_iterator = reverse_iterator;
+
+		constexpr
+		basic_string_ref() noexcept {}
+
+		//! @brief construct basic_string_ref from c-string
+		//! @param[in] str null-terminated string
+		constexpr
+		basic_string_ref(const Char * str) noexcept : first{str}, last{first} { if(last) while(*last) ++last; }
+		
+		//! @brief construct basic_string_ref from c-string + length
 		//! @param[in] str string to reference
-		string_ref(const std::string & str) noexcept : first{str.data()}, last{first + str.size()} {}
+		//! @param[in] size size of string to reference
+		//! @attention [str, size) must be a valid range!
+		constexpr
+		basic_string_ref(const Char * str, std::size_t size) noexcept : first{str}, last{str + size} { PTL_REQUIRES(str || (!str && !size)); }
 
-		auto operator[](std::size_t index) const noexcept { return first[index]; }
-		auto at(std::size_t index) const {
+		//! @brief construct basic_string_ref from string
+		//! @param[in] str string to reference
+		basic_string_ref(const std::string & str) noexcept : basic_string_ref{str.data(), str.size()} {}
+
+		constexpr
+		basic_string_ref(const basic_string_ref &) noexcept =default;
+
+		constexpr
+		auto operator=(const basic_string_ref &) noexcept -> basic_string_ref & =default;
+
+		constexpr
+		auto operator[](std::size_t index) const noexcept -> const_reference {
+			PTL_REQUIRES(index < size());
+			return first[index];
+		}
+		constexpr
+		auto at(std::size_t index) const -> const_reference {
 			if(index >= size()) throw std::out_of_range{"index out of range"}; 
 			return (*this)[index];
 		}
+		constexpr
+		auto front() const noexcept -> const_reference { return (*this)[0]; }
+		constexpr
+		auto back()  const noexcept -> const_reference { return (*this)[size() - 1]; }
 
-		auto size() const noexcept -> std::size_t { return last - first; }
+		constexpr
+		auto data() const noexcept -> const_pointer { return first; }
+
+		constexpr
+		auto size() const noexcept -> size_type { return last - first; }
+		constexpr
+		auto max_size() const noexcept { return std::numeric_limits<size_type>::max(); }
+		constexpr
 		auto empty() const noexcept { return size() == 0; }
 
-		auto data() const noexcept { return first; }
-		auto c_str() const noexcept { return first; }
+		constexpr
+		void remove_prefix(iterator pos) {
+			PTL_REQUIRES(pos.ptr >= first && pos.ptr <= last);
+			first = pos.ptr;
+		}
 
-		auto begin() const noexcept { return first; }
-		auto end() const noexcept { return last; }
+		constexpr
+		void remove_suffix(iterator pos) {
+			PTL_REQUIRES(pos.ptr >= first && pos.ptr <= last);
+			last = pos.ptr;
+		}
 
-		auto rbegin() const noexcept { return std::make_reverse_iterator(end()); }
-		auto rend() const noexcept { return std::make_reverse_iterator(begin()); }
+		constexpr
+		auto substr(iterator first, iterator last) const {
+			auto result{*this};
+			result.remove_prefix(first);
+			result.remove_suffix(last);
+			return result;
+		}
+
+		constexpr
+		auto begin()  const noexcept { return const_iterator{first}; }
+		constexpr
+		auto cbegin() const noexcept { return begin(); }
+		constexpr
+		auto end()    const noexcept { return const_iterator{last}; }
+		constexpr
+		auto cend()   const noexcept { return end(); }
+
+		constexpr
+		auto rbegin()  const noexcept { return const_reverse_iterator{end()}; }
+		constexpr
+		auto crbegin() const noexcept { return rbegin(); }
+		constexpr
+		auto rend()    const noexcept { return const_reverse_iterator{begin()}; }
+		constexpr
+		auto crend()   const noexcept { return rend(); }
 
 		friend
-		void swap(string_ref & lhs, string_ref & rhs) noexcept {
-			using std::swap;
-			swap(lhs.first, rhs.first);
-			swap(lhs.last, rhs.last);
+		constexpr
+		void swap(basic_string_ref & lhs, basic_string_ref & rhs) noexcept {
+			internal::swap(lhs.first, rhs.first);
+			internal::swap(lhs.last,  rhs.last);
 		}
 
 		friend
-		auto operator==(const string_ref & lhs, const string_ref & rhs) noexcept { return std::strcmp(lhs.c_str(), rhs.c_str()) == 0; }
+		constexpr
+		auto operator==(const basic_string_ref & lhs, const basic_string_ref & rhs) noexcept { return compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()) == 0; }
 		friend
-		auto operator< (const string_ref & lhs, const string_ref & rhs) noexcept { return std::strcmp(lhs.c_str(), rhs.c_str()) <  0; }
+		constexpr
+		auto operator< (const basic_string_ref & lhs, const basic_string_ref & rhs) noexcept { return compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()) <  0; }
 
 		friend
-		auto operator==(const char * lhs, const string_ref & rhs) noexcept { return std::strcmp(lhs, rhs.c_str()) == 0; }
+		constexpr
+		auto operator==(const Char * lhs, const basic_string_ref & rhs) noexcept { return compare(c_str_iterator{lhs}, c_str_iterator{}, rhs.begin(), rhs.end()) == 0; }
 		friend
-		auto operator< (const char * lhs, const string_ref & rhs) noexcept { return std::strcmp(lhs, rhs.c_str()) <  0; }
+		constexpr
+		auto operator< (const Char * lhs, const basic_string_ref & rhs) noexcept { return compare(c_str_iterator{lhs}, c_str_iterator{}, rhs.begin(), rhs.end()) <  0; }
 
 		friend
-		auto operator==(const string_ref & lhs, const char * rhs) noexcept { return std::strcmp(lhs.c_str(), rhs) == 0; }
-		friend
-		auto operator< (const string_ref & lhs, const char * rhs) noexcept { return std::strcmp(lhs.c_str(), rhs) <  0; }
-
-		friend
-		decltype(auto) operator<<(std::ostream & os, const string_ref & self) {
+		decltype(auto) operator<<(std::ostream & os, const basic_string_ref & self) {
 			for(auto & tmp : self) os << tmp;
 			return os;
 		}
 	};
 	PTL_PACK_END
-	static_assert(sizeof(string_ref) == 2 * sizeof(const char *), "invalid size of string_ref detected");
+
+	using string_ref = basic_string_ref<char>;
+	static_assert(sizeof(string_ref)           == 2 * sizeof(const char *), "invalid size of string_ref detected");
+	static_assert(sizeof(string_ref::iterator) ==     sizeof(const char *), "invalid size of string_ref::iterator detected");
 
 	namespace literals {
 		inline
-		auto operator""_sr(const char * ptr, std::size_t) noexcept -> string_ref { return {ptr}; }
+		constexpr
+		auto operator""_sr(const char * ptr, std::size_t) noexcept { return string_ref{ptr}; }
 	}
 }
+
+template<typename Char>
+struct std::hash<ptl::basic_string_ref<Char>> final {
+	auto operator()(const ptl::basic_string_ref<Char> & self) const noexcept -> std::size_t {
+		return ptl::internal::fnv_1a(reinterpret_cast<const char *>(self.data()), self.size() * sizeof(Char));
+	}
+};

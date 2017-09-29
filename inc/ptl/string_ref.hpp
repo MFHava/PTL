@@ -7,6 +7,7 @@
 #pragma once
 #include "internal/type_checks.hpp"
 #include "internal/operators.hpp"
+#include "internal/compiler_detection.hpp"
 #include <string>
 #include <cassert>
 #include <cstddef>

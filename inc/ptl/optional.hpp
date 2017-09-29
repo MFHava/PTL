@@ -8,7 +8,6 @@
 #include "internal/type_checks.hpp"
 #include "internal/compiler_detection.hpp"
 #include <cassert>
-#include <cstdint>
 #include <utility>
 #include <ostream>
 

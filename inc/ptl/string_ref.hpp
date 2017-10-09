@@ -12,6 +12,7 @@
 #include <stdexcept>
 #include <functional>
 #include <boost/operators.hpp>
+#include <boost/concept_check.hpp>
 
 namespace ptl {
 	PTL_PACK_BEGIN
@@ -48,6 +49,7 @@ namespace ptl {
 		private:
 			const Char * ptr{nullptr};
 		};
+		BOOST_CONCEPT_ASSERT((boost::InputIterator<c_str_iterator>));
 
 		template<typename InputIterator1, typename InputIterator2>
 		constexpr
@@ -115,6 +117,7 @@ namespace ptl {
 
 			const Char * ptr{nullptr};
 		};
+		BOOST_CONCEPT_ASSERT((boost::RandomAccessIterator<iterator>));
 		using const_iterator         = iterator;
 		using reverse_iterator       = std::reverse_iterator<iterator>;
 		using const_reverse_iterator = reverse_iterator;
@@ -237,6 +240,7 @@ namespace ptl {
 	PTL_PACK_END
 
 	using string_ref = basic_string_ref<char>;
+	BOOST_CONCEPT_ASSERT((boost::RandomAccessContainer<string_ref>));
 	static_assert(sizeof(string_ref)           == 2 * sizeof(const char *), "invalid size of string_ref detected");
 	static_assert(sizeof(string_ref::iterator) ==     sizeof(const char *), "invalid size of string_ref::iterator detected");
 

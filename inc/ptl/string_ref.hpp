@@ -6,12 +6,12 @@
 
 #pragma once
 #include "internal/utility.hpp"
-#include "internal/operators.hpp"
 #include "internal/type_checks.hpp"
 #include <string>
 #include <ostream>
 #include <stdexcept>
 #include <functional>
+#include <boost/operators.hpp>
 
 namespace ptl {
 	PTL_PACK_BEGIN
@@ -20,19 +20,11 @@ namespace ptl {
 	//! @attention the referenced string is not necessarily null-terminated!
 	template<typename Char>
 	class basic_string_ref final :
-		internal::comparison1<basic_string_ref<Char>,
-			internal::comparison2_symmetric<basic_string_ref<Char>, Char *>
+		boost::totally_ordered1<basic_string_ref<Char>,
+			boost::totally_ordered2<basic_string_ref<Char>, const Char *>
 		>
 	{
-		class c_str_iterator final : internal::postfix_inc<c_str_iterator> {
-			const Char * ptr{nullptr};
-		public:
-			using iterator_category = std::input_iterator_tag;
-			using value_type        = Char;
-			using difference_type   = std::ptrdiff_t;
-			using pointer           = const Char *;
-			using reference         = const Char &;
-
+		struct c_str_iterator final : boost::input_iterator_helper<c_str_iterator, Char> {
 			constexpr
 			c_str_iterator() {}
 			constexpr
@@ -45,7 +37,7 @@ namespace ptl {
 			}
 
 			constexpr
-			auto operator*() const -> reference {
+			auto operator*() const -> const Char & {
 				PTL_REQUIRES(ptr);
 				return *ptr;
 			}
@@ -53,9 +45,8 @@ namespace ptl {
 			friend
 			constexpr
 			auto operator==(const c_str_iterator & lhs, const c_str_iterator & rhs) { return lhs.ptr == rhs.ptr; }
-			friend
-			constexpr
-			auto operator!=(const c_str_iterator & lhs, const c_str_iterator & rhs) { return !(lhs == rhs); }
+		private:
+			const Char * ptr{nullptr};
 		};
 
 		template<typename InputIterator1, typename InputIterator2>
@@ -80,83 +71,49 @@ namespace ptl {
 		using const_pointer          = const Char *;
 		using reference              =       Char &;
 		using const_reference        = const Char &;
-		class iterator final :
-			internal::comparison1<iterator,
-				internal::postfix<iterator,
-					internal::additive2<iterator, std::ptrdiff_t,
-						internal::subtractive2<iterator, std::ptrdiff_t>
-					>
-				>
-			>
-		{
-			friend class basic_string_ref<Char>;
-
-			const Char * ptr{nullptr};
-			
-			constexpr
-			explicit
-			iterator(const Char * ptr) : ptr{ptr} {}
-		public:
-			using iterator_category = std::random_access_iterator_tag;
-			using value_type        = Char;
-			using difference_type   = std::ptrdiff_t;
-			using pointer           = const Char *;
-			using reference         = const Char &;
-
+		struct iterator final : public boost::random_access_iterator_helper<iterator, Char, std::ptrdiff_t, const Char *, const Char &> {
 			constexpr
 			iterator() noexcept {}
 
 			constexpr
-			decltype(auto) operator++() noexcept {
-				PTL_REQUIRES(ptr);
-				++ptr;
-				return *this;
-			}
+			decltype(auto) operator++() noexcept { move(+1); return *this; }
 			constexpr
-			decltype(auto) operator--() noexcept {
-				PTL_REQUIRES(ptr);
-				--ptr;
-				return *this;
-			}
-
+			decltype(auto) operator--() noexcept { move(-1); return *this; }
+			
 			constexpr
-			decltype(auto) operator*() const {
+			auto operator*() const -> const Char & {
 				PTL_REQUIRES(ptr);
 				return *ptr;
 			}
-
+			
 			constexpr
-			decltype(auto) operator+=(difference_type count) {
-				PTL_REQUIRES(ptr);
-				ptr += count;
-				return *this;
-			}
+			decltype(auto) operator+=(std::ptrdiff_t count) { move(+count); return *this; }
 			constexpr
-			decltype(auto) operator-=(difference_type count) {
-				PTL_REQUIRES(ptr);
-				ptr -= count;
-				return *this;
-			}
-
-			constexpr
-			decltype(auto) operator[](difference_type count) {
-				PTL_REQUIRES(ptr);
-				return ptr[count];
-			}
-
+			decltype(auto) operator-=(std::ptrdiff_t count) { move(-count); return *this; }
+			
 			friend
 			constexpr
-			auto operator+(difference_type lhs, const iterator & rhs) { return rhs + lhs; }
-			friend
-			constexpr
-			auto operator-(const iterator & lhs, const iterator & rhs) { return lhs.ptr - rhs.ptr; }
-
+			auto operator-(const iterator & lhs, const iterator & rhs) -> std::ptrdiff_t { return lhs.ptr - rhs.ptr; }
 			friend
 			constexpr
 			auto operator==(const iterator & lhs, const iterator & rhs) { return lhs.ptr == rhs.ptr; }
 			friend
 			constexpr
 			auto operator< (const iterator & lhs, const iterator & rhs) { return lhs.ptr <  rhs.ptr; }
+		private:
+			friend class basic_string_ref<Char>;
+
+			constexpr
+			void move(std::ptrdiff_t count) {
+				PTL_REQUIRES(ptr);
+				ptr += count;
+			}
+
+			explicit
+			constexpr
+			iterator(const Char * ptr) : ptr{ptr} {}
+
+			const Char * ptr{nullptr};
 		};
 		using const_iterator         = iterator;
 		using reverse_iterator       = std::reverse_iterator<iterator>;

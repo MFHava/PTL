@@ -10,7 +10,7 @@ The Portable Template Library (PTL) is a header-only library providing "standard
 
 Requirements
 ============ 
-The PTL requires only a conformant C++14 implementation and has no external depedencies.
+The PTL requires a conformant C++14 implementation and header-only Boost libraries.
 The included unit tests depend on CMake and Boost.Test.
 
 Historical Note

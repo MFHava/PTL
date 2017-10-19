@@ -13,6 +13,7 @@
 #include <functional>
 #include <boost/operators.hpp>
 #include <boost/concept_check.hpp>
+#include <boost/functional/hash.hpp>
 
 namespace ptl {
 	PTL_PACK_BEGIN
@@ -253,7 +254,5 @@ namespace ptl {
 
 template<typename Char>
 struct std::hash<ptl::basic_string_ref<Char>> final {
-	auto operator()(const ptl::basic_string_ref<Char> & self) const noexcept -> std::size_t {
-		return ptl::internal::fnv_1a(reinterpret_cast<const char *>(self.data()), self.size() * sizeof(Char));
-	}
+	auto operator()(const ptl::basic_string_ref<Char> & self) const noexcept -> std::size_t { return boost::hash_range(self.data(),  self.data() + self.size()); }
 };

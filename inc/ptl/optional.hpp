@@ -5,10 +5,8 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
+#include "internal/utility.hpp"
 #include "internal/type_checks.hpp"
-#include "internal/compiler_detection.hpp"
-#include <cassert>
-#include <utility>
 #include <ostream>
 
 namespace ptl {
@@ -82,8 +80,14 @@ namespace ptl {
 		auto operator->() const -> const Type * { return &**this; }
 		auto operator->()       ->       Type * { return &**this; }
 
-		auto operator*() const -> const Type & { assert(initialized); return reinterpret_cast<const Type &>(data); }
-		auto operator*()       ->       Type & { assert(initialized); return reinterpret_cast<      Type &>(data); }
+		auto operator*() const -> const Type & {
+			PTL_REQUIRES(initialized);
+			return reinterpret_cast<const Type &>(data);
+		}
+		auto operator*()       ->       Type & {
+			PTL_REQUIRES(initialized);
+			return reinterpret_cast<      Type &>(data);
+		}
 
 		explicit operator bool() const noexcept { return  initialized; }
 		auto operator!() const noexcept -> bool { return !initialized; }
@@ -104,7 +108,7 @@ namespace ptl {
 				lhs = std::move(*rhs);
 				rhs.reset();
 			} else {
-				assert(lhs && rhs);
+				PTL_REQUIRES(lhs && rhs);
 				using std::swap;
 				swap(*lhs, *rhs);
 			}

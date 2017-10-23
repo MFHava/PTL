@@ -8,7 +8,6 @@
 #include "internal/utility.hpp"
 #include "internal/type_checks.hpp"
 #include <limits>
-#include <cassert>
 #include <cstddef>
 #include <ostream>
 #include <iterator>
@@ -112,9 +111,15 @@ namespace ptl {
 		}
 
 		constexpr
-		auto operator[](size_type index) const noexcept -> const_reference { assert(!empty()); return first[index]; }
+		auto operator[](size_type index) const noexcept -> const_reference {
+			PTL_REQUIRES(index < size());
+			return first[index];
+		}
 		constexpr
-		auto operator[](size_type index)       noexcept ->       reference { assert(!empty()); return first[index]; }
+		auto operator[](size_type index)       noexcept ->       reference {
+			PTL_REQUIRES(index < size());
+			return first[index];
+		}
 
 		constexpr
 		auto size()  const noexcept -> size_type { return last - first; }

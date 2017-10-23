@@ -54,12 +54,12 @@ namespace ptl {
 
 		constexpr
 		auto operator[](size_type index) const noexcept -> const_reference {
-			PTL_REQUIRES(index < Size);
+			PTL_REQUIRES(index < size());
 			return values[index];
 		}
 		constexpr
 		auto operator[](size_type index)       noexcept ->       reference {
-			PTL_REQUIRES(index < Size);
+			PTL_REQUIRES(index < size());
 			return values[index];
 		}
 

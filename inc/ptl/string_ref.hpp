@@ -11,7 +11,6 @@
 #include <ostream>
 #include <stdexcept>
 #include <functional>
-#include <boost/operators.hpp>
 #include <boost/concept_check.hpp>
 #include <boost/functional/hash.hpp>
 
@@ -21,11 +20,11 @@ namespace ptl {
 	//! @tparam Char character type referenced
 	//! @attention the referenced string is not necessarily null-terminated!
 	template<typename Char>
-	class basic_string_ref final :
+	class basic_string_ref final : public internal::random_access_container_base<basic_string_ref<Char>, 
 		boost::totally_ordered1<basic_string_ref<Char>,
 			boost::totally_ordered2<basic_string_ref<Char>, const Char *>
 		>
-	{
+	> {
 		struct c_str_iterator final : boost::input_iterator_helper<c_str_iterator, Char> {
 			constexpr
 			c_str_iterator() noexcept {}
@@ -74,57 +73,14 @@ namespace ptl {
 		using const_pointer          = const Char *;
 		using reference              =       Char &;
 		using const_reference        = const Char &;
-		struct iterator final : boost::random_access_iterator_helper<iterator, Char, std::ptrdiff_t, const Char *, const Char &> {
-			constexpr
-			iterator() noexcept {}
-
-			constexpr
-			decltype(auto) operator++() noexcept { move(+1); return *this; }
-			constexpr
-			decltype(auto) operator--() noexcept { move(-1); return *this; }
-			
-			constexpr
-			auto operator*() const noexcept -> const Char & {
-				PTL_REQUIRES(ptr);
-				return *ptr;
-			}
-			
-			constexpr
-			decltype(auto) operator+=(std::ptrdiff_t count) noexcept { move(+count); return *this; }
-			constexpr
-			decltype(auto) operator-=(std::ptrdiff_t count) noexcept { move(-count); return *this; }
-			
-			friend
-			constexpr
-			auto operator-(const iterator & lhs, const iterator & rhs) noexcept -> std::ptrdiff_t { return lhs.ptr - rhs.ptr; }
-			friend
-			constexpr
-			auto operator==(const iterator & lhs, const iterator & rhs) noexcept { return lhs.ptr == rhs.ptr; }
-			friend
-			constexpr
-			auto operator< (const iterator & lhs, const iterator & rhs) noexcept { return lhs.ptr <  rhs.ptr; }
-		private:
-			friend class basic_string_ref<Char>;
-
-			constexpr
-			void move(std::ptrdiff_t count) noexcept {
-				PTL_REQUIRES(ptr);
-				ptr += count;
-			}
-
-			explicit
-			constexpr
-			iterator(const Char * ptr) noexcept : ptr{ptr} {}
-
-			const Char * ptr{nullptr};
-		};
+		using iterator               = internal::random_access_iterator<basic_string_ref<Char>, const Char>;
 		BOOST_CONCEPT_ASSERT((boost::RandomAccessIterator<iterator>));
 		using const_iterator         = iterator;
-		using reverse_iterator       = std::reverse_iterator<iterator>;
-		using const_reverse_iterator = reverse_iterator;
+		using reverse_iterator       = std::reverse_iterator<      iterator>;
+		using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
 		constexpr
-		basic_string_ref() noexcept {}
+		basic_string_ref() noexcept =default;
 
 		//! @brief construct basic_string_ref from c-string
 		//! @param[in] str null-terminated string
@@ -153,15 +109,6 @@ namespace ptl {
 			PTL_REQUIRES(index < size());
 			return first[index];
 		}
-		constexpr
-		auto at(std::size_t index) const -> const_reference {
-			if(index >= size()) throw std::out_of_range{"index out of range"}; 
-			return (*this)[index];
-		}
-		constexpr
-		auto front() const noexcept -> const_reference { return (*this)[0]; }
-		constexpr
-		auto back()  const noexcept -> const_reference { return (*this)[size() - 1]; }
 
 		constexpr
 		auto data() const noexcept -> const_pointer { return first; }
@@ -170,8 +117,6 @@ namespace ptl {
 		auto size() const noexcept -> size_type { return last - first; }
 		constexpr
 		auto max_size() const noexcept { return std::numeric_limits<size_type>::max(); }
-		constexpr
-		auto empty() const noexcept { return size() == 0; }
 
 		constexpr
 		void remove_prefix(iterator pos) noexcept {
@@ -194,22 +139,9 @@ namespace ptl {
 		}
 
 		constexpr
-		auto begin()  const noexcept { return const_iterator{first}; }
+		auto begin() const noexcept { return const_iterator{first}; }
 		constexpr
-		auto cbegin() const noexcept { return begin(); }
-		constexpr
-		auto end()    const noexcept { return const_iterator{last}; }
-		constexpr
-		auto cend()   const noexcept { return end(); }
-
-		constexpr
-		auto rbegin()  const noexcept { return const_reverse_iterator{end()}; }
-		constexpr
-		auto crbegin() const noexcept { return rbegin(); }
-		constexpr
-		auto rend()    const noexcept { return const_reverse_iterator{begin()}; }
-		constexpr
-		auto crend()   const noexcept { return rend(); }
+		auto end()   const noexcept { return const_iterator{last}; }
 
 		constexpr
 		void swap(basic_string_ref & other) noexcept {

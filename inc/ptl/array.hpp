@@ -5,14 +5,14 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
+#include "internal/utility.hpp"
 #include "internal/type_checks.hpp"
-#include "internal/compiler_detection.hpp"
-#include <cassert>
 #include <cstddef>
 #include <ostream>
 #include <utility>
 #include <iterator>
 #include <stdexcept>
+#include <boost/concept_check.hpp>
 
 namespace ptl {
 	PTL_PACK_BEGIN
@@ -20,7 +20,9 @@ namespace ptl {
 	//! @tparam Type type of the stored array
 	//! @tparam Size size of the stored array
 	template<typename Type, std::size_t Size>
-	struct array final {//TODO: evaluate differences to the standard!  
+	class array final : public internal::random_access_container_base<array<Type, Size>, boost::totally_ordered1<array<Type, Size>>> {
+		Type values[Size];
+	public:
 		static_assert(internal::is_abi_compatible<Type>::value, "Type does not fulfill ABI requirements");
 
 		using value_type             = Type;
@@ -30,8 +32,10 @@ namespace ptl {
 		using const_reference        = const value_type &;
 		using pointer                =       value_type *;
 		using const_pointer          = const value_type *;
-		using iterator               =       value_type *;
-		using const_iterator         = const value_type *;
+		using iterator               = internal::random_access_iterator<array<Type, Size>,       Type>;
+		BOOST_CONCEPT_ASSERT((boost::Mutable_RandomAccessIterator<iterator>));
+		using const_iterator         = internal::random_access_iterator<array<Type, Size>, const Type>;
+		BOOST_CONCEPT_ASSERT((boost::RandomAccessIterator<const_iterator>));
 		using reverse_iterator       = std::reverse_iterator<      iterator>;
 		using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
@@ -39,31 +43,25 @@ namespace ptl {
 		constexpr
 		array(Args &&... args) : values{std::forward<Args>(args)...} {}
 
+		constexpr
 		array(const array &) =default;
+		constexpr
 		array(array && other) noexcept { swap(*this, other); }
+		constexpr
 		auto operator=(const array &) -> array & =default;
+		constexpr
 		auto operator=(array && other) noexcept -> array & { swap(*this, other); return *this; }
-		~array() noexcept =default;
 
 		constexpr
-		auto at(size_type index) const -> const_reference { return validate_index(index), (*this)[index]; }
+		auto operator[](size_type index) const noexcept -> const_reference {
+			PTL_REQUIRES(index < Size);
+			return values[index];
+		}
 		constexpr
-		auto at(size_type index)       ->       reference { return validate_index(index), (*this)[index]; }
-
-		constexpr
-		auto operator[](size_type index) const noexcept -> const_reference { assert(index < Size); return values[index]; }
-		constexpr
-		auto operator[](size_type index)       noexcept ->       reference { assert(index < Size); return values[index]; }
-
-		constexpr
-		auto front() const -> const_reference { return (*this)[0]; }
-		constexpr
-		auto front()       ->       reference { return (*this)[0]; }
-
-		constexpr
-		auto back() const -> const_reference { return (*this)[Size - 1]; }
-		constexpr
-		auto back()       ->       reference { return (*this)[Size - 1]; }
+		auto operator[](size_type index)       noexcept ->       reference {
+			PTL_REQUIRES(index < Size);
+			return values[index];
+		}
 
 		constexpr
 		auto data() const noexcept -> const_pointer { return values; }
@@ -71,74 +69,51 @@ namespace ptl {
 		auto data()       noexcept ->       pointer { return values; }
 
 		constexpr
-		auto begin()  const noexcept -> const_iterator { return values; }
+		auto begin() const noexcept { return const_iterator{values}; }
 		constexpr
-		auto begin()        noexcept ->       iterator { return values; }
+		auto begin()       noexcept { return iterator{values}; }
 		constexpr
-		auto cbegin() const noexcept -> const_iterator { return values; }
+		auto end()   const noexcept { return const_iterator{values + Size}; }
+		constexpr
+		auto end()         noexcept { return iterator{values + Size}; }
 
 		constexpr
-		auto end()  const noexcept -> const_iterator { return values + Size; }
+		auto size() const noexcept { return Size; }
 		constexpr
-		auto end()        noexcept ->       iterator { return values + Size; }
-		constexpr
-		auto cend() const noexcept -> const_iterator { return values + Size; }
+		auto max_size() const noexcept { return Size; }
 
 		constexpr
-		auto rbegin()  const noexcept -> const_reverse_iterator { return const_reverse_iterator{end()}; }
-		constexpr
-		auto rbegin()        noexcept ->       reverse_iterator { return reverse_iterator{end()}; }
-		constexpr
-		auto crbegin() const noexcept -> const_reverse_iterator { return const_reverse_iterator{cend()}; }
-
-		constexpr
-		auto rend()  const noexcept -> const_reverse_iterator { return const_reverse_iterator{begin()}; }
-		constexpr
-		auto rend()        noexcept ->       reverse_iterator { return reverse_iterator{begin()}; }
-		constexpr
-		auto crend() const noexcept -> const_reverse_iterator { return const_reverse_iterator{cbegin()}; }
-
-		constexpr
-		auto empty() const noexcept -> bool { return size() == 0; }
-		constexpr
-		auto size() const noexcept -> size_type { return Size; }
-		constexpr
-		auto max_size() const noexcept -> size_type { return Size; }
-
 		void fill(const_reference value) { for(auto & v : values) v = value; }
 
-		friend
-		void swap(array & lhs, array & rhs) noexcept {
+		constexpr
+		void swap(array & other) noexcept {
 			using std::swap;
 			for(size_type i{0}; i < Size; ++i)
-				swap(lhs.values[i], rhs.values[i]);
+				swap(values[i], other.values[i]);
 		}
+		friend
+		constexpr
+		void swap(array & lhs, array & rhs) noexcept { lhs.swap(rhs); }
 
 		friend
-		auto operator==(const array & lhs, const array & rhs) noexcept -> bool {
+		constexpr
+		auto operator==(const array & lhs, const array & rhs) noexcept {
 			for(size_type i{0}; i < Size; ++i)
 				if(lhs[i] != rhs[i])
 					return false;
 			return true;
 		}
 		friend
-		auto operator!=(const array & lhs, const array & rhs) noexcept -> bool { return !(lhs == rhs); }
-		friend
-		auto operator< (const array & lhs, const array & rhs) noexcept -> bool {
+		constexpr
+		auto operator< (const array & lhs, const array & rhs) noexcept {
 			for(size_type i{0}; i < Size; ++i)
 				if(!(lhs[i] < rhs[i]))
 					return false;
 			return true;
 		}
-		friend
-		auto operator<=(const array & lhs, const array & rhs) noexcept -> bool { return !(rhs < lhs); }
-		friend
-		auto operator> (const array & lhs, const array & rhs) noexcept -> bool { return rhs < lhs; }
-		friend
-		auto operator>=(const array & lhs, const array & rhs) noexcept -> bool { return !(lhs < rhs); }
 
 		friend
-		auto operator<<(std::ostream & os, const array & self) -> std::ostream & {
+		decltype(auto) operator<<(std::ostream & os, const array & self) {
 			os << '[';
 			if(!self.empty()) {
 				auto it{self.begin()};
@@ -147,24 +122,19 @@ namespace ptl {
 			}
 			return os << ']';
 		}
-	private:
-		constexpr
-		void validate_index(size_type index) const { if(index >= size()) throw std::out_of_range{"index out of range"}; }
-
-		value_type values[Size];
 	};
 	PTL_PACK_END
 
 	template<std::size_t Index, typename Type, std::size_t Size>
 	constexpr
-	auto get(const array<Type, Size> & self) noexcept -> typename array<Type, Size>::const_reference {
+	decltype(auto) get(const array<Type, Size> & self) noexcept {
 		static_assert(Index < Size, "index out of range");
 		return self[Index];
 	}
 
 	template<std::size_t Index, typename Type, std::size_t Size>
 	constexpr
-	auto get(      array<Type, Size> & self) noexcept -> typename array<Type, Size>::      reference {
+	decltype(auto) get(      array<Type, Size> & self) noexcept {
 		static_assert(Index < Size, "index out of range");
 		return self[Index];
 	}

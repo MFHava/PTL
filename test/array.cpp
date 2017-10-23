@@ -6,6 +6,9 @@
 
 #include "ptl/array.hpp"
 
+BOOST_CONCEPT_ASSERT((boost::Mutable_RandomAccessContainer<ptl::array<int, 10>>));
+static_assert(sizeof(ptl::array<int, 10>) == 10 * sizeof(int), "unexpected size for array detected");
+
 namespace {
 	//TODO
 }

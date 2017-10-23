@@ -28,9 +28,9 @@ namespace ptl {
 	{
 		struct c_str_iterator final : boost::input_iterator_helper<c_str_iterator, Char> {
 			constexpr
-			c_str_iterator() {}
+			c_str_iterator() noexcept {}
 			constexpr
-			c_str_iterator(const Char * ptr) : ptr{ptr} {}
+			c_str_iterator(const Char * ptr) noexcept : ptr{ptr} {}
 
 			constexpr
 			decltype(auto) operator++() noexcept {
@@ -39,14 +39,14 @@ namespace ptl {
 			}
 
 			constexpr
-			auto operator*() const -> const Char & {
+			auto operator*() const noexcept -> const Char & {
 				PTL_REQUIRES(ptr);
 				return *ptr;
 			}
 
 			friend
 			constexpr
-			auto operator==(const c_str_iterator & lhs, const c_str_iterator & rhs) { return lhs.ptr == rhs.ptr; }
+			auto operator==(const c_str_iterator & lhs, const c_str_iterator & rhs) noexcept { return lhs.ptr == rhs.ptr; }
 		private:
 			const Char * ptr{nullptr};
 		};
@@ -74,7 +74,7 @@ namespace ptl {
 		using const_pointer          = const Char *;
 		using reference              =       Char &;
 		using const_reference        = const Char &;
-		struct iterator final : public boost::random_access_iterator_helper<iterator, Char, std::ptrdiff_t, const Char *, const Char &> {
+		struct iterator final : boost::random_access_iterator_helper<iterator, Char, std::ptrdiff_t, const Char *, const Char &> {
 			constexpr
 			iterator() noexcept {}
 
@@ -84,37 +84,37 @@ namespace ptl {
 			decltype(auto) operator--() noexcept { move(-1); return *this; }
 			
 			constexpr
-			auto operator*() const -> const Char & {
+			auto operator*() const noexcept -> const Char & {
 				PTL_REQUIRES(ptr);
 				return *ptr;
 			}
 			
 			constexpr
-			decltype(auto) operator+=(std::ptrdiff_t count) { move(+count); return *this; }
+			decltype(auto) operator+=(std::ptrdiff_t count) noexcept { move(+count); return *this; }
 			constexpr
-			decltype(auto) operator-=(std::ptrdiff_t count) { move(-count); return *this; }
+			decltype(auto) operator-=(std::ptrdiff_t count) noexcept { move(-count); return *this; }
 			
 			friend
 			constexpr
-			auto operator-(const iterator & lhs, const iterator & rhs) -> std::ptrdiff_t { return lhs.ptr - rhs.ptr; }
+			auto operator-(const iterator & lhs, const iterator & rhs) noexcept -> std::ptrdiff_t { return lhs.ptr - rhs.ptr; }
 			friend
 			constexpr
-			auto operator==(const iterator & lhs, const iterator & rhs) { return lhs.ptr == rhs.ptr; }
+			auto operator==(const iterator & lhs, const iterator & rhs) noexcept { return lhs.ptr == rhs.ptr; }
 			friend
 			constexpr
-			auto operator< (const iterator & lhs, const iterator & rhs) { return lhs.ptr <  rhs.ptr; }
+			auto operator< (const iterator & lhs, const iterator & rhs) noexcept { return lhs.ptr <  rhs.ptr; }
 		private:
 			friend class basic_string_ref<Char>;
 
 			constexpr
-			void move(std::ptrdiff_t count) {
+			void move(std::ptrdiff_t count) noexcept {
 				PTL_REQUIRES(ptr);
 				ptr += count;
 			}
 
 			explicit
 			constexpr
-			iterator(const Char * ptr) : ptr{ptr} {}
+			iterator(const Char * ptr) noexcept : ptr{ptr} {}
 
 			const Char * ptr{nullptr};
 		};
@@ -174,19 +174,19 @@ namespace ptl {
 		auto empty() const noexcept { return size() == 0; }
 
 		constexpr
-		void remove_prefix(iterator pos) {
+		void remove_prefix(iterator pos) noexcept {
 			PTL_REQUIRES(pos.ptr >= first && pos.ptr <= last);
 			first = pos.ptr;
 		}
 
 		constexpr
-		void remove_suffix(iterator pos) {
+		void remove_suffix(iterator pos) noexcept {
 			PTL_REQUIRES(pos.ptr >= first && pos.ptr <= last);
 			last = pos.ptr;
 		}
 
 		constexpr
-		auto substr(iterator first, iterator last) const {
+		auto substr(iterator first, iterator last) const noexcept {
 			auto result{*this};
 			result.remove_prefix(first);
 			result.remove_suffix(last);
@@ -211,12 +211,15 @@ namespace ptl {
 		constexpr
 		auto crend()   const noexcept { return rend(); }
 
+		constexpr
+		void swap(basic_string_ref & other) noexcept {
+			using std::swap;
+			swap(first, other.first);
+			swap(last, other.last);
+		}
 		friend
 		constexpr
-		void swap(basic_string_ref & lhs, basic_string_ref & rhs) noexcept {
-			internal::swap(lhs.first, rhs.first);
-			internal::swap(lhs.last,  rhs.last);
-		}
+		void swap(basic_string_ref & lhs, basic_string_ref & rhs) noexcept { lhs.swap(rhs); }
 
 		friend
 		constexpr

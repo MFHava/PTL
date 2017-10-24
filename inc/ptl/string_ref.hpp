@@ -6,12 +6,9 @@
 
 #pragma once
 #include "internal/utility.hpp"
-#include "internal/type_checks.hpp"
 #include <string>
 #include <ostream>
-#include <stdexcept>
 #include <functional>
-#include <boost/concept_check.hpp>
 #include <boost/functional/hash.hpp>
 
 namespace ptl {
@@ -20,11 +17,9 @@ namespace ptl {
 	//! @tparam Char character type referenced
 	//! @attention the referenced string is not necessarily null-terminated!
 	template<typename Char>
-	class basic_string_ref final : public internal::random_access_container_base<basic_string_ref<Char>, 
-		boost::totally_ordered1<basic_string_ref<Char>,
-			boost::totally_ordered2<basic_string_ref<Char>, const Char *>
-		>
-	> {
+	class basic_string_ref final : public internal::contiguous_container_base<basic_string_ref<Char>, const Char, boost::totally_ordered2<basic_string_ref<Char>, const Char *>> {
+		using base_type = internal::contiguous_container_base<basic_string_ref<Char>, const Char, boost::totally_ordered2<basic_string_ref<Char>, const Char *>>;
+
 		struct c_str_iterator final : boost::input_iterator_helper<c_str_iterator, Char> {
 			constexpr
 			c_str_iterator() noexcept {}
@@ -43,6 +38,10 @@ namespace ptl {
 				return *ptr;
 			}
 
+			//input_iterators can also act as a range
+			auto begin() const { return *this; }
+			auto end() const { return c_str_iterator{}; }
+
 			friend
 			constexpr
 			auto operator==(const c_str_iterator & lhs, const c_str_iterator & rhs) noexcept { return lhs.ptr == rhs.ptr; }
@@ -51,34 +50,8 @@ namespace ptl {
 		};
 		BOOST_CONCEPT_ASSERT((boost::InputIterator<c_str_iterator>));
 
-		template<typename InputIterator1, typename InputIterator2>
-		constexpr
-		static auto compare(InputIterator1 first1, InputIterator1 last1, InputIterator2 first2, InputIterator2 last2) noexcept -> int {
-			std::tie(first1, first2) = std::mismatch(first1, last1, first2, last2);
-			if(first1 == last1) {
-				if(first2 == last2) return 0;
-				else return -1;
-			} else {
-				if(first2 == last2) return +1;
-				else return *first1 - *first2;
-			}
-		}
-
 		const Char * first{nullptr}, * last{nullptr};
 	public:
-		using value_type             = Char;
-		using size_type              = std::size_t;
-		using difference_type        = std::ptrdiff_t;
-		using pointer                =       Char *;
-		using const_pointer          = const Char *;
-		using reference              =       Char &;
-		using const_reference        = const Char &;
-		using iterator               = internal::random_access_iterator<basic_string_ref<Char>, const Char>;
-		BOOST_CONCEPT_ASSERT((boost::RandomAccessIterator<iterator>));
-		using const_iterator         = iterator;
-		using reverse_iterator       = std::reverse_iterator<      iterator>;
-		using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-
 		constexpr
 		basic_string_ref() noexcept =default;
 
@@ -105,33 +78,26 @@ namespace ptl {
 		auto operator=(const basic_string_ref &) noexcept -> basic_string_ref & =default;
 
 		constexpr
-		auto operator[](std::size_t index) const noexcept -> const_reference {
-			PTL_REQUIRES(index < size());
-			return first[index];
-		}
+		auto data() const noexcept -> const Char * { return first; }
+		constexpr
+		auto size() const noexcept -> std::size_t { return last - first; }
+		constexpr
+		auto max_size() const noexcept { return std::numeric_limits<std::size_t>::max(); }
 
 		constexpr
-		auto data() const noexcept -> const_pointer { return first; }
-
-		constexpr
-		auto size() const noexcept -> size_type { return last - first; }
-		constexpr
-		auto max_size() const noexcept { return std::numeric_limits<size_type>::max(); }
-
-		constexpr
-		void remove_prefix(iterator pos) noexcept {
+		void remove_prefix(typename base_type::iterator pos) noexcept {
 			PTL_REQUIRES(pos.ptr >= first && pos.ptr <= last);
 			first = pos.ptr;
 		}
-
+		
 		constexpr
-		void remove_suffix(iterator pos) noexcept {
+		void remove_suffix(typename base_type::iterator pos) noexcept {
 			PTL_REQUIRES(pos.ptr >= first && pos.ptr <= last);
 			last = pos.ptr;
 		}
-
+		
 		constexpr
-		auto substr(iterator first, iterator last) const noexcept {
+		auto substr(typename base_type::iterator first, typename base_type::iterator last) const noexcept {
 			auto result{*this};
 			result.remove_prefix(first);
 			result.remove_suffix(last);
@@ -139,33 +105,25 @@ namespace ptl {
 		}
 
 		constexpr
-		auto begin() const noexcept { return const_iterator{first}; }
-		constexpr
-		auto end()   const noexcept { return const_iterator{last}; }
-
-		constexpr
 		void swap(basic_string_ref & other) noexcept {
 			using std::swap;
 			swap(first, other.first);
-			swap(last, other.last);
+			swap(last,  other.last);
 		}
-		friend
-		constexpr
-		void swap(basic_string_ref & lhs, basic_string_ref & rhs) noexcept { lhs.swap(rhs); }
 
 		friend
 		constexpr
-		auto operator==(const basic_string_ref & lhs, const basic_string_ref & rhs) noexcept { return compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()) == 0; }
+		auto operator==(const basic_string_ref & lhs, const basic_string_ref & rhs) noexcept { return base_type::equal(lhs, rhs); }
 		friend
 		constexpr
-		auto operator< (const basic_string_ref & lhs, const basic_string_ref & rhs) noexcept { return compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()) <  0; }
+		auto operator< (const basic_string_ref & lhs, const basic_string_ref & rhs) noexcept { return base_type::less(lhs, rhs); }
 
 		friend
 		constexpr
-		auto operator==(const Char * lhs, const basic_string_ref & rhs) noexcept { return compare(c_str_iterator{lhs}, c_str_iterator{}, rhs.begin(), rhs.end()) == 0; }
+		auto operator==(const Char * lhs, const basic_string_ref & rhs) noexcept { return base_type::equal(c_str_iterator{lhs}, rhs); }
 		friend
 		constexpr
-		auto operator< (const Char * lhs, const basic_string_ref & rhs) noexcept { return compare(c_str_iterator{lhs}, c_str_iterator{}, rhs.begin(), rhs.end()) <  0; }
+		auto operator< (const Char * lhs, const basic_string_ref & rhs) noexcept { return base_type::less(c_str_iterator{lhs}, rhs); }
 
 		friend
 		decltype(auto) operator<<(std::ostream & os, const basic_string_ref & self) {

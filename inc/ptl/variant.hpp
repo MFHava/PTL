@@ -135,10 +135,10 @@ namespace ptl {
 
 		template<typename Visitor>
 		constexpr
-		auto visit(Visitor && visitor) const -> decltype(auto) { return internal::visit<decltype(visitor(std::declval<DefaultType &>())), DefaultType, Types...>::dispatch(type, data, visitor); }
+		decltype(auto) visit(Visitor && visitor) const { return internal::visit<decltype(visitor(std::declval<DefaultType &>())), DefaultType, Types...>::dispatch(type, data, visitor); }
 		template<typename Visitor>
 		constexpr
-		auto visit(Visitor && visitor)       -> decltype(auto) { return internal::visit<decltype(visitor(std::declval<DefaultType &>())), DefaultType, Types...>::dispatch(type, data, visitor); }
+		decltype(auto) visit(Visitor && visitor)       { return internal::visit<decltype(visitor(std::declval<DefaultType &>())), DefaultType, Types...>::dispatch(type, data, visitor); }
 
 		template<typename Type>
 		constexpr
@@ -168,21 +168,21 @@ namespace ptl {
 
 		friend
 		constexpr
-		auto operator==(const variant & lhs, const variant & rhs) -> bool {
+		auto operator==(const variant & lhs, const variant & rhs) {
 			if(lhs.type != rhs.type) return false;
 			if(lhs.valueless_by_exception()) return true;
 			return lhs.visit([&](const auto & value) { return value == rhs.template get<std::decay_t<decltype(value)>>(); });
 		}
 		friend
 		constexpr
-		auto operator!=(const variant & lhs, const variant & rhs) -> bool {
+		auto operator!=(const variant & lhs, const variant & rhs) {
 			if(lhs.type != rhs.type) return true;
 			if(lhs.valueless_by_exception()) return false;
 			return lhs.visit([&](const auto & value) { return value != rhs.template get<std::decay_t<decltype(value)>>(); });
 		}
 		friend
 		constexpr
-		auto operator< (const variant & lhs, const variant & rhs) -> bool {
+		auto operator< (const variant & lhs, const variant & rhs) {
 			if(rhs.valueless_by_exception()) return false;
 			if(lhs.valueless_by_exception()) return true;
 			if(lhs.type < rhs.type) return true;
@@ -191,7 +191,7 @@ namespace ptl {
 		}
 		friend
 		constexpr
-		auto operator<=(const variant & lhs, const variant & rhs) -> bool {
+		auto operator<=(const variant & lhs, const variant & rhs) {
 			if(lhs.valueless_by_exception()) return true;
 			if(rhs.valueless_by_exception()) return false;
 			if(lhs.type < rhs.type) return true;
@@ -200,7 +200,7 @@ namespace ptl {
 		}
 		friend
 		constexpr
-		auto operator> (const variant & lhs, const variant & rhs) -> bool {
+		auto operator> (const variant & lhs, const variant & rhs) {
 			if(lhs.valueless_by_exception()) return false;
 			if(rhs.valueless_by_exception()) return true;
 			if(lhs.type > rhs.type) return true;
@@ -209,7 +209,7 @@ namespace ptl {
 		}
 		friend
 		constexpr
-		auto operator>=(const variant & lhs, const variant & rhs) -> bool {
+		auto operator>=(const variant & lhs, const variant & rhs) {
 			if(rhs.valueless_by_exception()) return true;
 			if(lhs.valueless_by_exception()) return false;
 			if(lhs.type > rhs.type) return true;
@@ -218,7 +218,7 @@ namespace ptl {
 		}
 
 		friend
-		auto operator<<(std::ostream & os, const variant & self) -> std::ostream & {
+		decltype(auto) operator<<(std::ostream & os, const variant & self) {
 			if(self.valueless_by_exception()) return os << "<valueless by exception>";
 			self.visit([&](const auto & value) { os << value; });
 			return os;
@@ -230,7 +230,7 @@ namespace ptl {
 namespace std {
 	template<typename... Types>
 	struct hash<ptl::variant<Types...>> final {
-		auto operator()(const ptl::variant<Types...> & self) const -> std::size_t {
+		auto operator()(const ptl::variant<Types...> & self) const noexcept -> std::size_t {
 			if(self.valueless_by_exception()) return 0;
 			return self.visit([](const auto & value) { return std::hash<std::decay_t<decltype(value)>>{}(value); });
 		}

@@ -59,7 +59,7 @@ namespace ptl {
 		//! @param[in] str null-terminated string
 		constexpr
 		basic_string_ref(const Char * str) noexcept : first{str}, last{first} { if(last) while(*last) ++last; }
-		
+
 		//! @brief construct basic_string_ref from c-string + length
 		//! @param[in] str string to reference
 		//! @param[in] size size of string to reference
@@ -89,13 +89,13 @@ namespace ptl {
 			PTL_REQUIRES(pos.ptr >= first && pos.ptr <= last);
 			first = pos.ptr;
 		}
-		
+
 		constexpr
 		void remove_suffix(typename base_type::iterator pos) noexcept {
 			PTL_REQUIRES(pos.ptr >= first && pos.ptr <= last);
 			last = pos.ptr;
 		}
-		
+
 		constexpr
 		auto substr(typename base_type::iterator first, typename base_type::iterator last) const noexcept {
 			auto result{*this};

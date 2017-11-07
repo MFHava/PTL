@@ -19,34 +19,34 @@ namespace ptl {
 			static_assert(internal::is_abi_compatible<Type>::value, "Type does not fulfill ABI requirements");
 
 			constexpr
-			auto self() const -> const Implementation & { return static_cast<const Implementation &>(*this); }
+			decltype(auto) self() const noexcept { return static_cast<const Implementation &>(*this); }
 			constexpr
-			auto self()       ->       Implementation & { return static_cast<      Implementation &>(*this); }
+			decltype(auto) self()       noexcept { return static_cast<      Implementation &>(*this); }
 
 			template<typename ValueType>
-			struct contiguous_iterator final : boost::random_access_iterator_helper<contiguous_iterator<ValueType>, ValueType,	std::ptrdiff_t, ValueType *, ValueType &> {
+			struct contiguous_iterator final : boost::random_access_iterator_helper<contiguous_iterator<ValueType>, ValueType, std::ptrdiff_t, ValueType *, ValueType &> {
 				constexpr
 				contiguous_iterator() noexcept {}
-				
+
 				constexpr
 				decltype(auto) operator++() noexcept { move(+1); return *this; }
 				constexpr
 				decltype(auto) operator--() noexcept { move(-1); return *this; }
-				
+
 				constexpr
 				auto operator*() const noexcept -> ValueType & {
 					PTL_REQUIRES(ptr);
 					return *ptr;
 				}
-				
+
 				constexpr
 				decltype(auto) operator+=(std::ptrdiff_t count) noexcept { move(+count); return *this; }
 				constexpr
 				decltype(auto) operator-=(std::ptrdiff_t count) noexcept { move(-count); return *this; }
-				
+
 				friend
 				constexpr
-				auto operator-(const contiguous_iterator & lhs, const contiguous_iterator & rhs) noexcept -> std::ptrdiff_t { return	lhs.ptr - rhs.ptr; }
+				auto operator-(const contiguous_iterator & lhs, const contiguous_iterator & rhs) noexcept -> std::ptrdiff_t { return lhs.ptr - rhs.ptr; }
 				friend
 				constexpr
 				auto operator==(const contiguous_iterator & lhs, const contiguous_iterator & rhs) noexcept { return lhs.ptr == rhs.ptr; }
@@ -62,11 +62,11 @@ namespace ptl {
 					PTL_REQUIRES(ptr);
 					ptr += count;
 				}
-				
+
 				explicit
 				constexpr
 				contiguous_iterator(ValueType * ptr) noexcept : ptr{ptr} {}
-				
+
 				ValueType * ptr{nullptr};
 			};
 

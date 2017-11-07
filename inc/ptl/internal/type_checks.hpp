@@ -21,7 +21,7 @@ namespace ptl {
 				is_nothrow_move_assignable    = std::is_nothrow_move_assignable<type>::value,
 				is_nothrow_destructible       = std::is_nothrow_destructible<type>::value,
 			};
-	
+
 		public:
 			enum {
 				value = is_standard_layout            &&
@@ -33,15 +33,15 @@ namespace ptl {
 				        is_nothrow_destructible
 			};
 		};
-	
+
 		template<typename...>
 		struct are_abi_compatible;
-	
+
 		template<typename Type, typename... Types>
 		struct are_abi_compatible<Type, Types...> final {
 			enum { value = is_abi_compatible<Type>::value && are_abi_compatible<Types...>::value };
 		};
-	
+
 		template<>
 		struct are_abi_compatible<> final {
 			enum { value = true };

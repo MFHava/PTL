@@ -6,8 +6,6 @@
 
 #pragma once
 #include "internal/utility.hpp"
-#include <ostream>
-#include <utility>
 
 namespace ptl {
 	PTL_PACK_BEGIN
@@ -55,17 +53,6 @@ namespace ptl {
 		friend
 		constexpr
 		auto operator< (const array & lhs, const array & rhs) noexcept { return base_type::less(lhs, rhs); }
-
-		friend
-		decltype(auto) operator<<(std::ostream & os, const array & self) {
-			os << '[';
-			if(!self.empty()) {
-				auto it{self.begin()};
-				os << *it;
-				for(++it; it != self.end(); ++it) os << ", " << *it;
-			}
-			return os << ']';
-		}
 	};
 	PTL_PACK_END
 
@@ -82,4 +69,12 @@ namespace ptl {
 		static_assert(Index < Size, "index out of range");
 		return self[Index];
 	}
+
+	//TODO: arrays of size 0 are explicitly allowed (http://en.cppreference.com/w/cpp/container/array)
+	//TODO: r-value versions of get (http://en.cppreference.com/w/cpp/container/array/get)
+	//TODO: tuple_size (http://en.cppreference.com/w/cpp/container/array/tuple_size)
+	//TODO: tuple_element (http://en.cppreference.com/w/cpp/container/array/tuple_element)
+	//TODO: make_array (http://en.cppreference.com/w/cpp/experimental/make_array)
+	//TODO: to_array (http://en.cppreference.com/w/cpp/experimental/to_array)
+	//TODO: deduction guides (http://en.cppreference.com/w/cpp/container/array/deduction_guides)
 }

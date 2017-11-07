@@ -7,41 +7,40 @@
 #pragma once
 #include "internal/utility.hpp"
 #include <limits>
-#include <ostream>
 #include <initializer_list>
 
 namespace ptl {
 	namespace internal {//emulate C++17-features
 		template<typename Container>
 		constexpr
-		auto size(const Container & c) -> decltype(c.size()) { return c.size(); }
+		auto size(const Container & c) -> std::size_t { return c.size(); }
 
 		template<typename Type, std::size_t Size>
 		constexpr
-		auto size(const Type(&array)[Size]) noexcept -> std::size_t { return Size; }
+		auto size(const Type(&array)[Size]) noexcept { return Size; }
 
 		template<typename Container>
 		constexpr
-		auto data(      Container & c) -> decltype(c.data()) { return c.data(); }
+		auto data(      Container & c) { return c.data(); }
 
 		template<typename Container>
 		constexpr
-		auto data(const Container & c) -> decltype(c.data()) { return c.data(); }
+		auto data(const Container & c) { return c.data(); }
 
 		template<typename Type, std::size_t Size>
 		constexpr
-		auto data(Type(&array)[Size]) noexcept -> Type * { return array; }
+		auto data(Type(&array)[Size]) noexcept { return array; }
 
 		template<typename Type>
 		constexpr
-		auto data(std::initializer_list<Type> ilist) noexcept -> const Type * { return ilist.begin(); }
+		auto data(std::initializer_list<Type> ilist) noexcept { return ilist.begin(); }
 	}
 
 	PTL_PACK_BEGIN
 	//! @brief non-owning reference to array
 	//! @tparam Type type of the referenced array
 	template<typename Type>
-	class array_ref final : public internal::contiguous_container_base<array_ref<Type>, Type> {//TODO: evaluate differences to the standard!
+	class array_ref final : public internal::contiguous_container_base<array_ref<Type>, Type> {
 		using base_type = internal::contiguous_container_base<array_ref<Type>, Type>;
 
 		Type * first{nullptr}, * last{nullptr};
@@ -74,24 +73,8 @@ namespace ptl {
 		//! @param[in] range range to reference
 		template<typename ContiguousRange>
 		constexpr
-		array_ref(ContiguousRange & range) noexcept : array_ref{internal::data(range), internal::size(range)} {}
+		array_ref(ContiguousRange && range) noexcept : array_ref{internal::data(range), internal::size(range)} {}
 
-		template<typename OtherType>
-		constexpr
-		array_ref(const array_ref<OtherType> & other) noexcept { *this = other; }
-
-		template<typename OtherType>
-		constexpr
-		auto operator=(const array_ref<OtherType> & other) noexcept -> array_ref & {
-			if(other.empty()) first = last = nullptr;
-			else {
-				first = &*other.begin();
-				last = first + other.size();
-			}
-			return *this;
-		}
-
-		constexpr
 		auto data() const noexcept -> const Type * { return first; }
 		constexpr
 		auto data()       noexcept ->       Type * { return first; }
@@ -109,27 +92,16 @@ namespace ptl {
 
 		friend
 		constexpr
-		auto operator==(const array_ref & lhs, const array_ref & rhs) noexcept -> bool {
+		auto operator==(const array_ref & lhs, const array_ref & rhs) noexcept {
 			if(lhs.size() != rhs.size()) return false;
 			return base_type::equal(lhs, rhs);
 		}
 		friend
 		constexpr
-		auto operator< (const array_ref & lhs, const array_ref & rhs) noexcept -> bool {
+		auto operator< (const array_ref & lhs, const array_ref & rhs) noexcept {
 			if(lhs.size() < rhs.size()) return true;
 			if(lhs.size() > rhs.size()) return false;
 			return base_type::less(lhs, rhs);
-		}
-
-		friend
-		decltype(auto) operator<<(std::ostream & os, const array_ref & self) {
-			os << '[';
-			if(!self.empty()) {
-				auto it{self.begin()};
-				os << *it;
-				for(++it; it != self.end(); ++it) os << ", " << *it;
-			}
-			return os << ']';
 		}
 	};
 	PTL_PACK_END

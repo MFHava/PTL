@@ -4,54 +4,47 @@
 //    (See accompanying file ../LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#define WIN32_LEAN_AND_MEAN//suppress #define interface
+#include <boost/test/unit_test.hpp>
 #include "ptl/array_ref.hpp"
 
 #include <array>
 #include <vector>
 
-namespace {
-	void test() {
-		using namespace ptl;
+BOOST_AUTO_TEST_SUITE(array_ref)
 
-		std::vector<int> vec0;
-		array_ref<int> ref00{vec0};
-		array_ref<const int> ref01{vec0};
-
-		const std::vector<int> vec1;
-		//array_ref<int> ref10{vec1};
-		array_ref<const int> ref11{vec1};
-
-
-		std::array<int, 3> arr0;
-		array_ref<int> ref20{arr0};
-		array_ref<const int> ref21{arr0};
-
-		const std::array<int, 3> arr1{{0, 0, 0}};
-		//array_ref<int> ref30{arr1};
-		array_ref<const int> ref31{arr1};
-
-		std::array<const int, 3> arr2{{0, 0, 0}};
-		//array_ref<int> ref40{arr2};
-		array_ref<const int> ref41{arr2};
-
-		const std::array<const int, 3> arr3{{0, 0, 0}};
-		//array_ref<int> ref50{arr3};
-		array_ref<const int> ref51{arr3};
-
-		int car0[3];
-		array_ref<int> ref60{car0};
-		array_ref<const int> ref61{car0};
-
-		const int car1[3]{0, 0, 0};
-		//array_ref<int> ref70{car1};
-		array_ref<const int> ref71{car1};
-
-		array_ref<int> ref80 = ref60;
-		//array_ref<int> ref81 = ref61;
-		array_ref<const int> ref82 = ref60;
-		array_ref<const int> ref83 = ref61;
-
-		array_ref<const int> ref84 = std::move(ref60);
-		array_ref<const int> ref85 = std::move(ref61);
-	}
+BOOST_AUTO_TEST_CASE(ctor) {
+	int a0[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+	ptl::array_ref<int> r0{a0};
+	ptl::array_ref<const int> r1{a0};
+	BOOST_TEST(ptl::internal::size(a0) == r0.size());
+	BOOST_TEST(r0[0] == a0[0]);
 }
+
+BOOST_AUTO_TEST_CASE(size) {
+	std::vector<int> v0;
+	ptl::array_ref<      int> r00{v0};
+	ptl::array_ref<const int> r01{v0};
+	BOOST_TEST(v0.size() == r00.size());
+	BOOST_TEST(v0.size() == r01.size());
+
+	std::vector<int> a0(10);
+	ptl::array_ref<      int> r10{a0};
+	ptl::array_ref<const int> r11{a0};
+	BOOST_TEST(a0.size() == r10.size());
+	BOOST_TEST(a0.size() == r11.size());
+}
+
+BOOST_AUTO_TEST_CASE(comparison) {
+	const std::array<int, 0> a0{};
+	const std::array<int, 3> a1{};
+	const ptl::array_ref<const int> r0{a0};
+	const ptl::array_ref<const int> r1{a1};
+
+	BOOST_TEST(r0 < r1);
+	BOOST_TEST(!(r0 == r1));
+	BOOST_TEST(!(r1 < a1));
+	BOOST_TEST(r1 == a1);
+}
+
+BOOST_AUTO_TEST_SUITE_END()

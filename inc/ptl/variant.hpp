@@ -5,12 +5,12 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include "internal/type_checks.hpp"
-#include "internal/compiler_detection.hpp"
 #include <limits>
 #include <ostream>
 #include <utility>
 #include <stdexcept>
+#include "internal/type_checks.hpp"
+#include "internal/compiler_detection.hpp"
 
 namespace ptl {
 	//! @brief exception thrown when trying to access a variant in an invalid way

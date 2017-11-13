@@ -5,7 +5,8 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include "internal/utility.hpp"
+#include "internal/compiler_detection.hpp"
+#include "internal/contiguous_container_base.hpp"
 
 namespace ptl {
 	PTL_PACK_BEGIN

@@ -5,12 +5,10 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include "type_checks.hpp"
-#include "compiler_detection.hpp"
 #include <boost/operators.hpp>
 #include <boost/concept_check.hpp>
-
-#define PTL_REQUIRES(args) ((void)0)
+#include "requires.hpp"
+#include "type_checks.hpp"
 
 namespace ptl {
 	namespace internal {

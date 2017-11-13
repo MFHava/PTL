@@ -5,9 +5,10 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include "internal/utility.hpp"
-#include "internal/type_checks.hpp"
 #include <ostream>
+#include "internal/requires.hpp"
+#include "internal/type_checks.hpp"
+#include "internal/compiler_detection.hpp"
 
 namespace ptl {
 	namespace internal {

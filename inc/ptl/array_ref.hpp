@@ -6,36 +6,10 @@
 
 #pragma once
 #include "internal/utility.hpp"
+#include "internal/array_ref.hpp"
 #include <limits>
-#include <initializer_list>
 
 namespace ptl {
-	namespace internal {//emulate C++17-features
-		template<typename Container>
-		constexpr
-		auto size(const Container & c) -> std::size_t { return c.size(); }
-
-		template<typename Type, std::size_t Size>
-		constexpr
-		auto size(const Type(&array)[Size]) noexcept { return Size; }
-
-		template<typename Container>
-		constexpr
-		auto data(      Container & c) { return c.data(); }
-
-		template<typename Container>
-		constexpr
-		auto data(const Container & c) { return c.data(); }
-
-		template<typename Type, std::size_t Size>
-		constexpr
-		auto data(Type(&array)[Size]) noexcept { return array; }
-
-		template<typename Type>
-		constexpr
-		auto data(std::initializer_list<Type> ilist) noexcept { return ilist.begin(); }
-	}
-
 	PTL_PACK_BEGIN
 	//! @brief non-owning reference to array
 	//! @tparam Type type of the referenced array

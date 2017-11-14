@@ -5,6 +5,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
+#include "internal/array.hpp"
 #include "internal/compiler_detection.hpp"
 #include "internal/contiguous_container_base.hpp"
 
@@ -18,7 +19,7 @@ namespace ptl {
 		using base_type = internal::contiguous_container_base<array<Type, Size>, Type>;
 		BOOST_CONCEPT_ASSERT((boost::Mutable_RandomAccessIterator<typename base_type::iterator>));
 
-		Type values[Size];
+		typename internal::array_storage<Type, Size>::type values;
 	public:
 		template<typename... Args>
 		constexpr

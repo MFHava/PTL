@@ -13,10 +13,10 @@
 namespace ptl {
 	PTL_PACK_BEGIN
 	//! @brief an empty class used to indicate an optional with uninitialized state
-	struct nullopt_t {
+	struct nullopt_t final {
 		explicit
 		constexpr
-		nullopt_t(int) {}
+		nullopt_t(int) noexcept {}
 	};
 	static_assert(sizeof(nullopt_t) == 1, "invalid size of nullopt_t detected");
 
@@ -81,14 +81,14 @@ namespace ptl {
 
 		~optional() noexcept { reset(); }
 
-		auto operator->() const -> const Type * { return &**this; }
-		auto operator->()       ->       Type * { return &**this; }
+		auto operator->() const noexcept -> const Type * { return &**this; }
+		auto operator->()       noexcept ->       Type * { return &**this; }
 
-		auto operator*() const -> const Type & {
+		auto operator*() const noexcept -> const Type & {
 			PTL_REQUIRES(initialized);
 			return reinterpret_cast<const Type &>(data);
 		}
-		auto operator*()       ->       Type & {
+		auto operator*()       noexcept ->       Type & {
 			PTL_REQUIRES(initialized);
 			return reinterpret_cast<      Type &>(data);
 		}
@@ -119,37 +119,37 @@ namespace ptl {
 		}
 
 		friend
-		auto operator==(const optional & lhs, const optional & rhs) {
+		auto operator==(const optional & lhs, const optional & rhs) noexcept {
 			if(static_cast<bool>(lhs) != static_cast<bool>(rhs)) return false;
 			if(static_cast<bool>(lhs) == false) return true;
 			return *lhs == *rhs;
 		}
 		friend
-		auto operator!=(const optional & lhs, const optional & rhs) {
+		auto operator!=(const optional & lhs, const optional & rhs) noexcept {
 			if(static_cast<bool>(lhs) != static_cast<bool>(rhs)) return true;
 			if(static_cast<bool>(lhs) == false) return false;
 			return *lhs != *rhs;
 		}
 		friend
-		auto operator< (const optional & lhs, const optional & rhs) {
+		auto operator< (const optional & lhs, const optional & rhs) noexcept {
 			if(static_cast<bool>(rhs) == false) return false;
 			if(static_cast<bool>(lhs) == false) return true;
 			return *lhs <  *rhs;
 		}
 		friend
-		auto operator<=(const optional & lhs, const optional & rhs) {
+		auto operator<=(const optional & lhs, const optional & rhs) noexcept {
 			if(static_cast<bool>(lhs) == false) return true;
 			if(static_cast<bool>(rhs) == false) return false;
 			return *lhs <= *rhs;
 		}
 		friend
-		auto operator> (const optional & lhs, const optional & rhs) {
+		auto operator> (const optional & lhs, const optional & rhs) noexcept {
 			if(static_cast<bool>(lhs) == false) return false;
 			if(static_cast<bool>(rhs) == false) return true;
 			return *lhs >  *rhs;
 		}
 		friend
-		auto operator>=(const optional & lhs, const optional & rhs) {
+		auto operator>=(const optional & lhs, const optional & rhs) noexcept {
 			if(static_cast<bool>(rhs) == false) return true;
 			if(static_cast<bool>(lhs) == false) return false;
 			return *lhs >= *rhs;
@@ -182,30 +182,30 @@ namespace ptl {
 		auto operator>=(nullopt_t, const optional & opt) noexcept { return !opt; }
 
 		friend
-		auto operator==(const optional & opt, const Type & value) { return opt ? *opt == value : false; }
+		auto operator==(const optional & opt, const Type & value) noexcept { return opt ? *opt == value : false; }
 		friend
-		auto operator!=(const optional & opt, const Type & value) { return opt ? *opt != value : true; }
+		auto operator!=(const optional & opt, const Type & value) noexcept { return opt ? *opt != value : true; }
 		friend
-		auto operator< (const optional & opt, const Type & value) { return opt ? *opt <  value : true; }
+		auto operator< (const optional & opt, const Type & value) noexcept { return opt ? *opt <  value : true; }
 		friend
-		auto operator<=(const optional & opt, const Type & value) { return opt ? *opt <= value : true; }
+		auto operator<=(const optional & opt, const Type & value) noexcept { return opt ? *opt <= value : true; }
 		friend
-		auto operator> (const optional & opt, const Type & value) { return opt ? *opt >  value : false; }
+		auto operator> (const optional & opt, const Type & value) noexcept { return opt ? *opt >  value : false; }
 		friend
-		auto operator>=(const optional & opt, const Type & value) { return opt ? *opt >= value : false; }
+		auto operator>=(const optional & opt, const Type & value) noexcept { return opt ? *opt >= value : false; }
 
 		friend
-		auto operator==(const Type & value, const optional & opt) { return opt ? value == *opt : false; }
+		auto operator==(const Type & value, const optional & opt) noexcept { return opt ? value == *opt : false; }
 		friend
-		auto operator!=(const Type & value, const optional & opt) { return opt ? value != *opt : true; }
+		auto operator!=(const Type & value, const optional & opt) noexcept { return opt ? value != *opt : true; }
 		friend
-		auto operator< (const Type & value, const optional & opt) { return opt ? value <  *opt : false; }
+		auto operator< (const Type & value, const optional & opt) noexcept { return opt ? value <  *opt : false; }
 		friend
-		auto operator<=(const Type & value, const optional & opt) { return opt ? value <= *opt : false; }
+		auto operator<=(const Type & value, const optional & opt) noexcept { return opt ? value <= *opt : false; }
 		friend
-		auto operator> (const Type & value, const optional & opt) { return opt ? value >  *opt : true; }
+		auto operator> (const Type & value, const optional & opt) noexcept { return opt ? value >  *opt : true; }
 		friend
-		auto operator>=(const Type & value, const optional & opt) { return opt ? value >= *opt : true; }
+		auto operator>=(const Type & value, const optional & opt) noexcept { return opt ? value >= *opt : true; }
 
 		friend
 		decltype(auto) operator<<(std::ostream & os, const optional & self) {

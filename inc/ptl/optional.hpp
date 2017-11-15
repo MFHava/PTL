@@ -217,3 +217,12 @@ namespace ptl {
 	};
 	PTL_PACK_END
 }
+
+namespace std {
+	template<typename Type>
+	struct hash<ptl::optional<Type>> final {
+		auto operator()(const ptl::optional<Type> & self) const noexcept -> std::size_t {
+			return self ? std::hash<Type>{}(*self) : 0;
+		}
+	};
+}

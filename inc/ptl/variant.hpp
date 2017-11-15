@@ -231,8 +231,7 @@ namespace std {
 	template<typename... Types>
 	struct hash<ptl::variant<Types...>> final {
 		auto operator()(const ptl::variant<Types...> & self) const noexcept -> std::size_t {
-			if(self.valueless_by_exception()) return 0;
-			return self.visit([](const auto & value) { return std::hash<std::decay_t<decltype(value)>>{}(value); });
+			return self.valueless_by_exception() ? 0 : self.visit([](const auto & value) { return std::hash<std::decay_t<decltype(value)>>{}(value); });
 		}
 	};
 }

@@ -11,15 +11,18 @@
 #include "internal/compiler_detection.hpp"
 
 namespace ptl {
-	namespace internal {
-		struct nullopt_helper;
-		using nullopt_t = int nullopt_helper::*;
-	}
+	PTL_PACK_BEGIN
+	//! @brief an empty class used to indicate an optional with uninitialized state
+	struct nullopt_t {
+		explicit
+		constexpr
+		nullopt_t(int) {}
+	};
+	static_assert(sizeof(nullopt_t) == 1, "invalid size of nullopt_t detected");
 
 	//! @brief global constant used to indicate an optional with uninitialized state
-	constexpr internal::nullopt_t nullopt{nullptr};
+	constexpr nullopt_t nullopt{0};
 
-	PTL_PACK_BEGIN
 	//! @brief an optional value
 	//! @tparam Type type of the potentially contained object
 	template<typename Type>
@@ -27,7 +30,7 @@ namespace ptl {
 		static_assert(internal::is_abi_compatible<Type>::value, "Type does not fulfill ABI requirements");
 
 		optional() noexcept =default;
-		optional(internal::nullopt_t) noexcept {}
+		optional(nullopt_t) noexcept {}
 
 		optional(const optional & other) {
 			if(!other) return;
@@ -43,7 +46,7 @@ namespace ptl {
 		optional(const Type & value) : initialized{true} { new(data) Type{value}; }
 		optional(Type && value) noexcept : initialized{true} { new(data) Type{std::move(value)}; }
 
-		auto operator=(internal::nullopt_t) noexcept -> optional & {
+		auto operator=(nullopt_t) noexcept -> optional & {
 			reset();
 			return *this;
 		}
@@ -153,30 +156,30 @@ namespace ptl {
 		}
 
 		friend
-		auto operator==(const optional & opt, internal::nullopt_t) noexcept { return !opt; }
+		auto operator==(const optional & opt, nullopt_t) noexcept { return !opt; }
 		friend
-		auto operator!=(const optional & opt, internal::nullopt_t) noexcept { return static_cast<bool>(opt); }
+		auto operator!=(const optional & opt, nullopt_t) noexcept { return static_cast<bool>(opt); }
 		friend
-		auto operator< (const optional & opt, internal::nullopt_t) noexcept { return false; }
+		auto operator< (const optional & opt, nullopt_t) noexcept { return false; }
 		friend
-		auto operator<=(const optional & opt, internal::nullopt_t) noexcept { return !opt; }
+		auto operator<=(const optional & opt, nullopt_t) noexcept { return !opt; }
 		friend
-		auto operator> (const optional & opt, internal::nullopt_t) noexcept { return static_cast<bool>(opt); }
+		auto operator> (const optional & opt, nullopt_t) noexcept { return static_cast<bool>(opt); }
 		friend
-		auto operator>=(const optional & opt, internal::nullopt_t) noexcept { return true; }
+		auto operator>=(const optional & opt, nullopt_t) noexcept { return true; }
 
 		friend
-		auto operator==(internal::nullopt_t, const optional & opt) noexcept { return !opt; }
+		auto operator==(nullopt_t, const optional & opt) noexcept { return !opt; }
 		friend
-		auto operator!=(internal::nullopt_t, const optional & opt) noexcept { return static_cast<bool>(opt); }
+		auto operator!=(nullopt_t, const optional & opt) noexcept { return static_cast<bool>(opt); }
 		friend
-		auto operator< (internal::nullopt_t, const optional & opt) noexcept { return static_cast<bool>(opt); }
+		auto operator< (nullopt_t, const optional & opt) noexcept { return static_cast<bool>(opt); }
 		friend
-		auto operator<=(internal::nullopt_t, const optional & opt) noexcept { return true; }
+		auto operator<=(nullopt_t, const optional & opt) noexcept { return true; }
 		friend
-		auto operator> (internal::nullopt_t, const optional & opt) noexcept { return false; }
+		auto operator> (nullopt_t, const optional & opt) noexcept { return false; }
 		friend
-		auto operator>=(internal::nullopt_t, const optional & opt) noexcept { return !opt; }
+		auto operator>=(nullopt_t, const optional & opt) noexcept { return !opt; }
 
 		friend
 		auto operator==(const optional & opt, const Type & value) { return opt ? *opt == value : false; }

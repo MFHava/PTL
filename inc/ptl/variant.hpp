@@ -9,6 +9,7 @@
 #include <ostream>
 #include <utility>
 #include <stdexcept>
+#include "internal/variant.hpp"
 #include "internal/type_checks.hpp"
 #include "internal/compiler_detection.hpp"
 
@@ -17,59 +18,6 @@ namespace ptl {
 	struct bad_variant_access : std::exception {
 		auto what() const noexcept -> const char * override { return "bad_variant_access"; }
 	};
-
-	namespace internal {
-		template<typename... Types>
-		struct max_sizeof final : std::integral_constant<std::size_t, 0> {};
-
-		template<typename Type, typename... Types>
-		struct max_sizeof<Type, Types...> final : std::integral_constant<std::size_t, (sizeof(Type) > max_sizeof<Types...>::value ? sizeof(Type) : max_sizeof<Types...>::value)>{};
-
-		template<typename TypeToFind, typename... Types>
-		struct find final : std::integral_constant<std::uint8_t, std::numeric_limits<std::uint8_t>::max()> {};
-
-		constexpr auto not_found{find<void>::value};
-
-		template<typename TypeToFind, typename Type, typename... Types>
-		struct find<TypeToFind, Type, Types...> final : std::integral_constant<
-			std::uint8_t,
-			std::is_same<TypeToFind, Type>::value 
-				? 0 : find<TypeToFind, Types...>::value == not_found
-					? not_found : find<TypeToFind, Types...>::value + 1
-		>{};
-
-		template<typename... Types>
-		struct are_unique final : std::true_type {};
-
-		template<typename Type, typename... Types>
-		struct are_unique<Type, Types...> final : std::integral_constant<bool, (find<Type, Types...>::value == not_found && are_unique<Types...>::value)> {};
-
-		template<typename ResultType, typename... Types>
-		struct visit final {
-			template<typename Visitor>
-			constexpr
-			static
-			auto dispatch(std::uint8_t, const void *, Visitor &) -> ResultType { throw bad_variant_access{}; }
-		};
-
-		template<typename ResultType, typename Type, typename... Types>
-		struct visit<ResultType, Type, Types...> final {
-			template<typename Visitor>
-			constexpr
-			static
-			auto dispatch(std::uint8_t index, const void * ptr, Visitor & visitor) -> ResultType {
-				return index ? visit<ResultType, Types...>::dispatch(index - 1, ptr, visitor)
-				             : visitor(*reinterpret_cast<const Type *>(ptr));
-			}
-			template<typename Visitor>
-			constexpr
-			static
-			auto dispatch(std::uint8_t index,       void * ptr, Visitor & visitor) -> ResultType {
-				return index ? visit<ResultType, Types...>::dispatch(index - 1, ptr, visitor)
-				             : visitor(*reinterpret_cast<      Type *>(ptr));
-			}
-		};
-	}
 
 	PTL_PACK_BEGIN
 	//! @brief a type-safe union, storing one of multiple types
@@ -135,10 +83,10 @@ namespace ptl {
 
 		template<typename Visitor>
 		constexpr
-		decltype(auto) visit(Visitor && visitor) const { return internal::visit<decltype(visitor(std::declval<DefaultType &>())), DefaultType, Types...>::dispatch(type, data, visitor); }
+		decltype(auto) visit(Visitor && visitor) const { return internal::visit<bad_variant_access, decltype(visitor(std::declval<DefaultType &>())), DefaultType, Types...>::dispatch(type, data, visitor); }
 		template<typename Visitor>
 		constexpr
-		decltype(auto) visit(Visitor && visitor)       { return internal::visit<decltype(visitor(std::declval<DefaultType &>())), DefaultType, Types...>::dispatch(type, data, visitor); }
+		decltype(auto) visit(Visitor && visitor)       { return internal::visit<bad_variant_access, decltype(visitor(std::declval<DefaultType &>())), DefaultType, Types...>::dispatch(type, data, visitor); }
 
 		template<typename Type>
 		constexpr

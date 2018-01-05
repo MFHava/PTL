@@ -14,6 +14,9 @@ static_assert(sizeof(ptl::array<int, 10>) == 10 * sizeof(int), "unexpected size 
 BOOST_CONCEPT_ASSERT((boost::Mutable_RandomAccessContainer<ptl::array<int,  0>>));
 static_assert(sizeof(ptl::array<int,  0>) == sizeof(void *), "unexpected size for array detected");
 
+static_assert(std::is_same<decltype(ptl::get<0>(std::declval<      ptl::array<int, 10> &&>())),       int &&>::value, "unexpected r-value get");
+static_assert(std::is_same<decltype(ptl::get<0>(std::declval<const ptl::array<int, 10> &&>())), const int &&>::value, "unexpected r-value get");
+
 BOOST_AUTO_TEST_SUITE(array)
 
 BOOST_AUTO_TEST_CASE(ctor) {

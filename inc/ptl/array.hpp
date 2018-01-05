@@ -47,7 +47,10 @@ namespace ptl {
 		void fill(const Type & value) { for(auto & v : values) v = value; }
 
 		constexpr
-		void swap(array & other) noexcept { for(auto it1{this->begin()}, it2{other.begin()}; it1 != this->end(); ++it1, ++it2) std::iter_swap(it1, it2); }
+		void swap(array & other) noexcept {
+			using std::swap;
+			for(std::size_t i{0}; i < Size; ++i) swap((*this)[i], other[i]);
+		}
 
 		friend
 		constexpr
@@ -72,11 +75,11 @@ namespace ptl {
 		return self[Index];
 	}
 
-	//TODO: arrays of size 0 are explicitly allowed (http://en.cppreference.com/w/cpp/container/array)
-	//TODO: r-value versions of get (http://en.cppreference.com/w/cpp/container/array/get)
-	//TODO: tuple_size (http://en.cppreference.com/w/cpp/container/array/tuple_size)
-	//TODO: tuple_element (http://en.cppreference.com/w/cpp/container/array/tuple_element)
-	//TODO: make_array (http://en.cppreference.com/w/cpp/experimental/make_array)
-	//TODO: to_array (http://en.cppreference.com/w/cpp/experimental/to_array)
-	//TODO: deduction guides (http://en.cppreference.com/w/cpp/container/array/deduction_guides)
+	template<std::size_t Index, typename Type, std::size_t Size>
+	constexpr
+	decltype(auto) get(const array<Type, Size> && self) noexcept { return std::move(get<Index>(self)); }
+
+	template<std::size_t Index, typename Type, std::size_t Size>
+	constexpr
+	decltype(auto) get(      array<Type, Size> && self) noexcept { return std::move(get<Index>(self)); }
 }

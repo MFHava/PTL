@@ -6,47 +6,47 @@
 
 #pragma once
 #include <ostream>
+#include "internal/optional.hpp"
 #include "internal/requires.hpp"
 #include "internal/type_checks.hpp"
 #include "internal/compiler_detection.hpp"
 
 namespace ptl {
-	PTL_PACK_BEGIN
-	//! @brief an empty class used to indicate an optional with uninitialized state
-	struct nullopt_t final {
-		explicit
-		constexpr
-		nullopt_t(int) noexcept {}
-	};
-	static_assert(sizeof(nullopt_t) == 1, "invalid size of nullopt_t detected");
-
 	//! @brief global constant used to indicate an optional with uninitialized state
-	constexpr nullopt_t nullopt{0};
+	constexpr internal::nullopt_t nullopt{0};
 
+	//! @brief tag for dispatch in constructor of optional
+	constexpr internal::in_place_t in_place{};
+
+	PTL_PACK_BEGIN
 	//! @brief an optional value
 	//! @tparam Type type of the potentially contained object
 	template<typename Type>
-	struct optional final {//TODO: evaluate differences to the standard!  
+	class optional final {
+		std::uint8_t data[sizeof(Type)], initialized{false};
+
 		static_assert(internal::is_abi_compatible<Type>::value, "Type does not fulfill ABI requirements");
-
+	public:
+		constexpr
 		optional() noexcept =default;
-		optional(nullopt_t) noexcept {}
+		constexpr
+		optional(internal::nullopt_t) noexcept {}
 
-		optional(const optional & other) {
-			if(!other) return;
-			new(data) Type{*other};
-			initialized = true;
-		}
-		optional(optional && other) noexcept {
-			if(!other) return;
-			new(data) Type{std::move(*other)};
-			initialized = true;
-		}
+		constexpr
+		optional(const optional & other) : initialized{other.initialized} { if(other) new(data) Type{*other}; }
+		constexpr
+		optional(optional && other) noexcept : initialized{other.initialized} { if(other) new(data) Type{std::move(*other)}; }
 
+		constexpr
 		optional(const Type & value) : initialized{true} { new(data) Type{value}; }
+		constexpr
 		optional(Type && value) noexcept : initialized{true} { new(data) Type{std::move(value)}; }
 
-		auto operator=(nullopt_t) noexcept -> optional & {
+		template<typename... Args>
+		explicit
+		optional(internal::in_place_t, Args &&... args) : initialized{true} { new(data) Type{std::forward<Args>(args)...}; }
+
+		auto operator=(internal::nullopt_t) noexcept -> optional & {
 			reset();
 			return *this;
 		}
@@ -81,25 +81,44 @@ namespace ptl {
 
 		~optional() noexcept { reset(); }
 
+		constexpr
 		auto operator->() const noexcept -> const Type * { return &**this; }
+		constexpr
 		auto operator->()       noexcept ->       Type * { return &**this; }
 
-		auto operator*() const noexcept -> const Type & {
+		constexpr
+		auto operator*() const & noexcept -> const Type & {
 			PTL_REQUIRES(initialized);
 			return reinterpret_cast<const Type &>(data);
 		}
-		auto operator*()       noexcept ->       Type & {
+		constexpr
+		auto operator*()       & noexcept ->       Type & {
 			PTL_REQUIRES(initialized);
 			return reinterpret_cast<      Type &>(data);
 		}
 
-		explicit operator bool() const noexcept { return  initialized; }
+		constexpr
+		auto operator*() const && noexcept -> const Type && { return std::move(**this); }
+		constexpr
+		auto operator*()       && noexcept ->       Type && { return std::move(**this); }
+
+		explicit
+		operator bool() const noexcept { return initialized; }
 		auto operator!() const noexcept -> bool { return !initialized; }
 
 		void reset() noexcept {
-			if(!initialized) return;
-			(**this).~Type();
-			initialized = false;
+			if(initialized) {
+				(**this).~Type();
+				initialized = false;
+			}
+		}
+
+		template<typename... Args>
+		auto emplace(Args &&... args) -> Type & {
+			reset();
+			new(data) Type{std::forward<Args>(args)...};
+			initialized = true;
+			return **this;
 		}
 
 		friend
@@ -112,43 +131,48 @@ namespace ptl {
 				lhs = std::move(*rhs);
 				rhs.reset();
 			} else {
-				PTL_REQUIRES(lhs && rhs);
 				using std::swap;
 				swap(*lhs, *rhs);
 			}
 		}
 
 		friend
+		constexpr
 		auto operator==(const optional & lhs, const optional & rhs) noexcept {
 			if(static_cast<bool>(lhs) != static_cast<bool>(rhs)) return false;
 			if(static_cast<bool>(lhs) == false) return true;
 			return *lhs == *rhs;
 		}
 		friend
+		constexpr
 		auto operator!=(const optional & lhs, const optional & rhs) noexcept {
 			if(static_cast<bool>(lhs) != static_cast<bool>(rhs)) return true;
 			if(static_cast<bool>(lhs) == false) return false;
 			return *lhs != *rhs;
 		}
 		friend
+		constexpr
 		auto operator< (const optional & lhs, const optional & rhs) noexcept {
 			if(static_cast<bool>(rhs) == false) return false;
 			if(static_cast<bool>(lhs) == false) return true;
 			return *lhs <  *rhs;
 		}
 		friend
+		constexpr
 		auto operator<=(const optional & lhs, const optional & rhs) noexcept {
 			if(static_cast<bool>(lhs) == false) return true;
 			if(static_cast<bool>(rhs) == false) return false;
 			return *lhs <= *rhs;
 		}
 		friend
+		constexpr
 		auto operator> (const optional & lhs, const optional & rhs) noexcept {
 			if(static_cast<bool>(lhs) == false) return false;
 			if(static_cast<bool>(rhs) == false) return true;
 			return *lhs >  *rhs;
 		}
 		friend
+		constexpr
 		auto operator>=(const optional & lhs, const optional & rhs) noexcept {
 			if(static_cast<bool>(rhs) == false) return true;
 			if(static_cast<bool>(lhs) == false) return false;
@@ -156,55 +180,79 @@ namespace ptl {
 		}
 
 		friend
-		auto operator==(const optional & opt, nullopt_t) noexcept { return !opt; }
+		constexpr
+		auto operator==(const optional & opt, internal::nullopt_t) noexcept { return !opt; }
 		friend
-		auto operator!=(const optional & opt, nullopt_t) noexcept { return static_cast<bool>(opt); }
+		constexpr
+		auto operator!=(const optional & opt, internal::nullopt_t) noexcept { return static_cast<bool>(opt); }
 		friend
-		auto operator< (const optional & opt, nullopt_t) noexcept { return false; }
+		constexpr
+		auto operator< (const optional & opt, internal::nullopt_t) noexcept { return false; }
 		friend
-		auto operator<=(const optional & opt, nullopt_t) noexcept { return !opt; }
+		constexpr
+		auto operator<=(const optional & opt, internal::nullopt_t) noexcept { return !opt; }
 		friend
-		auto operator> (const optional & opt, nullopt_t) noexcept { return static_cast<bool>(opt); }
+		constexpr
+		auto operator> (const optional & opt, internal::nullopt_t) noexcept { return static_cast<bool>(opt); }
 		friend
-		auto operator>=(const optional & opt, nullopt_t) noexcept { return true; }
+		constexpr
+		auto operator>=(const optional & opt, internal::nullopt_t) noexcept { return true; }
 
 		friend
-		auto operator==(nullopt_t, const optional & opt) noexcept { return !opt; }
+		constexpr
+		auto operator==(internal::nullopt_t, const optional & opt) noexcept { return !opt; }
 		friend
-		auto operator!=(nullopt_t, const optional & opt) noexcept { return static_cast<bool>(opt); }
+		constexpr
+		auto operator!=(internal::nullopt_t, const optional & opt) noexcept { return static_cast<bool>(opt); }
 		friend
-		auto operator< (nullopt_t, const optional & opt) noexcept { return static_cast<bool>(opt); }
+		constexpr
+		auto operator< (internal::nullopt_t, const optional & opt) noexcept { return static_cast<bool>(opt); }
 		friend
-		auto operator<=(nullopt_t, const optional & opt) noexcept { return true; }
+		constexpr
+		auto operator<=(internal::nullopt_t, const optional & opt) noexcept { return true; }
 		friend
-		auto operator> (nullopt_t, const optional & opt) noexcept { return false; }
+		constexpr
+		auto operator> (internal::nullopt_t, const optional & opt) noexcept { return false; }
 		friend
-		auto operator>=(nullopt_t, const optional & opt) noexcept { return !opt; }
+		constexpr
+		auto operator>=(internal::nullopt_t, const optional & opt) noexcept { return !opt; }
 
 		friend
+		constexpr
 		auto operator==(const optional & opt, const Type & value) noexcept { return opt ? *opt == value : false; }
 		friend
+		constexpr
 		auto operator!=(const optional & opt, const Type & value) noexcept { return opt ? *opt != value : true; }
 		friend
+		constexpr
 		auto operator< (const optional & opt, const Type & value) noexcept { return opt ? *opt <  value : true; }
 		friend
+		constexpr
 		auto operator<=(const optional & opt, const Type & value) noexcept { return opt ? *opt <= value : true; }
 		friend
+		constexpr
 		auto operator> (const optional & opt, const Type & value) noexcept { return opt ? *opt >  value : false; }
 		friend
+		constexpr
 		auto operator>=(const optional & opt, const Type & value) noexcept { return opt ? *opt >= value : false; }
 
 		friend
+		constexpr
 		auto operator==(const Type & value, const optional & opt) noexcept { return opt ? value == *opt : false; }
 		friend
+		constexpr
 		auto operator!=(const Type & value, const optional & opt) noexcept { return opt ? value != *opt : true; }
 		friend
+		constexpr
 		auto operator< (const Type & value, const optional & opt) noexcept { return opt ? value <  *opt : false; }
 		friend
+		constexpr
 		auto operator<=(const Type & value, const optional & opt) noexcept { return opt ? value <= *opt : false; }
 		friend
+		constexpr
 		auto operator> (const Type & value, const optional & opt) noexcept { return opt ? value >  *opt : true; }
 		friend
+		constexpr
 		auto operator>=(const Type & value, const optional & opt) noexcept { return opt ? value >= *opt : true; }
 
 		friend
@@ -212,10 +260,49 @@ namespace ptl {
 			if(!self) return os << "<nullopt>";
 			return os << *self;
 		}
-	private:
-		std::uint8_t data[sizeof(Type)], initialized{false};
 	};
 	PTL_PACK_END
+
+	//! @brief exception thrown when trying to access an optional in an invalid way
+	struct bad_optional_access : std::exception {
+		auto what() const noexcept -> const char * override { return "bad_optional_access"; }
+	};
+
+	template<typename Type>
+	constexpr
+	decltype(auto) get(const optional<Type> & self) {
+		if(!self) throw bad_optional_access{};
+		return *self;
+	}
+
+	template<typename Type>
+	constexpr
+	decltype(auto) get(      optional<Type> & self) {
+		if(!self) throw bad_optional_access{};
+		return *self;
+	}
+
+	template<typename Type>
+	constexpr
+	decltype(auto) get(const optional<Type> && self) {
+		if(!self) throw bad_optional_access{};
+		return *std::move(self);
+	}
+
+	template<typename Type>
+	constexpr
+	decltype(auto) get(      optional<Type> && self) {
+		if(!self) throw bad_optional_access{};
+		return *std::move(self);
+	}
+
+	template<typename Type>
+	constexpr
+	auto make_optional(Type && value) { return optional<std::decay_t<Type>>{std::forward<Type>(value)}; }
+
+	template<typename Type, typename... Args>
+	constexpr
+	auto make_optional(Args &&... args) { return optional<Type>{in_place, std::forward<Args>(args)...}; }
 }
 
 namespace std {

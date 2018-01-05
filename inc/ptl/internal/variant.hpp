@@ -61,5 +61,27 @@ namespace ptl {
 				             : visitor(*reinterpret_cast<      Type *>(ptr));
 			}
 		};
+
+		template<typename Type>
+		struct in_place_type_t final {
+			explicit
+			in_place_type_t() =default;
+		};
+
+		template<typename Exception, typename Type>
+		struct get_visitor final {
+			auto operator()(Type & self) const -> Type & { return self; }
+
+			template<typename OtherType>
+			auto operator()(const OtherType & self) const -> Type & { throw Exception{}; }
+		};
+
+		template<typename Type>
+		struct holds_alternative_visitor final {
+			auto operator()(const Type &) const noexcept { return true; }
+
+			template<typename OtherType>
+			auto operator()(const OtherType &) const noexcept { return false; }
+		};
 	}
 }

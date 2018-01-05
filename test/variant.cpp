@@ -8,36 +8,39 @@
 #include <boost/test/unit_test.hpp>
 #include "ptl/variant.hpp"
 
+static_assert(std::is_same<decltype(ptl::get<int>(std::declval<      ptl::variant<int, double> &&>())),       int &&>::value, "unexpected r-value get");
+static_assert(std::is_same<decltype(ptl::get<int>(std::declval<const ptl::variant<int, double> &&>())), const int &&>::value, "unexpected r-value get");
+
 BOOST_AUTO_TEST_SUITE(variant)
 
 BOOST_AUTO_TEST_CASE(ctor) {
 	ptl::variant<int, double> var;
 	BOOST_TEST(!var.valueless_by_exception());
-	BOOST_TEST(var.get<int>() == 0);
+	BOOST_TEST(ptl::get<int>(var) == 0);
 
 	var = 10.;
-	BOOST_TEST(var.holds_alternative<double>());
-	BOOST_TEST(var.get<double>() == 10.);
+	BOOST_TEST(ptl::holds_alternative<double>(var));
+	BOOST_TEST(ptl::get<double>(var) == 10.);
 
 	var = 10;
-	BOOST_TEST(var.holds_alternative<int>());
-	BOOST_TEST(var.get<int>() == 10);
+	BOOST_TEST(ptl::holds_alternative<int>(var));
+	BOOST_TEST(ptl::get<int>(var) == 10);
 }
 
 BOOST_AUTO_TEST_CASE(copy) {
 	ptl::variant<double, int> var{1000};
 	BOOST_TEST(!var.valueless_by_exception());
-	BOOST_TEST(!var.holds_alternative<double>());
+	BOOST_TEST(!ptl::holds_alternative<double>(var));
 
 	auto copy1 = var;
 	BOOST_TEST(!copy1.valueless_by_exception());
-	BOOST_TEST(!copy1.holds_alternative<double>());
-	BOOST_TEST(var.get<int>() == copy1.get<int>());
+	BOOST_TEST(!ptl::holds_alternative<double>(copy1));
+	BOOST_TEST(ptl::get<int>(var) == ptl::get<int>(copy1));
 
 	decltype(var) copy2; copy2 = copy1;
 	BOOST_TEST(!copy2.valueless_by_exception());
-	BOOST_TEST(!copy2.holds_alternative<double>());
-	BOOST_TEST(var.get<int>() == copy2.get<int>());
+	BOOST_TEST(!ptl::holds_alternative<double>(copy2));
+	BOOST_TEST(ptl::get<int>(var) == ptl::get<int>(copy2));
 }
 
 namespace {
@@ -61,11 +64,11 @@ namespace {
 BOOST_AUTO_TEST_CASE(move) {
 	ptl::variant<moveable> var1;
 	decltype(var1) var2{std::move(var1)};
-	BOOST_TEST( var1.get<moveable>().moved);
-	BOOST_TEST(!var2.get<moveable>().moved);
+	BOOST_TEST( ptl::get<moveable>(var1).moved);
+	BOOST_TEST(!ptl::get<moveable>(var2).moved);
 	var1 = std::move(var2);
-	BOOST_TEST(!var1.get<moveable>().moved);
-	BOOST_TEST( var2.get<moveable>().moved);
+	BOOST_TEST(!ptl::get<moveable>(var1).moved);
+	BOOST_TEST( ptl::get<moveable>(var2).moved);
 }
 
 namespace {
@@ -92,21 +95,21 @@ BOOST_AUTO_TEST_CASE(visit) {
 
 BOOST_AUTO_TEST_CASE(swapping) {
 	ptl::variant<int, double> var1{10}, var2{20.2};
-	BOOST_TEST(var1.holds_alternative<int>());
-	BOOST_TEST(var2.holds_alternative<double>());
+	BOOST_TEST(ptl::holds_alternative<int>(var1));
+	BOOST_TEST(ptl::holds_alternative<double>(var2));
 
 	swap(var1, var2);
-	BOOST_TEST(var1.holds_alternative<double>());
-	BOOST_TEST(var1.get<double>() == 20.2);
-	BOOST_TEST(var2.holds_alternative<int>());
-	BOOST_TEST(var2.get<int>() == 10);
+	BOOST_TEST(ptl::holds_alternative<double>(var1));
+	BOOST_TEST(ptl::get<double>(var1) == 20.2);
+	BOOST_TEST(ptl::holds_alternative<int>(var2));
+	BOOST_TEST(ptl::get<int>(var2) == 10);
 
 	decltype(var1) var3{20};
 	swap(var2, var3);
-	BOOST_TEST(var2.holds_alternative<int>());
-	BOOST_TEST(var2.get<int>() == 20);
-	BOOST_TEST(var3.holds_alternative<int>());
-	BOOST_TEST(var3.get<int>() == 10);
+	BOOST_TEST(ptl::holds_alternative<int>(var2));
+	BOOST_TEST(ptl::get<int>(var2) == 20);
+	BOOST_TEST(ptl::holds_alternative<int>(var3));
+	BOOST_TEST(ptl::get<int>(var3) == 10);
 }
 
 BOOST_AUTO_TEST_CASE(comparison) {

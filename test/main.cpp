@@ -5,5 +5,4 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #define BOOST_TEST_MODULE Tests
-#define WIN32_LEAN_AND_MEAN//suppress #define interface
 #include <boost/test/unit_test.hpp>

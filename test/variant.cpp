@@ -4,7 +4,6 @@
 //    (See accompanying file ../LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#define WIN32_LEAN_AND_MEAN//suppress #define interface
 #include <boost/test/unit_test.hpp>
 #include "ptl/variant.hpp"
 
@@ -132,5 +131,8 @@ BOOST_AUTO_TEST_CASE(comparison) {
 	BOOST_TEST(var1 > var4);
 	BOOST_TEST(var4 < var1);
 }
+
+//TODO: inplace-constructor
+//TODO: emplace
 
 BOOST_AUTO_TEST_SUITE_END()

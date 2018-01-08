@@ -15,4 +15,4 @@ The included unit tests depend on CMake and Boost.Test.
 
 Historical Note
 ===============
-This project was originally developed as part of C++ with Components (https://github.com/MFHava/CWC) but has since been made independent.
+This project was originally developed as part of [CWC](https://github.com/MFHava/CWC) but has since been made independent.

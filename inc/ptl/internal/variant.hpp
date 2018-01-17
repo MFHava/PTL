@@ -20,7 +20,8 @@ namespace ptl {
 		template<typename TypeToFind, typename... Types>
 		struct find final : std::integral_constant<std::uint8_t, std::numeric_limits<std::uint8_t>::max()> {};
 
-		constexpr auto not_found{find<void>::value};
+		constexpr
+		auto not_found{find<void>::value};
 
 		template<typename TypeToFind, typename Type, typename... Types>
 		struct find<TypeToFind, Type, Types...> final : std::integral_constant<

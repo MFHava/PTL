@@ -5,6 +5,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <boost/test/unit_test.hpp>
+#include "moveable.hpp"
 #include "ptl/variant.hpp"
 
 static_assert(std::is_same<decltype(ptl::get<int>(std::declval<      ptl::variant<int, double> &&>())),       int &&>::value, "unexpected r-value get");
@@ -13,17 +14,32 @@ static_assert(std::is_same<decltype(ptl::get<int>(std::declval<const ptl::varian
 BOOST_AUTO_TEST_SUITE(variant)
 
 BOOST_AUTO_TEST_CASE(ctor) {
-	ptl::variant<int, double> var;
-	BOOST_TEST(!var.valueless_by_exception());
-	BOOST_TEST(ptl::get<int>(var) == 0);
+	ptl::variant<int, double> var1;
+	BOOST_TEST(!var1.valueless_by_exception());
+	BOOST_TEST(ptl::get<int>(var1) == 0);
 
-	var = 10.;
-	BOOST_TEST(ptl::holds_alternative<double>(var));
-	BOOST_TEST(ptl::get<double>(var) == 10.);
+	var1 = 10.;
+	BOOST_TEST(ptl::holds_alternative<double>(var1));
+	BOOST_TEST(ptl::get<double>(var1) == 10.);
 
-	var = 10;
-	BOOST_TEST(ptl::holds_alternative<int>(var));
-	BOOST_TEST(ptl::get<int>(var) == 10);
+	var1 = 10;
+	BOOST_TEST(ptl::holds_alternative<int>(var1));
+	BOOST_TEST(ptl::get<int>(var1) == 10);
+
+	struct X {
+		X() {}
+		X(int, int) {}
+	};
+	struct Y {
+		Y() {}
+		Y(int, int, int) {}
+	};
+
+	ptl::variant<int, double, X, Y> var2{ptl::in_place_type<X>, 4, 5};
+	BOOST_TEST(ptl::holds_alternative<X>(var2));
+
+	var2.emplace<Y>(1, 2, 3);
+	BOOST_TEST(ptl::holds_alternative<Y>(var2));
 }
 
 BOOST_AUTO_TEST_CASE(copy) {
@@ -42,25 +58,8 @@ BOOST_AUTO_TEST_CASE(copy) {
 	BOOST_TEST(ptl::get<int>(var) == ptl::get<int>(copy2));
 }
 
-namespace {
-	struct moveable final {
-		bool moved{false};
-
-		moveable() {}
-		moveable(const moveable &) { throw std::runtime_error{"copy called"}; }
-		moveable(moveable && other) noexcept : moved{other.moved} { other.moved = true; }
-
-		auto operator=(const moveable &) -> moveable & { throw std::runtime_error{"copy called"}; }
-		auto operator=(moveable && other) noexcept -> moveable & {
-			moved = other.moved;
-			other.moved = true;
-			return *this;
-		}
-
-		~moveable() noexcept =default;
-	};
-}
 BOOST_AUTO_TEST_CASE(move) {
+	using ptl::test::moveable;
 	ptl::variant<moveable> var1;
 	decltype(var1) var2{std::move(var1)};
 	BOOST_TEST( ptl::get<moveable>(var1).moved);
@@ -131,8 +130,5 @@ BOOST_AUTO_TEST_CASE(comparison) {
 	BOOST_TEST(var1 > var4);
 	BOOST_TEST(var4 < var1);
 }
-
-//TODO: inplace-constructor
-//TODO: emplace
 
 BOOST_AUTO_TEST_SUITE_END()

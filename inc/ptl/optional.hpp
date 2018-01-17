@@ -13,10 +13,12 @@
 
 namespace ptl {
 	//! @brief global constant used to indicate an optional with uninitialized state
-	constexpr internal::nullopt_t nullopt{0};
+	constexpr
+	internal::nullopt_t nullopt{0};
 
 	//! @brief tag for dispatch in constructor of optional
-	constexpr internal::in_place_t in_place{};
+	constexpr
+	internal::in_place_t in_place{};
 
 	PTL_PACK_BEGIN
 	//! @brief an optional value

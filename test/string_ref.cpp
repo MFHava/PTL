@@ -70,6 +70,4 @@ BOOST_AUTO_TEST_CASE(removing) {
 	BOOST_TEST(r2.size() == 1);
 }
 
-//TODO: hash?!
-
 BOOST_AUTO_TEST_SUITE_END()

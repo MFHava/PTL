@@ -16,7 +16,8 @@
 namespace ptl {
 	//! @brief tag for dispatch in constructor of variant
 	template<typename Type>
-	constexpr internal::in_place_type_t<Type> in_place_type{};
+	constexpr
+	internal::in_place_type_t<Type> in_place_type{};
 
 	//! @brief exception thrown when trying to access a variant in an invalid way
 	struct bad_variant_access : std::exception {

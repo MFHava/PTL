@@ -30,8 +30,10 @@ BOOST_AUTO_TEST_CASE(ctor) {
 BOOST_AUTO_TEST_CASE(size) {
 	ptl::array<int, 10> a0;
 	BOOST_TEST(a0.size() == 10);
+	BOOST_TEST(a0.max_size() == 10);
 	ptl::array<int,  0> a1;
 	BOOST_TEST(a1.size() ==  0);
+	BOOST_TEST(a1.max_size() == 0);
 }
 
 BOOST_AUTO_TEST_CASE(comparison) {

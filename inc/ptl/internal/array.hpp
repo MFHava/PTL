@@ -14,5 +14,8 @@ namespace ptl {
 
 		template<typename Type>
 		struct array_storage<Type, 0> final { using type = Type *; };
+
+		template<typename Type, std::size_t Size>
+		using array_storage_t = typename array_storage<Type, Size>::type;
 	}
 }

@@ -19,7 +19,7 @@ namespace ptl {
 		using base_type = internal::contiguous_container_base<array<Type, Size>, Type>;
 		BOOST_CONCEPT_ASSERT((boost::Mutable_RandomAccessIterator<typename base_type::iterator>));
 
-		typename internal::array_storage<Type, Size>::type values;
+		internal::array_storage_t<Type, Size> values;
 	public:
 		template<typename... Args>
 		constexpr

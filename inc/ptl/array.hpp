@@ -44,13 +44,10 @@ namespace ptl {
 		auto max_size() const noexcept { return Size; }
 
 		constexpr
-		void fill(const Type & value) { for(auto & v : values) v = value; }
+		void fill(const Type & value) { std::fill(base_type::begin(), base_type::end(), value); }
 
 		constexpr
-		void swap(array & other) noexcept {
-			using std::swap;
-			for(std::size_t i{0}; i < Size; ++i) swap((*this)[i], other[i]);
-		}
+		void swap(array & other) noexcept { std::swap_ranges(base_type::begin(), base_type::end(), other.begin()); }
 
 		friend
 		constexpr

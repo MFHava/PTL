@@ -50,6 +50,7 @@ namespace ptl {
 		constexpr
 		array_ref(ContiguousRange && range) noexcept : array_ref{internal::data(range), internal::size(range)} {}
 
+		constexpr
 		auto data() const noexcept -> const Type * { return first; }
 		constexpr
 		auto data()       noexcept ->       Type * { return first; }

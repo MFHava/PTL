@@ -100,7 +100,7 @@ namespace ptl {
 		}
 
 		constexpr
-		auto valueless_by_exception() const noexcept -> bool { return type == internal::not_found; }
+		auto valueless_by_exception() const noexcept { return type == internal::not_found; }
 
 		template<typename Visitor>
 		constexpr

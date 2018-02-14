@@ -105,7 +105,9 @@ namespace ptl {
 		auto operator*()       && noexcept ->       Type && { return std::move(**this); }
 
 		explicit
+		constexpr
 		operator bool() const noexcept { return initialized; }
+		constexpr
 		auto operator!() const noexcept -> bool { return !initialized; }
 
 		void reset() noexcept {

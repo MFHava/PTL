@@ -40,8 +40,10 @@ namespace ptl {
 			}
 
 			//input_iterators can also act as a range
-			auto begin() const { return *this; }
-			auto end() const { return c_str_iterator{}; }
+			constexpr
+			auto begin() const noexcept { return *this; }
+			constexpr
+			auto end() const noexcept { return c_str_iterator{}; }
 
 			friend
 			constexpr

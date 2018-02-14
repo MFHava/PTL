@@ -5,7 +5,6 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include <cstdint>
 
 #ifdef _MSC_VER
 	#define PTL_PACK_BEGIN __pragma(pack(push, 1))

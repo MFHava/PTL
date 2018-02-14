@@ -86,19 +86,19 @@ namespace ptl {
 		auto max_size() const noexcept { return std::numeric_limits<std::size_t>::max(); }
 
 		constexpr
-		void remove_prefix(typename base_type::iterator pos) noexcept {
+		void remove_prefix(typename base_type::const_iterator pos) noexcept {
 			PTL_REQUIRES(pos.ptr >= first && pos.ptr <= last);
 			first = pos.ptr;
 		}
 
 		constexpr
-		void remove_suffix(typename base_type::iterator pos) noexcept {
+		void remove_suffix(typename base_type::const_iterator pos) noexcept {
 			PTL_REQUIRES(pos.ptr >= first && pos.ptr <= last);
 			last = pos.ptr;
 		}
 
 		constexpr
-		auto substr(typename base_type::iterator first, typename base_type::iterator last) const noexcept {
+		auto substr(typename base_type::const_iterator first, typename base_type::const_iterator last) const noexcept {
 			auto result{*this};
 			result.remove_prefix(first);
 			result.remove_suffix(last);
@@ -136,8 +136,9 @@ namespace ptl {
 
 	using string_ref = basic_string_ref<char>;
 	BOOST_CONCEPT_ASSERT((boost::RandomAccessContainer<string_ref>));
-	static_assert(sizeof(string_ref)           == 2 * sizeof(const char *), "invalid size of string_ref detected");
-	static_assert(sizeof(string_ref::iterator) ==     sizeof(const char *), "invalid size of string_ref::iterator detected");
+	static_assert(sizeof(string_ref)                 == 2 * sizeof(const char *), "invalid size of string_ref detected");
+	static_assert(sizeof(string_ref::iterator)       ==     sizeof(const char *), "invalid size of string_ref::iterator detected");
+	static_assert(sizeof(string_ref::const_iterator) ==     sizeof(const char *), "invalid size of string_ref::const_iterator detected");
 
 	namespace literals {
 		inline

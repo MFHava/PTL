@@ -149,7 +149,9 @@ namespace ptl {
 	}
 }
 
-template<typename Char>
-struct std::hash<ptl::basic_string_ref<Char>> final {
-	auto operator()(const ptl::basic_string_ref<Char> & self) const noexcept -> std::size_t { return boost::hash_range(self.data(),  self.data() + self.size()); }
-};
+namespace std {
+	template<typename Char>
+	struct hash<ptl::basic_string_ref<Char>> final {
+		auto operator()(const ptl::basic_string_ref<Char> & self) const noexcept -> std::size_t { return boost::hash_range(self.data(),  self.data() + self.size()); }
+	};
+}

@@ -24,7 +24,7 @@ namespace ptl {
 			template<typename ValueType>
 			struct contiguous_iterator final : boost::random_access_iterator_helper<contiguous_iterator<ValueType>, ValueType, std::ptrdiff_t, ValueType *, ValueType &> {
 				constexpr
-				contiguous_iterator() noexcept {}
+				contiguous_iterator() noexcept =default;
 
 				constexpr
 				decltype(auto) operator++() noexcept { move(+1); return *this; }
@@ -42,6 +42,9 @@ namespace ptl {
 				constexpr
 				decltype(auto) operator-=(std::ptrdiff_t count) noexcept { move(-count); return *this; }
 
+				constexpr
+				operator contiguous_iterator<const ValueType>() const noexcept { return contiguous_iterator<const ValueType>{ptr}; }
+
 				friend
 				constexpr
 				auto operator-(const contiguous_iterator & lhs, const contiguous_iterator & rhs) noexcept -> std::ptrdiff_t { return lhs.ptr - rhs.ptr; }
@@ -52,6 +55,9 @@ namespace ptl {
 				constexpr
 				auto operator< (const contiguous_iterator & lhs, const contiguous_iterator & rhs) noexcept { return lhs.ptr <  rhs.ptr; }
 			private:
+				constexpr
+				operator contiguous_iterator<std::remove_const_t<ValueType>>() const noexcept { return contiguous_iterator<std::remove_const_t<ValueType>>{const_cast<std::remove_const_t<ValueType> *>(ptr)}; }
+
 				friend contiguous_container_base;
 				friend Implementation;
 

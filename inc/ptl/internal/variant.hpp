@@ -40,23 +40,23 @@ namespace ptl {
 		template<typename Exception, typename ResultType, typename... Types>
 		struct visit final {
 			template<typename Visitor>
-			constexpr
 			static
+			constexpr
 			auto dispatch(std::uint8_t, const void *, Visitor &) -> ResultType { throw Exception{}; }
 		};
 
 		template<typename Exception, typename ResultType, typename Type, typename... Types>
 		struct visit<Exception, ResultType, Type, Types...> final {
 			template<typename Visitor>
-			constexpr
 			static
+			constexpr
 			auto dispatch(std::uint8_t index, const void * ptr, Visitor & visitor) -> ResultType {
 				return index ? visit<Exception, ResultType, Types...>::dispatch(index - 1, ptr, visitor)
 				             : visitor(*reinterpret_cast<const Type *>(ptr));
 			}
 			template<typename Visitor>
-			constexpr
 			static
+			constexpr
 			auto dispatch(std::uint8_t index,       void * ptr, Visitor & visitor) -> ResultType {
 				return index ? visit<Exception, ResultType, Types...>::dispatch(index - 1, ptr, visitor)
 				             : visitor(*reinterpret_cast<      Type *>(ptr));

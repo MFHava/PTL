@@ -93,13 +93,13 @@ namespace ptl {
 			}
 		protected:
 			template<typename InputRange1, typename InputRange2>
-			constexpr
 			static
+			constexpr
 			auto equal(const InputRange1 & lhs, const InputRange2 & rhs) noexcept { return compare(lhs, rhs) == 0; }
 
 			template<typename InputRange1, typename InputRange2>
-			constexpr
 			static
+			constexpr
 			auto less(const InputRange1 & lhs, const InputRange2 & rhs) noexcept { return compare(lhs, rhs) <  0; }
 		public:
 			using value_type             = std::remove_const_t<Type>;

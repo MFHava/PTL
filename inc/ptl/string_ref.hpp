@@ -133,6 +133,8 @@ namespace ptl {
 			for(auto & tmp : self) os << tmp;
 			return os;
 		}
+
+		operator std::string() const { return {this->begin(), this->end()}; }
 	};
 	PTL_PACK_END
 

@@ -21,8 +21,10 @@ namespace ptl {
 			constexpr
 			decltype(auto) self()       noexcept { return static_cast<      Implementation &>(*this); }
 
-			template<typename ValueType>
-			struct contiguous_iterator final : boost::random_access_iterator_helper<contiguous_iterator<ValueType>, ValueType, std::ptrdiff_t, ValueType *, ValueType &> {
+			template<typename ValueType, bool IsConst>
+			struct contiguous_iterator final : boost::random_access_iterator_helper<contiguous_iterator<ValueType, IsConst>, ValueType, std::ptrdiff_t, std::conditional_t<IsConst, const ValueType, ValueType> *, std::conditional_t<IsConst, const ValueType, ValueType> &> {
+				static_assert(!std::is_const<ValueType>::value, "ValueType may not be const");
+
 				constexpr
 				contiguous_iterator() noexcept =default;
 
@@ -32,7 +34,7 @@ namespace ptl {
 				decltype(auto) operator--() noexcept { move(-1); return *this; }
 
 				constexpr
-				auto operator*() const noexcept -> ValueType & {
+				decltype(auto) operator*() const noexcept {
 					PTL_REQUIRES(ptr);
 					return *ptr;
 				}
@@ -43,7 +45,7 @@ namespace ptl {
 				decltype(auto) operator-=(std::ptrdiff_t count) noexcept { move(-count); return *this; }
 
 				constexpr
-				operator contiguous_iterator<const ValueType>() const noexcept { return contiguous_iterator<const ValueType>{ptr}; }
+				operator contiguous_iterator<ValueType, true>() const noexcept { return contiguous_iterator<ValueType, true>{ptr}; }
 
 				friend
 				constexpr
@@ -56,7 +58,7 @@ namespace ptl {
 				auto operator< (const contiguous_iterator & lhs, const contiguous_iterator & rhs) noexcept { return lhs.ptr <  rhs.ptr; }
 			private:
 				constexpr
-				operator contiguous_iterator<std::remove_const_t<ValueType>>() const noexcept { return contiguous_iterator<std::remove_const_t<ValueType>>{const_cast<std::remove_const_t<ValueType> *>(ptr)}; }
+				operator contiguous_iterator<ValueType, false>() const noexcept { return contiguous_iterator<ValueType, false>{const_cast<ValueType *>(ptr)}; }
 
 				friend contiguous_container_base;
 				friend Implementation;
@@ -67,11 +69,13 @@ namespace ptl {
 					ptr += count;
 				}
 
+				using internal_type = std::conditional_t<IsConst, const ValueType, ValueType> *;
+
 				explicit
 				constexpr
-				contiguous_iterator(ValueType * ptr) noexcept : ptr{ptr} {}
+				contiguous_iterator(internal_type ptr) noexcept : ptr{ptr} {}
 
-				ValueType * ptr{nullptr};
+				internal_type ptr{nullptr};
 			};
 
 			template<typename InputRange1, typename InputRange2>
@@ -102,17 +106,20 @@ namespace ptl {
 			constexpr
 			auto less(const InputRange1 & lhs, const InputRange2 & rhs) noexcept { return compare(lhs, rhs) <  0; }
 		public:
-			using value_type             = std::remove_const_t<Type>;
+			using value_type             = std::remove_cv_t<Type>;
 			using size_type              = std::size_t;
 			using difference_type        = std::ptrdiff_t;
 			using reference              =       value_type &;
 			using const_reference        = const value_type &;
 			using pointer                =       value_type *;
 			using const_pointer          = const value_type *;
-			using iterator               = contiguous_iterator<      Type>;
-			BOOST_CONCEPT_ASSERT((boost::RandomAccessIterator<iterator>));
-			using const_iterator         = contiguous_iterator<const Type>;
+		private:
+			using mutable_iterator       = contiguous_iterator<value_type, false>;
+			BOOST_CONCEPT_ASSERT((boost::Mutable_RandomAccessIterator<mutable_iterator>));
+		public:
+			using const_iterator         = contiguous_iterator<value_type, true>;
 			BOOST_CONCEPT_ASSERT((boost::RandomAccessIterator<const_iterator>));
+			using iterator               = std::conditional_t<std::is_const<Type>::value, const_iterator, mutable_iterator>;
 			using reverse_iterator       = std::reverse_iterator<      iterator>;
 			using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 

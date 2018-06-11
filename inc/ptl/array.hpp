@@ -17,7 +17,6 @@ namespace ptl {
 	template<typename Type, std::size_t Size>
 	class array final : public internal::contiguous_container_base<array<Type, Size>, Type> {
 		using base_type = internal::contiguous_container_base<array<Type, Size>, Type>;
-		BOOST_CONCEPT_ASSERT((boost::Mutable_RandomAccessIterator<typename base_type::iterator>));
 
 		internal::array_storage_t<Type, Size> values;
 	public:

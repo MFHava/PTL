@@ -125,20 +125,22 @@ namespace ptl {
 			return **this;
 		}
 
-		friend
-		void swap(optional & lhs, optional & rhs) noexcept {
-			if(!lhs && !rhs) return;
-			else if(lhs && !rhs) {
-				rhs = std::move(*lhs);
-				lhs.reset();
-			} else if(!lhs && rhs) {
-				lhs = std::move(*rhs);
-				rhs.reset();
+		void swap(optional & other) noexcept {
+			if(!*this && !other) return;
+			else if(*this && !other) {
+				other = std::move(**this);
+				reset();
+			} else if(!*this && other) {
+				*this = std::move(*other);
+				other.reset();
 			} else {
 				using std::swap;
-				swap(*lhs, *rhs);
+				swap(**this, *other);
 			}
 		}
+
+		friend
+		void swap(optional & lhs, optional & rhs) noexcept { lhs.swap(rhs); }
 
 		friend
 		constexpr

@@ -109,17 +109,19 @@ namespace ptl {
 		constexpr
 		decltype(auto) visit(Visitor && visitor)       { return internal::visit<bad_variant_access, decltype(visitor(std::declval<DefaultType &>())), DefaultType, Types...>::dispatch(type, data, visitor); }
 
-		friend
-		void swap(variant & lhs, variant & rhs) noexcept {
-			if(lhs.valueless_by_exception() && rhs.valueless_by_exception()) return;
-			if(lhs.type == rhs.type)
-				lhs.visit([&](auto & value) {
+		void swap(variant & other) noexcept {
+			if(valueless_by_exception() && other.valueless_by_exception()) return;
+			if(type == other.type)
+				visit([&](auto & value) {
 					using Type = std::decay_t<decltype(value)>;
 					using std::swap;
-					swap(value, *reinterpret_cast<Type *>(rhs.data));
+					swap(value, *reinterpret_cast<Type *>(other.data));
 				});
-			else std::swap(lhs, rhs);
+			else std::swap(*this, other);
 		}
+
+		friend
+		void swap(variant & lhs, variant & rhs) noexcept { lhs.swap(rhs); }
 
 		friend
 		constexpr

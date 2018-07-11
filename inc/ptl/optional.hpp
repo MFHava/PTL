@@ -6,6 +6,7 @@
 
 #pragma once
 #include <ostream>
+#include "internal/adl_swap.hpp"
 #include "internal/optional.hpp"
 #include "internal/requires.hpp"
 #include "internal/type_checks.hpp"
@@ -133,10 +134,7 @@ namespace ptl {
 			} else if(!*this && other) {
 				*this = std::move(*other);
 				other.reset();
-			} else {
-				using std::swap;
-				swap(**this, *other);
-			}
+			} else internal::adl_swap(**this, *other);
 		}
 
 		friend

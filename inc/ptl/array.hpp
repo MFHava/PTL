@@ -6,6 +6,7 @@
 
 #pragma once
 #include "internal/array.hpp"
+#include "internal/adl_swap.hpp"
 #include "internal/compiler_detection.hpp"
 #include "internal/contiguous_container_base.hpp"
 
@@ -46,10 +47,7 @@ namespace ptl {
 		void fill(const Type & value) { for(auto it{base_type::begin()}, end{base_type::end()}; it != end; ++it) *it = value; }
 
 		constexpr
-		void swap(array & other) noexcept {
-			using std::swap;
-			for(auto it1{base_type::begin()}, it2{other.begin()}, end{base_type::end()}; it1 != end;) swap(*it1++, *it2++);
-		}
+		void swap(array & other) noexcept { for(auto it1{base_type::begin()}, it2{other.begin()}, end{base_type::end()}; it1 != end;) internal::adl_swap(*it1++, *it2++); }
 
 		friend
 		constexpr

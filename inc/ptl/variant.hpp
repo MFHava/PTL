@@ -10,6 +10,7 @@
 #include <utility>
 #include <stdexcept>
 #include "internal/variant.hpp"
+#include "internal/adl_swap.hpp"
 #include "internal/type_checks.hpp"
 #include "internal/compiler_detection.hpp"
 
@@ -111,12 +112,7 @@ namespace ptl {
 
 		void swap(variant & other) noexcept {
 			if(valueless_by_exception() && other.valueless_by_exception()) return;
-			if(type == other.type)
-				visit([&](auto & value) {
-					using Type = std::decay_t<decltype(value)>;
-					using std::swap;
-					swap(value, *reinterpret_cast<Type *>(other.data));
-				});
+			if(type == other.type) visit([&](auto & value) { internal::adl_swap(value, *reinterpret_cast<std::decay_t<decltype(value)> *>(other.data)); });
 			else std::swap(*this, other);
 		}
 

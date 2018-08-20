@@ -16,7 +16,7 @@ BOOST_AUTO_TEST_CASE(ctor) {
 	int a0[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 	ptl::array_ref<      int> r0{a0};
 	ptl::array_ref<const int> r1{a0};
-	BOOST_TEST(ptl::internal::size(a0) == r0.size());
+	BOOST_TEST(std::size(a0) == r0.size());
 	BOOST_TEST(r0[0] == a0[0]);
 }
 

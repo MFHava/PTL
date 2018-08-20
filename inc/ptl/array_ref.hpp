@@ -6,8 +6,8 @@
 
 #pragma once
 #include <limits>
+#include <iterator>
 #include "internal/adl_swap.hpp"
-#include "internal/array_ref.hpp"
 #include "internal/compiler_detection.hpp"
 #include "internal/contiguous_container_base.hpp"
 
@@ -49,7 +49,7 @@ namespace ptl {
 		//! @param[in] range range to reference
 		template<typename ContiguousRange>
 		constexpr
-		array_ref(ContiguousRange && range) noexcept : array_ref{internal::data(range), internal::size(range)} {}
+		array_ref(ContiguousRange && range) noexcept : array_ref{std::data(range), std::size(range)} {}
 
 		constexpr
 		auto data() const noexcept -> const Type * { return first; }

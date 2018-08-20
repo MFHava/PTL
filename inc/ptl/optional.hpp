@@ -28,7 +28,7 @@ namespace ptl {
 	class optional final {
 		std::uint8_t data[sizeof(Type)], initialized{false};
 
-		static_assert(internal::is_abi_compatible<Type>::value, "Type does not fulfill ABI requirements");
+		static_assert(internal::is_abi_compatible_v<Type>);
 	public:
 		constexpr
 		optional() noexcept =default;

@@ -14,7 +14,7 @@ namespace ptl {
 	namespace internal {
 		template<typename Implementation, typename Type, typename Base = boost::operators_detail::empty_base<Implementation>>
 		class contiguous_container_base : boost::totally_ordered1<Implementation, Base> {
-			static_assert(internal::is_abi_compatible<Type>::value, "Type does not fulfill ABI requirements");
+			static_assert(internal::is_abi_compatible_v<Type>);
 
 			constexpr
 			decltype(auto) self() const noexcept { return static_cast<const Implementation &>(*this); }

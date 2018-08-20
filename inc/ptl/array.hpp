@@ -61,14 +61,14 @@ namespace ptl {
 	template<std::size_t Index, typename Type, std::size_t Size>
 	constexpr
 	decltype(auto) get(const array<Type, Size> & self) noexcept {
-		static_assert(Index < Size, "index out of range");
+		static_assert(Index < Size);
 		return self[Index];
 	}
 
 	template<std::size_t Index, typename Type, std::size_t Size>
 	constexpr
 	decltype(auto) get(      array<Type, Size> & self) noexcept {
-		static_assert(Index < Size, "index out of range");
+		static_assert(Index < Size);
 		return self[Index];
 	}
 

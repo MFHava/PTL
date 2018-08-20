@@ -26,7 +26,7 @@ namespace ptl {
 		template<typename TypeToFind, typename Type, typename... Types>
 		struct find<TypeToFind, Type, Types...> final : std::integral_constant<
 			std::uint8_t,
-			std::is_same<TypeToFind, Type>::value 
+			std::is_same_v<TypeToFind, Type> 
 				? 0 : find<TypeToFind, Types...>::value == not_found
 					? not_found : find<TypeToFind, Types...>::value + 1
 		>{};

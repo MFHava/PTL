@@ -8,8 +8,8 @@
 #include "moveable.hpp"
 #include "ptl/optional.hpp"
 
-static_assert(std::is_same<decltype(ptl::get(std::declval<      ptl::optional<int> &&>())),       int &&>::value, "unexpected r-value get");
-static_assert(std::is_same<decltype(ptl::get(std::declval<const ptl::optional<int> &&>())), const int &&>::value, "unexpected r-value get");
+static_assert(std::is_same_v<decltype(ptl::get(std::declval<      ptl::optional<int> &&>())),       int &&>);
+static_assert(std::is_same_v<decltype(ptl::get(std::declval<const ptl::optional<int> &&>())), const int &&>);
 
 BOOST_AUTO_TEST_SUITE(optional)
 

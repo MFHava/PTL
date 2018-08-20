@@ -32,7 +32,7 @@ namespace ptl {
 	template<typename DefaultType, typename... Types>
 	class variant final {
 		template<typename Type>
-		using parameter_validation = std::integral_constant<bool, !std::is_same<std::decay_t<Type>, variant>::value && internal::find<std::decay_t<Type>, DefaultType, Types...>::value != internal::not_found>;
+		using parameter_validation = std::integral_constant<bool, !std::is_same_v<std::decay_t<Type>, variant> && internal::find<std::decay_t<Type>, DefaultType, Types...>::value != internal::not_found>;
 
 		std::uint8_t data[internal::max_sizeof<DefaultType, Types...>::value], type{internal::not_found};
 
@@ -45,7 +45,7 @@ namespace ptl {
 			type = internal::not_found;
 		}
 
-		static_assert(internal::are_abi_compatible<DefaultType, Types...>::value, "Types do not fulfill ABI requirements");
+		static_assert(internal::are_abi_compatible_v<DefaultType, Types...>);
 		static_assert(1 + sizeof...(Types) < internal::not_found, "Too many types for variant specified");
 		static_assert(internal::are_unique<DefaultType, Types...>::value, "variant does not support duplicated types");
 	public:

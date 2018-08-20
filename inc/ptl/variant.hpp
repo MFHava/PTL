@@ -21,9 +21,9 @@ namespace ptl {
 	template<typename DefaultType, typename... Types>
 	class variant final {
 		template<typename Type>
-		using parameter_validation = std::integral_constant<bool, !std::is_same_v<std::decay_t<Type>, variant> && internal::find<std::decay_t<Type>, DefaultType, Types...>::value != internal::not_found>;
+		using parameter_validation = std::bool_constant<!std::is_same_v<std::decay_t<Type>, variant> && internal::find_v<std::decay_t<Type>, DefaultType, Types...> != internal::not_found>;
 
-		std::uint8_t data[internal::max_sizeof<DefaultType, Types...>::value], type{internal::not_found};
+		std::uint8_t data[internal::max_sizeof_v<DefaultType, Types...>], type{internal::not_found};
 
 		void reset() noexcept {
 			if(type == internal::not_found) return;
@@ -35,7 +35,7 @@ namespace ptl {
 		}
 
 		static_assert(internal::are_abi_compatible_v<DefaultType, Types...>);
-		static_assert(internal::are_unique<DefaultType, Types...>::value);
+		static_assert(internal::are_unique_v<DefaultType, Types...>);
 		static_assert(1 + sizeof...(Types) < internal::not_found, "Too many types for variant specified");
 	public:
 		constexpr
@@ -67,7 +67,7 @@ namespace ptl {
 		template<typename Type>
 		auto operator=(Type && value) -> std::enable_if_t<parameter_validation<Type>::value, variant &> {
 			using DecayedType = std::decay_t<Type>;
-			constexpr auto tmp{internal::find<DecayedType, DefaultType, Types...>::value};
+			constexpr auto tmp{internal::find_v<DecayedType, DefaultType, Types...>};
 			if(type == tmp) *reinterpret_cast<DecayedType *>(data) = std::forward<Type>(value);
 			else {
 				reset();
@@ -82,7 +82,7 @@ namespace ptl {
 		template<typename Type, typename... Args>
 		auto emplace(Args &&... args) -> std::enable_if_t<parameter_validation<Type>::value, Type &> {
 			using DecayedType = std::decay_t<Type>;
-			constexpr auto tmp{internal::find<DecayedType, DefaultType, Types...>::value};
+			constexpr auto tmp{internal::find_v<DecayedType, DefaultType, Types...>};
 			reset();
 			new(data) DecayedType{std::forward<Args>(args)...};
 			type = tmp;
@@ -94,17 +94,16 @@ namespace ptl {
 
 		template<typename Visitor>
 		constexpr
-		decltype(auto) visit(Visitor && visitor) const { return internal::visit<decltype(visitor(std::declval<DefaultType &>())), DefaultType, Types...>::dispatch(type, data, visitor); }
+		auto visit(Visitor && visitor) const -> decltype(auto) { return internal::visit<decltype(visitor(std::declval<DefaultType &>())), DefaultType, Types...>::dispatch(type, data, visitor); }
 		template<typename Visitor>
 		constexpr
-		decltype(auto) visit(Visitor && visitor)       { return internal::visit<decltype(visitor(std::declval<DefaultType &>())), DefaultType, Types...>::dispatch(type, data, visitor); }
+		auto visit(Visitor && visitor)       -> decltype(auto) { return internal::visit<decltype(visitor(std::declval<DefaultType &>())), DefaultType, Types...>::dispatch(type, data, visitor); }
 
 		void swap(variant & other) noexcept {
 			if(valueless_by_exception() && other.valueless_by_exception()) return;
 			if(type == other.type) visit([&](auto & value) { internal::adl_swap(value, *reinterpret_cast<std::decay_t<decltype(value)> *>(other.data)); });
 			else std::swap(*this, other);
 		}
-
 		friend
 		void swap(variant & lhs, variant & rhs) noexcept { lhs.swap(rhs); }
 
@@ -178,7 +177,7 @@ namespace ptl {
 		}
 
 		friend
-		decltype(auto) operator<<(std::ostream & os, const variant & self) {
+		auto operator<<(std::ostream & os, const variant & self) -> std::ostream & {
 			if(self.valueless_by_exception()) return os << "<valueless by exception>";
 			self.visit([&](const auto & value) { os << value; });
 			return os;
@@ -192,25 +191,25 @@ namespace ptl {
 
 	template<typename Type, typename... Types>
 	constexpr
-	decltype(auto) get(const variant<Types...> & self) {
-		static_assert(internal::find<Type, Types...>::value != internal::not_found);
+	auto get(const variant<Types...> & self) -> const Type & {
+		static_assert(internal::find_v<Type, Types...> != internal::not_found);
 		return self.visit(internal::get_visitor<const Type>());
 	}
 
 	template<typename Type, typename... Types>
 	constexpr
-	decltype(auto) get(      variant<Types...> & self) {
-		static_assert(internal::find<Type, Types...>::value != internal::not_found);
+	auto get(      variant<Types...> & self) ->       Type & {
+		static_assert(internal::find_v<Type, Types...> != internal::not_found);
 		return self.visit(internal::get_visitor<      Type>());
 	}
 
 	template<typename Type, typename... Types>
 	constexpr
-	decltype(auto) get(const variant<Types...> && self) { return std::move(get<Type>(self)); }
+	auto get(const variant<Types...> && self) -> const Type && { return std::move(get<Type>(self)); }
 
 	template<typename Type, typename... Types>
 	constexpr
-	decltype(auto) get(      variant<Types...> && self) { return std::move(get<Type>(self)); }
+	auto get(      variant<Types...> && self) ->       Type && { return std::move(get<Type>(self)); }
 }
 
 namespace std {

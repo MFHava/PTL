@@ -30,7 +30,7 @@ namespace ptl {
 			c_str_iterator(const Char * ptr) noexcept : ptr{ptr} {}
 
 			constexpr
-			decltype(auto) operator++() noexcept {
+			auto operator++() noexcept -> c_str_iterator & {
 				if(ptr && !*ptr++) ptr = nullptr;
 				return *this;
 			}
@@ -132,7 +132,7 @@ namespace ptl {
 		auto operator< (const Char * lhs, const basic_string_ref & rhs) noexcept { return base_type::less(c_str_iterator{lhs}, rhs); }
 
 		friend
-		decltype(auto) operator<<(std::ostream & os, const basic_string_ref & self) {
+		auto operator<<(std::ostream & os, const basic_string_ref & self) -> std::ostream & {
 			for(auto & tmp : self) os << tmp;
 			return os;
 		}

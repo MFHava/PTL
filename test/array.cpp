@@ -9,8 +9,6 @@
 
 static_assert(sizeof(ptl::array<int, 10>) == 10 * sizeof(int));
 static_assert(sizeof(ptl::array<int,  0>) == sizeof(void *));
-static_assert(std::is_same_v<decltype(ptl::get<0>(std::declval<      ptl::array<int, 10> &&>())),       int &&>);
-static_assert(std::is_same_v<decltype(ptl::get<0>(std::declval<const ptl::array<int, 10> &&>())), const int &&>);
 static_assert(std::is_same_v<decltype(ptl::array{1, 2, 3, 4}), ptl::array<int, 4>>);
 static_assert(std::is_same_v<decltype(ptl::array{1., 2., 3.}), ptl::array<double, 3>>);
 
@@ -49,7 +47,7 @@ BOOST_AUTO_TEST_CASE(fill) {
 	for(const auto & tmp : arr) BOOST_TEST(tmp == 10);
 }
 
-BOOST_AUTO_TEST_CASE(tuple) {
+BOOST_AUTO_TEST_CASE(structured_binding) {
 	ptl::array<int, 3> arr{0, 1, 2};
 	auto [a, b, c] = arr;
 	BOOST_TEST(a == arr[0]);

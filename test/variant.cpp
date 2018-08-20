@@ -8,9 +8,6 @@
 #include "moveable.hpp"
 #include "ptl/variant.hpp"
 
-static_assert(std::is_same_v<decltype(ptl::get<int>(std::declval<      ptl::variant<int, double> &&>())),       int &&>);
-static_assert(std::is_same_v<decltype(ptl::get<int>(std::declval<const ptl::variant<int, double> &&>())), const int &&>);
-
 BOOST_AUTO_TEST_SUITE(variant)
 
 BOOST_AUTO_TEST_CASE(ctor) {

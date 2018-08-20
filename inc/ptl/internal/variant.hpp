@@ -14,28 +14,50 @@ namespace ptl::internal {
 	template<typename... Types>
 	struct max_sizeof final : std::integral_constant<std::size_t, 0> {};
 
+	template<typename... Types>
+	inline
+	constexpr
+	auto max_sizeof_v{max_sizeof<Types...>::value};
+
 	template<typename Type, typename... Types>
-	struct max_sizeof<Type, Types...> final : std::integral_constant<std::size_t, (sizeof(Type) > max_sizeof<Types...>::value ? sizeof(Type) : max_sizeof<Types...>::value)>{};
+	struct max_sizeof<Type, Types...> final : std::integral_constant<std::size_t,
+		(sizeof(Type) > max_sizeof_v<Types...> ? sizeof(Type) : max_sizeof_v<Types...>)
+	>{};
 
 	template<typename TypeToFind, typename... Types>
 	struct find final : std::integral_constant<std::uint8_t, std::numeric_limits<std::uint8_t>::max()> {};
 
+	template<typename TypeToFind, typename... Types>
+	inline
 	constexpr
-	auto not_found{find<void>::value};
+	std::uint8_t find_v{find<TypeToFind, Types...>::value};//TODO: why can't GCC deduce the correct type here?!
+
+	inline
+	constexpr
+	auto not_found{find_v<void>};
 
 	template<typename TypeToFind, typename Type, typename... Types>
-	struct find<TypeToFind, Type, Types...> final : std::integral_constant<
-		std::uint8_t,
+	struct find<TypeToFind, Type, Types...> final : std::integral_constant<std::uint8_t,
 		std::is_same_v<TypeToFind, Type> 
-			? 0 : find<TypeToFind, Types...>::value == not_found
-				? not_found : find<TypeToFind, Types...>::value + 1
+			? 0
+			: find_v<TypeToFind, Types...> == not_found
+				? not_found
+				: find_v<TypeToFind, Types...> + 1
 	>{};
 
 	template<typename... Types>
 	struct are_unique final : std::true_type {};
 
+	template<typename... Types>
+	inline
+	constexpr
+	auto are_unique_v{are_unique<Types...>::value};
+
 	template<typename Type, typename... Types>
-	struct are_unique<Type, Types...> final : std::bool_constant<(find<Type, Types...>::value == not_found && are_unique<Types...>::value)> {};
+	struct are_unique<Type, Types...> final : std::bool_constant<
+		find_v<Type, Types...> == not_found &&
+		are_unique_v<Types...>
+	> {};
 
 	template<typename ResultType, typename... Types>
 	struct visit final {

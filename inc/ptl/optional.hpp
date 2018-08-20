@@ -102,7 +102,7 @@ namespace ptl {
 		explicit
 		operator bool() const noexcept { return initialized; }
 		constexpr
-		auto operator!() const noexcept -> bool { return !initialized; }
+		auto operator!() const noexcept { return !initialized; }
 
 		void reset() noexcept {
 			if(initialized) {
@@ -129,7 +129,6 @@ namespace ptl {
 				other.reset();
 			} else internal::adl_swap(**this, *other);
 		}
-
 		friend
 		void swap(optional & lhs, optional & rhs) noexcept { lhs.swap(rhs); }
 
@@ -253,7 +252,7 @@ namespace ptl {
 		auto operator>=(const Type & value, const optional & opt) noexcept { return opt ? value >= *opt : true; }
 
 		friend
-		decltype(auto) operator<<(std::ostream & os, const optional & self) {
+		auto operator<<(std::ostream & os, const optional & self) -> std::ostream & {
 			if(!self) return os << "<nullopt>";
 			return os << *self;
 		}
@@ -265,28 +264,28 @@ namespace ptl {
 
 	template<typename Type>
 	constexpr
-	decltype(auto) get(const optional<Type> & self) {
+	auto get(const optional<Type> & self) -> const Type & {
 		if(!self) throw std::bad_optional_access{};
 		return *self;
 	}
 
 	template<typename Type>
 	constexpr
-	decltype(auto) get(      optional<Type> & self) {
+	auto get(      optional<Type> & self) ->       Type & {
 		if(!self) throw std::bad_optional_access{};
 		return *self;
 	}
 
 	template<typename Type>
 	constexpr
-	decltype(auto) get(const optional<Type> && self) {
+	auto get(const optional<Type> && self) -> const Type && {
 		if(!self) throw std::bad_optional_access{};
 		return *std::move(self);
 	}
 
 	template<typename Type>
 	constexpr
-	decltype(auto) get(      optional<Type> && self) {
+	auto get(      optional<Type> && self) ->       Type && {
 		if(!self) throw std::bad_optional_access{};
 		return *std::move(self);
 	}

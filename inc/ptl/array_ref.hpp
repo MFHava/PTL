@@ -61,7 +61,7 @@ namespace ptl {
 		constexpr
 		auto size() const noexcept -> std::size_t { return last - first; }
 		constexpr
-		auto max_size() const noexcept { return std::numeric_limits<std::size_t>::max(); }
+		auto max_size() const noexcept { return std::numeric_limits<std::size_t>::max() / sizeof(Type); }
 
 		constexpr
 		void swap(array_ref & other) noexcept {

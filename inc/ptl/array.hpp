@@ -62,25 +62,25 @@ namespace ptl {
 
 	template<std::size_t Index, typename Type, std::size_t Size>
 	constexpr
-	decltype(auto) get(const array<Type, Size> & self) noexcept {
+	auto get(const array<Type, Size> & self) noexcept -> const Type & {
 		static_assert(Index < Size);
 		return self[Index];
 	}
 
 	template<std::size_t Index, typename Type, std::size_t Size>
 	constexpr
-	decltype(auto) get(      array<Type, Size> & self) noexcept {
+	auto get(      array<Type, Size> & self) noexcept ->       Type & {
 		static_assert(Index < Size);
 		return self[Index];
 	}
 
 	template<std::size_t Index, typename Type, std::size_t Size>
 	constexpr
-	decltype(auto) get(const array<Type, Size> && self) noexcept { return std::move(get<Index>(self)); }
+	auto get(const array<Type, Size> && self) noexcept -> const Type && { return std::move(get<Index>(self)); }
 
 	template<std::size_t Index, typename Type, std::size_t Size>
 	constexpr
-	decltype(auto) get(      array<Type, Size> && self) noexcept { return std::move(get<Index>(self)); }
+	auto get(      array<Type, Size> && self) noexcept ->       Type && { return std::move(get<Index>(self)); }
 }
 
 namespace std {
@@ -88,7 +88,5 @@ namespace std {
 	struct tuple_size<ptl::array<Type, Size>> : std::integral_constant<std::size_t, Size> {};
 
 	template<std::size_t Index, typename Type, std::size_t Size>
-	struct tuple_element<Index, ptl::array<Type, Size>> {
-		using type = Type;
-	};
+	struct tuple_element<Index, ptl::array<Type, Size>> { using type = Type; };
 }

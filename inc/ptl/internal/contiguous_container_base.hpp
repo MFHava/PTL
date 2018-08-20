@@ -16,13 +16,13 @@ namespace ptl::internal {
 		static_assert(internal::is_abi_compatible_v<Type>);
 
 		constexpr
-		decltype(auto) self() const noexcept { return static_cast<const Implementation &>(*this); }
+		auto self() const noexcept -> const Implementation & { return static_cast<const Implementation &>(*this); }
 		constexpr
-		decltype(auto) self()       noexcept { return static_cast<      Implementation &>(*this); }
+		auto self()       noexcept ->       Implementation & { return static_cast<      Implementation &>(*this); }
 
 		template<typename ValueType, bool IsConst>
 		struct contiguous_iterator final : boost::random_access_iterator_helper<contiguous_iterator<ValueType, IsConst>, ValueType, std::ptrdiff_t, std::conditional_t<IsConst, const ValueType, ValueType> *, std::conditional_t<IsConst, const ValueType, ValueType> &> {
-			static_assert(!std::is_const<ValueType>::value, "ValueType may not be const");
+			static_assert(!std::is_const_v<ValueType>);
 
 			constexpr
 			contiguous_iterator() noexcept =default;
@@ -33,20 +33,20 @@ namespace ptl::internal {
 			~contiguous_iterator() noexcept =default;
 
 			constexpr
-			decltype(auto) operator++() noexcept { move(+1); return *this; }
+			auto operator++() noexcept -> contiguous_iterator & { move(+1); return *this; }
 			constexpr
-			decltype(auto) operator--() noexcept { move(-1); return *this; }
+			auto operator--() noexcept -> contiguous_iterator & { move(-1); return *this; }
 
 			constexpr
-			decltype(auto) operator*() const noexcept {
+			auto operator*() const noexcept -> decltype(auto) {
 				PTL_REQUIRES(ptr);
 				return *ptr;
 			}
 
 			constexpr
-			decltype(auto) operator+=(std::ptrdiff_t count) noexcept { move(+count); return *this; }
+			auto operator+=(std::ptrdiff_t count) noexcept -> contiguous_iterator & { move(+count); return *this; }
 			constexpr
-			decltype(auto) operator-=(std::ptrdiff_t count) noexcept { move(-count); return *this; }
+			auto operator-=(std::ptrdiff_t count) noexcept -> contiguous_iterator & { move(-count); return *this; }
 
 			constexpr
 			operator contiguous_iterator<ValueType, true>() const noexcept { return contiguous_iterator<ValueType, true>{ptr}; }
@@ -96,7 +96,7 @@ namespace ptl::internal {
 				else return -1;
 			} else {
 				if(first2 == last2) return 1;
-				else return *first1 - *first2;
+				else return *first1 - *first2;//TODO: this is an unnecessary requirement!
 			}
 		}
 	protected:
@@ -123,54 +123,54 @@ namespace ptl::internal {
 	public:
 		using const_iterator         = contiguous_iterator<value_type, true>;
 		BOOST_CONCEPT_ASSERT((boost::RandomAccessIterator<const_iterator>));
-		using iterator               = std::conditional_t<std::is_const<Type>::value, const_iterator, mutable_iterator>;
+		using iterator               = std::conditional_t<std::is_const_v<Type>, const_iterator, mutable_iterator>;
 		using reverse_iterator       = std::reverse_iterator<      iterator>;
 		using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
 		constexpr
-		decltype(auto) front() const noexcept {
+		auto front() const noexcept -> decltype(auto) {
 			PTL_REQUIRES(!empty());
 			return (*this)[0];
 		}
 		constexpr
-		decltype(auto) front()       noexcept {
+		auto front()       noexcept -> decltype(auto) {
 			PTL_REQUIRES(!empty());
 			return (*this)[0];
 		}
 		constexpr
-		decltype(auto) back() const noexcept {
+		auto back() const noexcept -> decltype(auto) {
 			PTL_REQUIRES(!empty());
 			return (*this)[self().size() - 1];
 		}
 		constexpr
-		decltype(auto) back()       noexcept {
+		auto back()       noexcept -> decltype(auto) {
 			PTL_REQUIRES(!empty());
 			return (*this)[self().size() - 1];
 		}
 
 		constexpr
-		decltype(auto) operator[](std::size_t index) const noexcept {
+		auto operator[](std::size_t index) const noexcept -> decltype(auto) {
 			PTL_REQUIRES(index < self().size());
 			return *(begin() + index);
 		}
 		constexpr
-		decltype(auto) operator[](std::size_t index)       noexcept {
+		auto operator[](std::size_t index)       noexcept -> decltype(auto) {
 			PTL_REQUIRES(index < self().size());
 			return *(begin() + index);
 		}
 		constexpr
-		decltype(auto) at(std::size_t index) const {
+		auto at(std::size_t index) const -> decltype(auto) {
 			if(index >= self().size()) throw std::out_of_range{"index out of range"};
 			return (*this)[index];
 		}
 		constexpr
-		decltype(auto) at(std::size_t index)       {
+		auto at(std::size_t index)       -> decltype(auto) {
 			if(index >= self().size()) throw std::out_of_range{"index out of range"};
 			return (*this)[index];
 		}
 
 		constexpr
-		auto empty() const noexcept -> bool { return self().size() == 0; }
+		auto empty() const noexcept { return self().size() == 0; }
 
 		constexpr
 		auto begin() const noexcept { return const_iterator{self().data()}; }

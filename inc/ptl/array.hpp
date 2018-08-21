@@ -21,18 +21,14 @@ namespace ptl {
 
 		internal::array_storage_t<Type, Size> values;
 	public:
-		template<typename... Args>
+		template<typename... Args, typename = std::enable_if_t<internal::are_convertible_v<Type, Args...>>>
 		constexpr
 		array(Args &&... args) : values{std::forward<Args>(args)...} {}
 
 		constexpr
 		array(const array &) =default;
 		constexpr
-		array(array && other) noexcept { swap(*this, other); }
-		constexpr
 		auto operator=(const array &) -> array & =default;
-		constexpr
-		auto operator=(array && other) noexcept -> array & { swap(*this, other); return *this; }
 
 		constexpr
 		auto data() const noexcept -> const Type * { return values; }
@@ -58,6 +54,9 @@ namespace ptl {
 	};
 	PTL_PACK_END
 
+	template<typename Type, typename... Types>
+	array(Type, Types...) -> array<Type, 1 + sizeof...(Types)>;
+
 	template<std::size_t Index, typename Type, std::size_t Size>
 	constexpr
 	decltype(auto) get(const array<Type, Size> & self) noexcept {
@@ -79,4 +78,14 @@ namespace ptl {
 	template<std::size_t Index, typename Type, std::size_t Size>
 	constexpr
 	decltype(auto) get(      array<Type, Size> && self) noexcept { return std::move(get<Index>(self)); }
+}
+
+namespace std {
+	template<typename Type, std::size_t Size>
+	struct tuple_size<ptl::array<Type, Size>> : std::integral_constant<std::size_t, Size> {};
+
+	template<std::size_t Index, typename Type, std::size_t Size>
+	struct tuple_element<Index, ptl::array<Type, Size>> {
+		using type = Type;
+	};
 }

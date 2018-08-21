@@ -23,7 +23,7 @@ BOOST_AUTO_TEST_CASE(ctor) {
 	BOOST_TEST(static_cast<bool>(op1));
 	BOOST_TEST(*op1 == 1);
 
-	ptl::optional<int> op2{ptl::in_place, 5};
+	ptl::optional<int> op2{std::in_place, 5};
 	BOOST_TEST(!!op2);
 	BOOST_TEST(static_cast<bool>(op2));
 	BOOST_TEST(*op2 == 5);

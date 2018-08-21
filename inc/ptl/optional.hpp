@@ -6,21 +6,13 @@
 
 #pragma once
 #include <ostream>
+#include <optional>
 #include "internal/adl_swap.hpp"
-#include "internal/optional.hpp"
 #include "internal/requires.hpp"
 #include "internal/type_checks.hpp"
 #include "internal/compiler_detection.hpp"
 
 namespace ptl {
-	//! @brief global constant used to indicate an optional with uninitialized state
-	constexpr
-	internal::nullopt_t nullopt{0};
-
-	//! @brief tag for dispatch in constructor of optional
-	constexpr
-	internal::in_place_t in_place{};
-
 	PTL_PACK_BEGIN
 	//! @brief an optional value
 	//! @tparam Type type of the potentially contained object
@@ -33,7 +25,7 @@ namespace ptl {
 		constexpr
 		optional() noexcept =default;
 		constexpr
-		optional(internal::nullopt_t) noexcept {}
+		optional(std::nullopt_t) noexcept {}
 
 		constexpr
 		optional(const optional & other) : initialized{other.initialized} { if(other) new(data) Type{*other}; }
@@ -47,9 +39,9 @@ namespace ptl {
 
 		template<typename... Args>
 		explicit
-		optional(internal::in_place_t, Args &&... args) : initialized{true} { new(data) Type{std::forward<Args>(args)...}; }
+		optional(std::in_place_t, Args &&... args) : initialized{true} { new(data) Type{std::forward<Args>(args)...}; }
 
-		auto operator=(internal::nullopt_t) noexcept -> optional & {
+		auto operator=(std::nullopt_t) noexcept -> optional & {
 			reset();
 			return *this;
 		}
@@ -185,41 +177,41 @@ namespace ptl {
 
 		friend
 		constexpr
-		auto operator==(const optional & opt, internal::nullopt_t) noexcept { return !opt; }
+		auto operator==(const optional & opt, std::nullopt_t) noexcept { return !opt; }
 		friend
 		constexpr
-		auto operator!=(const optional & opt, internal::nullopt_t) noexcept { return static_cast<bool>(opt); }
+		auto operator!=(const optional & opt, std::nullopt_t) noexcept { return static_cast<bool>(opt); }
 		friend
 		constexpr
-		auto operator< (const optional & opt, internal::nullopt_t) noexcept { return false; }
+		auto operator< (const optional & opt, std::nullopt_t) noexcept { return false; }
 		friend
 		constexpr
-		auto operator<=(const optional & opt, internal::nullopt_t) noexcept { return !opt; }
+		auto operator<=(const optional & opt, std::nullopt_t) noexcept { return !opt; }
 		friend
 		constexpr
-		auto operator> (const optional & opt, internal::nullopt_t) noexcept { return static_cast<bool>(opt); }
+		auto operator> (const optional & opt, std::nullopt_t) noexcept { return static_cast<bool>(opt); }
 		friend
 		constexpr
-		auto operator>=(const optional & opt, internal::nullopt_t) noexcept { return true; }
+		auto operator>=(const optional & opt, std::nullopt_t) noexcept { return true; }
 
 		friend
 		constexpr
-		auto operator==(internal::nullopt_t, const optional & opt) noexcept { return !opt; }
+		auto operator==(std::nullopt_t, const optional & opt) noexcept { return !opt; }
 		friend
 		constexpr
-		auto operator!=(internal::nullopt_t, const optional & opt) noexcept { return static_cast<bool>(opt); }
+		auto operator!=(std::nullopt_t, const optional & opt) noexcept { return static_cast<bool>(opt); }
 		friend
 		constexpr
-		auto operator< (internal::nullopt_t, const optional & opt) noexcept { return static_cast<bool>(opt); }
+		auto operator< (std::nullopt_t, const optional & opt) noexcept { return static_cast<bool>(opt); }
 		friend
 		constexpr
-		auto operator<=(internal::nullopt_t, const optional & opt) noexcept { return true; }
+		auto operator<=(std::nullopt_t, const optional & opt) noexcept { return true; }
 		friend
 		constexpr
-		auto operator> (internal::nullopt_t, const optional & opt) noexcept { return false; }
+		auto operator> (std::nullopt_t, const optional & opt) noexcept { return false; }
 		friend
 		constexpr
-		auto operator>=(internal::nullopt_t, const optional & opt) noexcept { return !opt; }
+		auto operator>=(std::nullopt_t, const optional & opt) noexcept { return !opt; }
 
 		friend
 		constexpr
@@ -267,36 +259,34 @@ namespace ptl {
 	};
 	PTL_PACK_END
 
-	//! @brief exception thrown when trying to access an optional in an invalid way
-	struct bad_optional_access : std::exception {
-		auto what() const noexcept -> const char * override { return "bad_optional_access"; }
-	};
+	template<typename Type>
+	optional(Type) -> optional<Type>;
 
 	template<typename Type>
 	constexpr
 	decltype(auto) get(const optional<Type> & self) {
-		if(!self) throw bad_optional_access{};
+		if(!self) throw std::bad_optional_access{};
 		return *self;
 	}
 
 	template<typename Type>
 	constexpr
 	decltype(auto) get(      optional<Type> & self) {
-		if(!self) throw bad_optional_access{};
+		if(!self) throw std::bad_optional_access{};
 		return *self;
 	}
 
 	template<typename Type>
 	constexpr
 	decltype(auto) get(const optional<Type> && self) {
-		if(!self) throw bad_optional_access{};
+		if(!self) throw std::bad_optional_access{};
 		return *std::move(self);
 	}
 
 	template<typename Type>
 	constexpr
 	decltype(auto) get(      optional<Type> && self) {
-		if(!self) throw bad_optional_access{};
+		if(!self) throw std::bad_optional_access{};
 		return *std::move(self);
 	}
 
@@ -306,7 +296,7 @@ namespace ptl {
 
 	template<typename Type, typename... Args>
 	constexpr
-	auto make_optional(Args &&... args) { return optional<Type>{in_place, std::forward<Args>(args)...}; }
+	auto make_optional(Args &&... args) { return optional<Type>{std::in_place, std::forward<Args>(args)...}; }
 }
 
 namespace std {

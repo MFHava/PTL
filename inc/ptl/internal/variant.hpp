@@ -6,7 +6,6 @@
 
 #pragma once
 #include <cstddef>
-#include <cstdint>
 #include <variant>
 #include <type_traits>
 
@@ -85,19 +84,25 @@ namespace ptl::internal {
 		}
 	};
 
-	template<typename Type>
-	struct get_visitor final {
-		auto operator()(Type & self) const -> Type & { return self; }
+	template<typename... Functors>
+	struct combined_visitor;
 
-		template<typename OtherType>
-		auto operator()(const OtherType &) const -> Type & { throw std::bad_variant_access{}; }
+	template<typename Functor>
+	struct combined_visitor<Functor> : Functor {
+		constexpr
+		combined_visitor(Functor functor) : Functor{functor} {}
 	};
 
-	template<typename Type>
-	struct holds_alternative_visitor final {
-		auto operator()(const Type &) const noexcept { return true; }
+	template<typename Functor, typename... Functors>
+	struct combined_visitor<Functor, Functors...> : Functor, combined_visitor<Functors...> {
+		using Functor::operator();
+		using combined_visitor<Functors...>::operator();
 
-		template<typename OtherType>
-		auto operator()(const OtherType &) const noexcept { return false; }
+		constexpr
+		combined_visitor(Functor functor, Functors... functors) : Functor{functor}, combined_visitor<Functors...>{functors...} {}
 	};
+
+	template<typename... Functors>
+	constexpr
+	auto combine(Functors &&... functors) -> combined_visitor<Functors...> { return {std::forward<Functors>(functors)...}; }
 }

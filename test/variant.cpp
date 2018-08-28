@@ -66,25 +66,25 @@ BOOST_AUTO_TEST_CASE(move) {
 	BOOST_TEST( ptl::get<moveable>(var2).moved);
 }
 
-namespace {
-	template<typename ExpectedType>
-	struct expected_type_visitor final {
-		void operator()(const ExpectedType &) const { BOOST_TEST(true); }
-
-		template<typename Type>
-		void operator()(const Type &) const { BOOST_TEST(false); }
-	};
-}
 BOOST_AUTO_TEST_CASE(visit) {
 	ptl::variant<int, double> var;
-	var.visit(expected_type_visitor<int>{});
+	var.visit(
+		[](int) { BOOST_TEST(true); },
+		[](double) { BOOST_TEST(false); }
+	);
 
 	var = 1.5;
-	var.visit(expected_type_visitor<double>{});
+	var.visit(
+		[](int) { BOOST_TEST(false); },
+		[](double) { BOOST_TEST(true); }
+	);
 	BOOST_TEST(var.visit([](const auto & value) -> double { return value; }) == 1.5);
 
 	var = 1;
-	var.visit(expected_type_visitor<int>{});
+	var.visit(
+		[](int) { BOOST_TEST(true); },
+		[](double) { BOOST_TEST(false); }
+	);
 	BOOST_TEST(var.visit([](const auto & value) -> double { return value; }) == 1.0);
 }
 

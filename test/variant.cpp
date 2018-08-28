@@ -35,7 +35,7 @@ BOOST_AUTO_TEST_CASE(ctor) {
 		Y(int, int, int) {}
 	};
 
-	ptl::variant<int, double, X, Y> var2{ptl::in_place_type<X>, 4, 5};
+	ptl::variant<int, double, X, Y> var2{std::in_place_type<X>, 4, 5};
 	BOOST_TEST(ptl::holds_alternative<X>(var2));
 
 	var2.emplace<Y>(1, 2, 3);

@@ -8,23 +8,12 @@
 #include <limits>
 #include <ostream>
 #include <utility>
-#include <stdexcept>
 #include "internal/variant.hpp"
 #include "internal/adl_swap.hpp"
 #include "internal/type_checks.hpp"
 #include "internal/compiler_detection.hpp"
 
 namespace ptl {
-	//! @brief tag for dispatch in constructor of variant
-	template<typename Type>
-	constexpr
-	internal::in_place_type_t<Type> in_place_type{};
-
-	//! @brief exception thrown when trying to access a variant in an invalid way
-	struct bad_variant_access : std::exception {
-		auto what() const noexcept -> const char * override { return "bad_variant_access"; }
-	};
-
 	PTL_PACK_BEGIN
 	//! @brief a type-safe union, storing one of multiple types
 	//! @tparam DefaultType type that will be stored in the variant by default
@@ -46,8 +35,8 @@ namespace ptl {
 		}
 
 		static_assert(internal::are_abi_compatible_v<DefaultType, Types...>);
+		static_assert(internal::are_unique<DefaultType, Types...>::value);
 		static_assert(1 + sizeof...(Types) < internal::not_found, "Too many types for variant specified");
-		static_assert(internal::are_unique<DefaultType, Types...>::value, "variant does not support duplicated types");
 	public:
 		constexpr
 		variant() : type{0} { new(data) DefaultType{}; }
@@ -62,7 +51,7 @@ namespace ptl {
 		template<typename Type, typename... Args>
 		explicit
 		constexpr
-		variant(internal::in_place_type_t<Type>, Args &&... args) { emplace<Type>(std::forward<Args>(args)...); }
+		variant(std::in_place_type_t<Type>, Args &&... args) { emplace<Type>(std::forward<Args>(args)...); }
 
 		auto operator=(const variant & other) -> variant & {
 			if(other.valueless_by_exception()) reset();
@@ -105,10 +94,10 @@ namespace ptl {
 
 		template<typename Visitor>
 		constexpr
-		decltype(auto) visit(Visitor && visitor) const { return internal::visit<bad_variant_access, decltype(visitor(std::declval<DefaultType &>())), DefaultType, Types...>::dispatch(type, data, visitor); }
+		decltype(auto) visit(Visitor && visitor) const { return internal::visit<decltype(visitor(std::declval<DefaultType &>())), DefaultType, Types...>::dispatch(type, data, visitor); }
 		template<typename Visitor>
 		constexpr
-		decltype(auto) visit(Visitor && visitor)       { return internal::visit<bad_variant_access, decltype(visitor(std::declval<DefaultType &>())), DefaultType, Types...>::dispatch(type, data, visitor); }
+		decltype(auto) visit(Visitor && visitor)       { return internal::visit<decltype(visitor(std::declval<DefaultType &>())), DefaultType, Types...>::dispatch(type, data, visitor); }
 
 		void swap(variant & other) noexcept {
 			if(valueless_by_exception() && other.valueless_by_exception()) return;
@@ -204,15 +193,15 @@ namespace ptl {
 	template<typename Type, typename... Types>
 	constexpr
 	decltype(auto) get(const variant<Types...> & self) {
-		static_assert(internal::find<Type, Types...>::value != internal::not_found, "type not stored in variant");
-		return self.visit(internal::get_visitor<bad_variant_access, const Type>());
+		static_assert(internal::find<Type, Types...>::value != internal::not_found);
+		return self.visit(internal::get_visitor<const Type>());
 	}
 
 	template<typename Type, typename... Types>
 	constexpr
 	decltype(auto) get(      variant<Types...> & self) {
-		static_assert(internal::find<Type, Types...>::value != internal::not_found, "type not stored in variant");
-		return self.visit(internal::get_visitor<bad_variant_access,       Type>());
+		static_assert(internal::find<Type, Types...>::value != internal::not_found);
+		return self.visit(internal::get_visitor<      Type>());
 	}
 
 	template<typename Type, typename... Types>

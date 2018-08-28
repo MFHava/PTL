@@ -7,6 +7,7 @@
 #pragma once
 #include <cstddef>
 #include <cstdint>
+#include <variant>
 #include <type_traits>
 
 namespace ptl {
@@ -37,44 +38,38 @@ namespace ptl {
 		template<typename Type, typename... Types>
 		struct are_unique<Type, Types...> final : std::integral_constant<bool, (find<Type, Types...>::value == not_found && are_unique<Types...>::value)> {};
 
-		template<typename Exception, typename ResultType, typename... Types>
+		template<typename ResultType, typename... Types>
 		struct visit final {
 			template<typename Visitor>
 			static
 			constexpr
-			auto dispatch(std::uint8_t, const void *, Visitor &) -> ResultType { throw Exception{}; }
+			auto dispatch(std::uint8_t, const void *, Visitor &) -> ResultType { throw std::bad_variant_access{}; }
 		};
 
-		template<typename Exception, typename ResultType, typename Type, typename... Types>
-		struct visit<Exception, ResultType, Type, Types...> final {
+		template<typename ResultType, typename Type, typename... Types>
+		struct visit<ResultType, Type, Types...> final {
 			template<typename Visitor>
 			static
 			constexpr
 			auto dispatch(std::uint8_t index, const void * ptr, Visitor & visitor) -> ResultType {
-				return index ? visit<Exception, ResultType, Types...>::dispatch(index - 1, ptr, visitor)
+				return index ? visit<ResultType, Types...>::dispatch(index - 1, ptr, visitor)
 				             : visitor(*reinterpret_cast<const Type *>(ptr));
 			}
 			template<typename Visitor>
 			static
 			constexpr
 			auto dispatch(std::uint8_t index,       void * ptr, Visitor & visitor) -> ResultType {
-				return index ? visit<Exception, ResultType, Types...>::dispatch(index - 1, ptr, visitor)
+				return index ? visit<ResultType, Types...>::dispatch(index - 1, ptr, visitor)
 				             : visitor(*reinterpret_cast<      Type *>(ptr));
 			}
 		};
 
 		template<typename Type>
-		struct in_place_type_t final {
-			explicit
-			in_place_type_t() =default;
-		};
-
-		template<typename Exception, typename Type>
 		struct get_visitor final {
 			auto operator()(Type & self) const -> Type & { return self; }
 
 			template<typename OtherType>
-			auto operator()(const OtherType & self) const -> Type & { throw Exception{}; }
+			auto operator()(const OtherType & self) const -> Type & { throw std::bad_variant_access{}; }
 		};
 
 		template<typename Type>

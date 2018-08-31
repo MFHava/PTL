@@ -7,13 +7,11 @@
 #pragma once
 #include <utility>
 
-namespace ptl {
-	namespace internal {
-		template<typename Type>
-		constexpr
-		void adl_swap(Type & lhs, Type & rhs) noexcept {
-			using std::swap;
-			swap(lhs, rhs);
-		}
+namespace ptl::internal {
+	template<typename Type>
+	constexpr
+	void adl_swap(Type & lhs, Type & rhs) noexcept {
+		using std::swap;
+		swap(lhs, rhs);
 	}
 }

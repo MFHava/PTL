@@ -23,10 +23,13 @@ namespace ptl {
 	public:
 		constexpr
 		array_ref() =default;
+
 		constexpr
 		array_ref(const array_ref &) =default;
+
 		constexpr
 		auto operator=(const array_ref &) -> array_ref & =default;
+
 		~array_ref() noexcept =default;
 
 		//! @brief construct array_ref from two pointers

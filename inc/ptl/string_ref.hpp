@@ -25,6 +25,7 @@ namespace ptl {
 		struct c_str_iterator final : boost::input_iterator_helper<c_str_iterator, Char> {
 			constexpr
 			c_str_iterator() noexcept {}
+
 			constexpr
 			c_str_iterator(const Char * ptr) noexcept : ptr{ptr} {}
 
@@ -80,6 +81,8 @@ namespace ptl {
 
 		constexpr
 		auto operator=(const basic_string_ref &) noexcept -> basic_string_ref & =default;
+
+		~basic_string_ref() noexcept =default;
 
 		constexpr
 		auto data() const noexcept -> const Char * { return first; }

@@ -27,8 +27,11 @@ namespace ptl {
 
 		constexpr
 		array(const array &) =default;
+
 		constexpr
 		auto operator=(const array &) -> array & =default;
+
+		~array() noexcept =default;
 
 		constexpr
 		auto data() const noexcept -> const Type * { return values; }

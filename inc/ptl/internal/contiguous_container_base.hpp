@@ -28,6 +28,11 @@ namespace ptl::internal {
 			contiguous_iterator() noexcept =default;
 
 			constexpr
+			contiguous_iterator(const contiguous_iterator &) =default;
+
+			~contiguous_iterator() noexcept =default;
+
+			constexpr
 			decltype(auto) operator++() noexcept { move(+1); return *this; }
 			constexpr
 			decltype(auto) operator--() noexcept { move(-1); return *this; }

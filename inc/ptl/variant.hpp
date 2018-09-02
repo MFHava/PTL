@@ -49,8 +49,8 @@ namespace ptl {
 		variant(Type && value) { *this = std::forward<Type>(value); }
 
 		template<typename Type, typename... Args>
-		explicit
 		constexpr
+		explicit
 		variant(std::in_place_type_t<Type>, Args &&... args) { emplace<Type>(std::forward<Args>(args)...); }
 
 		auto operator=(const variant & other) -> variant & {

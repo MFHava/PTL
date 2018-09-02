@@ -70,8 +70,8 @@ namespace ptl::internal {
 
 			using internal_type = std::conditional_t<IsConst, const ValueType, ValueType> *;
 
-			explicit
 			constexpr
+			explicit
 			contiguous_iterator(internal_type ptr) noexcept : ptr{ptr} {}
 
 			internal_type ptr{nullptr};

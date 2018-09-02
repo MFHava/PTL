@@ -38,6 +38,7 @@ namespace ptl {
 		optional(Type && value) noexcept : initialized{true} { new(data) Type{std::move(value)}; }
 
 		template<typename... Args>
+		constexpr
 		explicit
 		optional(std::in_place_t, Args &&... args) : initialized{true} { new(data) Type{std::forward<Args>(args)...}; }
 
@@ -97,8 +98,8 @@ namespace ptl {
 		constexpr
 		auto operator*()       && noexcept ->       Type && { return std::move(**this); }
 
-		explicit
 		constexpr
+		explicit
 		operator bool() const noexcept { return initialized; }
 		constexpr
 		auto operator!() const noexcept -> bool { return !initialized; }

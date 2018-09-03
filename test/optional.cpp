@@ -36,11 +36,6 @@ BOOST_AUTO_TEST_CASE(ctor) {
 	BOOST_TEST(!!op3);
 	BOOST_TEST(static_cast<bool>(op3));
 	BOOST_TEST(*op3 == 10);
-
-	auto op4{ptl::make_optional<int>(20)};
-	BOOST_TEST(!!op4);
-	BOOST_TEST(static_cast<bool>(op4));
-	BOOST_TEST(*op4 == 20);
 }
 
 BOOST_AUTO_TEST_CASE(copy) {

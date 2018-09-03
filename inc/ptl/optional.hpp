@@ -290,14 +290,6 @@ namespace ptl {
 		if(!self) throw std::bad_optional_access{};
 		return *std::move(self);
 	}
-
-	template<typename Type>
-	constexpr
-	auto make_optional(Type && value) { return optional<std::decay_t<Type>>{std::forward<Type>(value)}; }
-
-	template<typename Type, typename... Args>
-	constexpr
-	auto make_optional(Args &&... args) { return optional<Type>{std::in_place, std::forward<Args>(args)...}; }
 }
 
 namespace std {

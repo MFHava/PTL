@@ -119,13 +119,6 @@ namespace ptl {
 
 		friend
 		constexpr
-		auto operator==(const basic_string_ref & lhs, const basic_string_ref & rhs) noexcept { return base_type::equal(lhs, rhs); }
-		friend
-		constexpr
-		auto operator< (const basic_string_ref & lhs, const basic_string_ref & rhs) noexcept { return base_type::less(lhs, rhs); }
-
-		friend
-		constexpr
 		auto operator==(const Char * lhs, const basic_string_ref & rhs) noexcept { return base_type::equal(c_str_iterator{lhs}, rhs); }
 		friend
 		constexpr
@@ -157,6 +150,6 @@ namespace ptl {
 namespace std {
 	template<typename Char>
 	struct hash<ptl::basic_string_ref<Char>> final {
-		auto operator()(const ptl::basic_string_ref<Char> & self) const noexcept -> std::size_t { return boost::hash_range(self.data(),  self.data() + self.size()); }
+		auto operator()(const ptl::basic_string_ref<Char> & self) const noexcept -> std::size_t { return boost::hash_range(self.data(), self.data() + self.size()); }
 	};
 }

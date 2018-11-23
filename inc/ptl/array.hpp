@@ -47,13 +47,6 @@ namespace ptl {
 
 		constexpr
 		void swap(array & other) noexcept { for(auto it1{base_type::begin()}, it2{other.begin()}, end{base_type::end()}; it1 != end;) internal::adl_swap(*it1++, *it2++); }
-
-		friend
-		constexpr
-		auto operator==(const array & lhs, const array & rhs) noexcept { return base_type::equal(lhs, rhs); }
-		friend
-		constexpr
-		auto operator< (const array & lhs, const array & rhs) noexcept { return base_type::less(lhs, rhs); }
 	};
 	PTL_PACK_END
 

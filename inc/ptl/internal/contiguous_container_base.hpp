@@ -5,6 +5,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
+#include <algorithm>
 #include <boost/operators.hpp>
 #include <boost/concept_check.hpp>
 #include "requires.hpp"
@@ -81,34 +82,16 @@ namespace ptl::internal {
 
 			internal_type ptr{nullptr};
 		};
-
-		template<typename InputRange1, typename InputRange2>
-		static
-		constexpr
-		auto compare(const InputRange1 & lhs, const InputRange2 & rhs) noexcept -> int {
-			auto first1{lhs.begin()};
-			auto first2{rhs.begin()};
-			const auto last1{lhs.end()};
-			const auto last2{rhs.end()};
-			while(first1 != last1 && first2 != last2 && *first1 == *first2) ++first1, ++first2;
-			if(first1 == last1) {
-				if(first2 == last2) return 0;
-				else return -1;
-			} else {
-				if(first2 == last2) return 1;
-				else return *first1 - *first2;//TODO: this is an unnecessary requirement!
-			}
-		}
 	protected:
 		template<typename InputRange1, typename InputRange2>
 		static
 		constexpr
-		auto equal(const InputRange1 & lhs, const InputRange2 & rhs) noexcept { return compare(lhs, rhs) == 0; }
+		auto equal(const InputRange1 & lhs, const InputRange2 & rhs) noexcept { return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()); }
 
 		template<typename InputRange1, typename InputRange2>
 		static
 		constexpr
-		auto less(const InputRange1 & lhs, const InputRange2 & rhs) noexcept { return compare(lhs, rhs) <  0; }
+		auto less(const InputRange1 & lhs, const InputRange2 & rhs) noexcept { return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()); }
 	public:
 		using value_type             = std::remove_cv_t<Type>;
 		using size_type              = std::size_t;
@@ -200,6 +183,13 @@ namespace ptl::internal {
 		friend
 		constexpr
 		void swap(Implementation & lhs, Implementation & rhs) noexcept { lhs.swap(rhs); }
+
+		friend
+		constexpr
+		auto operator==(const Implementation & lhs, const Implementation & rhs) noexcept { return equal(lhs, rhs); }
+		friend
+		constexpr
+		auto operator< (const Implementation & lhs, const Implementation & rhs) noexcept { return less(lhs, rhs); }
 	};
 }
 

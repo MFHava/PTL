@@ -68,20 +68,6 @@ namespace ptl {
 			internal::adl_swap(first, other.first);
 			internal::adl_swap(last,  other.last);
 		}
-
-		friend
-		constexpr
-		auto operator==(const array_ref & lhs, const array_ref & rhs) noexcept {
-			if(lhs.size() != rhs.size()) return false;
-			return base_type::equal(lhs, rhs);
-		}
-		friend
-		constexpr
-		auto operator< (const array_ref & lhs, const array_ref & rhs) noexcept {
-			if(lhs.size() < rhs.size()) return true;
-			if(lhs.size() > rhs.size()) return false;
-			return base_type::less(lhs, rhs);
-		}
 	};
 	PTL_PACK_END
 }

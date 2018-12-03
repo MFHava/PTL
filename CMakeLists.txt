@@ -20,10 +20,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(Boost 1.59 REQUIRED)
+add_library(ptl_flags INTERFACE)
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+	target_compile_options(ptl_flags INTERFACE -Wall -Wextra -Wpedantic -Wconversion)
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+	target_compile_options(ptl_flags INTERFACE /W4 /MP)
+endif()
 
 add_library(ptl INTERFACE)
 target_include_directories(ptl INTERFACE "inc")
-target_link_libraries(ptl INTERFACE Boost::boost)
+target_link_libraries(ptl INTERFACE ptl_flags Boost::boost)
 
 if(PTL_BUILD_TESTS)
 	find_package(Boost 1.59 REQUIRED unit_test_framework)
@@ -33,7 +39,7 @@ if(PTL_BUILD_TESTS)
 	file(GLOB_RECURSE PTL_TEST "test/*")
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/test FILES ${PTL_TEST})
 	add_executable(test-ptl ${PTL} ${PTL_TEST}) #including PTL sources here to have them included in IDEs
-	target_compile_definitions(test-ptl PRIVATE -DBOOST_TEST_DYN_LINK) #assuming that system uses dynamic Boost
+	target_compile_definitions(test-ptl PRIVATE BOOST_TEST_DYN_LINK) #assuming that system uses dynamic Boost
 	target_link_libraries(test-ptl ptl Boost::unit_test_framework)
 	set_target_properties(test-ptl PROPERTIES FOLDER "Portable Template Library")
 endif()

@@ -73,14 +73,14 @@ namespace ptl::internal {
 		static
 		constexpr
 		auto dispatch(std::uint8_t index, const void * ptr, Visitor & visitor) -> ResultType {
-			return index ? visit<ResultType, Types...>::dispatch(index - 1, ptr, visitor)
+			return index ? visit<ResultType, Types...>::dispatch(static_cast<std::uint8_t>(index - 1), ptr, visitor)
 			             : visitor(*reinterpret_cast<const Type *>(ptr));
 		}
 		template<typename Visitor>
 		static
 		constexpr
 		auto dispatch(std::uint8_t index,       void * ptr, Visitor & visitor) -> ResultType {
-			return index ? visit<ResultType, Types...>::dispatch(index - 1, ptr, visitor)
+			return index ? visit<ResultType, Types...>::dispatch(static_cast<std::uint8_t>(index - 1), ptr, visitor)
 			             : visitor(*reinterpret_cast<      Type *>(ptr));
 		}
 	};
@@ -90,7 +90,7 @@ namespace ptl::internal {
 		auto operator()(Type & self) const -> Type & { return self; }
 
 		template<typename OtherType>
-		auto operator()(const OtherType & self) const -> Type & { throw std::bad_variant_access{}; }
+		auto operator()(const OtherType &) const -> Type & { throw std::bad_variant_access{}; }
 	};
 
 	template<typename Type>

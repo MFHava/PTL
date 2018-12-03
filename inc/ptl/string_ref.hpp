@@ -104,10 +104,10 @@ namespace ptl {
 		}
 
 		constexpr
-		auto substr(typename base_type::const_iterator first, typename base_type::const_iterator last) const noexcept {
+		auto substr(typename base_type::const_iterator prefix, typename base_type::const_iterator suffix) const noexcept {
 			auto result{*this};
-			result.remove_prefix(first);
-			result.remove_suffix(last);
+			result.remove_prefix(prefix);
+			result.remove_suffix(suffix);
 			return result;
 		}
 

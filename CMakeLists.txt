@@ -7,6 +7,9 @@
 cmake_minimum_required(VERSION 3.13)
 project(PTL)
 
+find_package(Git REQUIRED)
+execute_process(COMMAND ${GIT_EXECUTABLE} describe WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE PTL_VERSION OUTPUT_STRIP_TRAILING_WHITESPACE)
+
 option(PTL_BUILD_TESTS "Build tests" OFF)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -40,6 +43,7 @@ endif()
 add_library(ptl INTERFACE)
 target_include_directories(ptl INTERFACE "inc")
 target_link_libraries(ptl INTERFACE ptl_flags)
+install(DIRECTORY inc/ptl DESTINATION inc)
 
 if(PTL_BUILD_TESTS)
 	find_package(Catch2 CONFIG REQUIRED)
@@ -69,4 +73,9 @@ if(Doxygen_FOUND)
 	set(DOXYGEN_COLLABORATION_GRAPH NO)
 	doxygen_add_docs(PTL-Documentation "inc;docs")
 	set_target_properties(PTL-Documentation PROPERTIES FOLDER "Portable Template Library")
+#	install(DIRECTORY ${CMAKE_BINARY_DIR}/docs DESTINATION .) #TODO: add to package
 endif()
+
+set(CPACK_GENERATOR "ZIP")
+set(CPACK_PACKAGE_FILE_NAME "ptl-${PTL_VERSION}")
+include(CPack)

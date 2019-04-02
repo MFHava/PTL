@@ -4,7 +4,7 @@
 #    (See accompanying file LICENSE_1_0.txt or copy at
 #          http://www.boost.org/LICENSE_1_0.txt)
 
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.13)
 project(PTL)
 
 option(PTL_BUILD_TESTS "Build tests" OFF)
@@ -24,7 +24,18 @@ add_library(ptl_flags INTERFACE)
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	target_compile_options(ptl_flags INTERFACE -Wall -Wextra -Wpedantic -Wconversion)
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-	target_compile_options(ptl_flags INTERFACE /W4 /MP)
+	target_compile_definitions(ptl_flags INTERFACE _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS _CRT_SECURE_NO_WARNINGS _SCL_SECURE_NO_WARNINGS _SILENCE_FPOS_SEEKPOS_DEPRECATION_WARNING)
+	target_compile_options(ptl_flags INTERFACE
+		/W4 /JMC /MP /permissive- /bigobj
+		/wd4003 # ignore not enough parameters for function macro
+		/wd4456 # ignore local shadowing
+		/wd4457 # ignore function parameter shadowing
+		/wd4458 # ignore class member shadowing
+		/wd4459 # ignore global shadowing
+	)
+	target_link_options(ptl_flags INTERFACE
+		/ignore:4099 # ignore mixing struct and class keyword for same type
+	)
 endif()
 
 add_library(ptl INTERFACE)

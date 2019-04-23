@@ -50,24 +50,4 @@ BOOST_AUTO_TEST_CASE(comparisons) {
 	BOOST_TEST(!(r1 == s));
 }
 
-BOOST_AUTO_TEST_CASE(removing) {
-	const ptl::string_ref r{"Hello World"};
-	auto r0{r};
-	r0.remove_prefix(std::begin(r0));
-	BOOST_TEST(r0 == r);
-	r0.remove_prefix(std::find(std::begin(r0), std::end(r0), ' ') + 1);
-	BOOST_TEST(r0 == "World");
-
-	auto r1{r};
-	r1.remove_suffix(std::end(r1));
-	BOOST_TEST(r1 == r);
-	r1.remove_suffix(std::find(std::begin(r1), std::end(r1), ' '));
-	BOOST_TEST(r1 == "Hello");
-
-	const auto it{std::find(std::begin(r), std::end(r), ' ')};
-	const auto r2{r.substr(it, it + 1)};
-	BOOST_TEST(r2 == " ");
-	BOOST_TEST(r2.size() == 1);
-}
-
 BOOST_AUTO_TEST_SUITE_END()

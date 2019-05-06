@@ -96,13 +96,13 @@ namespace ptl {
 		constexpr
 		auto visit(Visitor && visitor, Visitors &&... visitors) const -> decltype(auto) {
 			if constexpr(sizeof...(visitors) == 0) return internal::visit<decltype(visitor(std::declval<DefaultType &>())), DefaultType, Types...>::dispatch(type, data, visitor);
-			else return visit(internal::combine(std::forward<Visitor>(visitor), std::forward<Visitors>(visitors)...));
+			else return visit(internal::combined_visitor{std::forward<Visitor>(visitor), std::forward<Visitors>(visitors)...});
 		}
 		template<typename Visitor, typename... Visitors>
 		constexpr
 		auto visit(Visitor && visitor, Visitors &&... visitors)       -> decltype(auto) {
 			if constexpr(sizeof...(visitors) == 0) return internal::visit<decltype(visitor(std::declval<DefaultType &>())), DefaultType, Types...>::dispatch(type, data, visitor);
-			else return visit(internal::combine(std::forward<Visitor>(visitor), std::forward<Visitors>(visitors)...));
+			else return visit(internal::combined_visitor{std::forward<Visitor>(visitor), std::forward<Visitors>(visitors)...});
 		}
 
 		void swap(variant & other) noexcept {

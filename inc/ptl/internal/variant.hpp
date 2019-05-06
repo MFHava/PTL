@@ -85,24 +85,10 @@ namespace ptl::internal {
 	};
 
 	template<typename... Functors>
-	struct combined_visitor;
-
-	template<typename Functor>
-	struct combined_visitor<Functor> : Functor {
-		constexpr
-		combined_visitor(Functor functor) : Functor{functor} {}
-	};
-
-	template<typename Functor, typename... Functors>
-	struct combined_visitor<Functor, Functors...> : Functor, combined_visitor<Functors...> {
-		using Functor::operator();
-		using combined_visitor<Functors...>::operator();
-
-		constexpr
-		combined_visitor(Functor functor, Functors... functors) : Functor{functor}, combined_visitor<Functors...>{functors...} {}
+	struct combined_visitor : Functors... {
+		using Functors::operator()...;
 	};
 
 	template<typename... Functors>
-	constexpr
-	auto combine(Functors &&... functors) -> combined_visitor<Functors...> { return {std::forward<Functors>(functors)...}; }
+	combined_visitor(Functors &&...) -> combined_visitor<Functors...>;
 }

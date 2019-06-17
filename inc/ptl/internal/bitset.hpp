@@ -5,8 +5,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include <cstddef>
-#include <cstdint>
+#include "fnv.hpp"
 #include "adl_swap.hpp"
 #include "requires.hpp"
 
@@ -139,6 +138,12 @@ namespace ptl::internal {
 		constexpr
 		void swap(bitset_storage & other) noexcept { for(std::size_t i{0}; i < sizeof(values); ++i) internal::adl_swap(values[i], other.values[i]); }
 
+		constexpr
+		auto hash() const noexcept -> std::size_t {
+			static_assert(std::is_same_v<storage_type, std::uint8_t>);
+			return fnv1a(values);
+		}
+
 		friend
 		constexpr
 		auto operator==(const bitset_storage & lhs, const bitset_storage & rhs) noexcept -> bool {
@@ -196,6 +201,9 @@ namespace ptl::internal {
 
 		constexpr
 		void swap(bitset_storage &) noexcept {}
+
+		constexpr
+		auto hash() const noexcept -> std::size_t { return 0; }
 
 		friend
 		constexpr

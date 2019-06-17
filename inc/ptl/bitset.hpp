@@ -18,9 +18,12 @@ namespace ptl {
 	template<std::size_t Size>
 	class bitset final : boost::equality_comparable1<bitset<Size>, boost::bitwise1<bitset<Size>, boost::shiftable1<bitset<Size>>>> {
 		internal::bitset_storage<Size> storage;
+
+		friend
+		struct std::hash<bitset>;
 	public:
-		using value_type             = bool;
-		using size_type              = std::size_t;
+		using value_type = bool;
+		using size_type  = std::size_t;
 		class reference final {
 			friend bitset;
 
@@ -61,14 +64,14 @@ namespace ptl {
 				if(index == other.index) return;
 				const auto this_set{static_cast<bool>(*this)};
 				const auto other_set{static_cast<bool>(other)};
-				ptr->set(index , other_set);
+				ptr->set(index, other_set);
 				other.ptr->set(other.index, this_set);
 			}
 			friend
 			constexpr
 			void swap(reference lhs, reference rhs) noexcept { lhs.swap(rhs); }
 		};
-		using const_reference        = bool;
+		using const_reference = bool;
 
 		constexpr
 		bitset() noexcept =default;
@@ -234,14 +237,12 @@ namespace ptl {
 		static_assert(Index < Size);
 		return self[Index];
 	}
-
-	//TODO: mutable get?
 }
 
 namespace std {
 	template<std::size_t Size>
 	struct hash<ptl::bitset<Size>> final {
-		auto operator()(const ptl::bitset<Size> & self) const noexcept -> std::size_t;//TODO
+		auto operator()(const ptl::bitset<Size> & self) const noexcept -> std::size_t { return self.storage.hash(); }
 	};
 
 	template<std::size_t Size>

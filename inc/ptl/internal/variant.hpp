@@ -44,8 +44,8 @@ namespace ptl::internal {
 				: find_v<TypeToFind, Types...> + 1
 	>{};
 
-	template<typename... Types>
-	struct are_unique final : std::true_type {};
+	template<typename...>
+	struct are_unique;
 
 	template<typename... Types>
 	inline
@@ -57,6 +57,9 @@ namespace ptl::internal {
 		find_v<Type, Types...> == not_found &&
 		are_unique_v<Types...>
 	> {};
+
+	template<>
+	struct are_unique<> final : std::true_type {};
 
 	template<typename ResultType, typename... Types>
 	struct visit final {

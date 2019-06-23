@@ -24,40 +24,4 @@ namespace ptl::internal {
 	inline
 	constexpr
 	auto is_abi_compatible_v{is_abi_compatible<Type>::value};
-
-
-	template<typename...>
-	struct are_abi_compatible;
-
-	template<typename... Types>
-	inline
-	constexpr
-	auto are_abi_compatible_v{are_abi_compatible<Types...>::value};
-
-	template<>
-	struct are_abi_compatible<> final : std::true_type {};
-
-	template<typename Type, typename... Types>
-	struct are_abi_compatible<Type, Types...> final : std::bool_constant<
-		is_abi_compatible_v<Type> &&
-		are_abi_compatible_v<Types...>
-	> {};
-
-
-	template<typename...>
-	struct are_integral;
-
-	template<typename... Types>
-	inline
-	constexpr
-	auto are_integral_v{are_integral<Types...>::value};
-
-	template<>
-	struct are_integral<> final : std::true_type {};
-
-	template<typename Type, typename... Types>
-	struct are_integral<Type, Types...> final : std::bool_constant<
-		std::is_integral_v<Type> &&
-		are_integral_v<Types...>
-	> {};
 }

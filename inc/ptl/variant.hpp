@@ -34,7 +34,7 @@ namespace ptl {
 			type = internal::not_found;
 		}
 
-		static_assert(internal::are_abi_compatible_v<DefaultType, Types...>);
+		static_assert(internal::is_abi_compatible_v<DefaultType> && (internal::is_abi_compatible_v<Types> &&...));
 		static_assert(internal::are_unique_v<DefaultType, Types...>);
 		static_assert(1 + sizeof...(Types) < internal::not_found, "Too many types for variant specified");
 	public:

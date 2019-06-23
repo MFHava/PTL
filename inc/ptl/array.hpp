@@ -21,7 +21,7 @@ namespace ptl {
 
 		internal::array_storage_t<Type, Size> values;
 	public:
-		template<typename... Args, typename = std::enable_if_t<internal::are_convertible_v<Type, Args...>>>
+		template<typename... Args, typename = std::enable_if_t<(std::is_convertible_v<Type, Args> &&...)>>
 		constexpr
 		array(Args &&... args) : values{std::forward<Args>(args)...} {}
 

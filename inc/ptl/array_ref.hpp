@@ -70,4 +70,13 @@ namespace ptl {
 		}
 	};
 	PTL_PACK_END
+
+	template<typename Type, std::size_t Size>
+	array_ref(Type (&)[Size]) -> array_ref<Type>;
+
+	template<typename ContiguousRange>
+	array_ref(const ContiguousRange &) -> array_ref<const typename ContiguousRange::value_type>;
+
+	template<typename ContiguousRange>
+	array_ref(      ContiguousRange &) -> array_ref<      typename ContiguousRange::value_type>;
 }

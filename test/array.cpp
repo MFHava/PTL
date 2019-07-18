@@ -55,4 +55,11 @@ BOOST_AUTO_TEST_CASE(structured_binding) {
 	BOOST_TEST(c == arr[2]);
 }
 
+BOOST_AUTO_TEST_CASE(ctad) {
+	ptl::array arr0{0};
+	static_assert(std::is_same_v<decltype(arr0), ptl::array<int, 1>>);
+	ptl::array arr1{0, 1};
+	static_assert(std::is_same_v<decltype(arr1), ptl::array<int, 2>>);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

@@ -74,4 +74,15 @@ BOOST_AUTO_TEST_CASE(structured_binding) {
 	BOOST_TEST(c == ptl::get<2>(tup));
 }
 
+BOOST_AUTO_TEST_CASE(ctad) {
+	ptl::tuple t0;
+	static_assert(std::is_same_v<decltype(t0), ptl::tuple<>>);
+	ptl::tuple t1{0};
+	static_assert(std::is_same_v<decltype(t1), ptl::tuple<int>>);
+	ptl::tuple t2{0, 0.};
+	static_assert(std::is_same_v<decltype(t2), ptl::tuple<int, double>>);
+	ptl::tuple t3{0, 0., false};
+	static_assert(std::is_same_v<decltype(t3), ptl::tuple<int, double, bool>>);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

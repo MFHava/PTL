@@ -99,4 +99,9 @@ BOOST_AUTO_TEST_CASE(comparison) {
 	BOOST_TEST(op3 == op5);
 }
 
+BOOST_AUTO_TEST_CASE(ctad) {
+	ptl::optional op{0};
+	static_assert(std::is_same_v<decltype(op), ptl::optional<int>>);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

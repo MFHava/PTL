@@ -45,4 +45,22 @@ BOOST_AUTO_TEST_CASE(comparison) {
 	BOOST_TEST(r1 == a1);
 }
 
+BOOST_AUTO_TEST_CASE(ctad) {
+	int arr[]{0};
+	const int carr[]{0};
+
+	ptl::array_ref ref0{arr};
+	static_assert(std::is_same_v<decltype(ref0), ptl::array_ref<      int>>);
+	ptl::array_ref ref1{carr};
+	static_assert(std::is_same_v<decltype(ref1), ptl::array_ref<const int>>);
+
+	std::vector<int> vec{0};
+	const std::vector<int> cvec{0};
+
+	ptl::array_ref ref2{vec};
+	static_assert(std::is_same_v<decltype(ref2), ptl::array_ref<      int>>);
+	ptl::array_ref ref3{cvec};
+	static_assert(std::is_same_v<decltype(ref3), ptl::array_ref<const int>>);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

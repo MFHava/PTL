@@ -70,7 +70,7 @@ namespace ptl::internal {
 
 			constexpr
 			void move(std::ptrdiff_t count) noexcept {
-				PTL_REQUIRES(ptr);
+				PTL_REQUIRES(ptr || (!ptr && !count));
 				ptr += count;
 			}
 

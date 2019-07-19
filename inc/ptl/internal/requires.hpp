@@ -6,4 +6,20 @@
 
 #pragma once
 
-#define PTL_REQUIRES(args) ((void)0)
+
+#ifdef PTL_ENABLE_DEBUGGING
+	#include <cstdio>
+	#include <exception>
+
+	#define PTL_REQUIRES_STRINGIFY(args) #args
+
+	#define PTL_REQUIRES(args)\
+		do {\
+			if(!(args)) {\
+				std::fprintf(stderr, "PRECONDITION VIOLATION DETECTED (%s:%d) \"" PTL_REQUIRES_STRINGIFY(args) "\"\n", __FILE__, __LINE__);\
+				std::terminate();\
+			}\
+		} while(0)
+#else
+	#define PTL_REQUIRES(...) ((void)0)
+#endif

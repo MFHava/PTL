@@ -31,7 +31,7 @@ namespace ptl {
 			size_type index;
 
 			constexpr
-			reference(bitset & ptr, size_type index) noexcept : ptr{&ptr}, index{index} {}
+			reference(bitset & ptr, size_type index) noexcept : ptr{&ptr}, index{index} { PTL_REQUIRES(index < ptr.size()); }
 		public:
 			reference(const reference &) =default;
 
@@ -58,8 +58,6 @@ namespace ptl {
 
 			constexpr
 			void swap(reference & other) noexcept {
-				PTL_REQUIRES(ptr);
-				PTL_REQUIRES(other.ptr);
 				PTL_REQUIRES(ptr == other.ptr);
 				if(index == other.index) return;
 				const auto this_set{static_cast<bool>(*this)};

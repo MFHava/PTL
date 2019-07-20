@@ -107,7 +107,7 @@ namespace ptl {
 		auto test(size_type index) const -> bool { return at(index); }
 
 		constexpr
-		auto all() const noexcept -> bool { return count() == size(); }
+		auto all() const noexcept -> bool { return storage.all(); }
 		constexpr
 		auto any() const noexcept -> bool { return storage.any(); }
 		constexpr

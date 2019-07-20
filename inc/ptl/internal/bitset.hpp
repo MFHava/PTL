@@ -59,6 +59,27 @@ namespace ptl::internal {
 		}
 
 		constexpr
+		auto all() const noexcept -> bool {
+			if constexpr(sizeof(values) > 1)
+				for(std::size_t i{0}; i < sizeof(values) - 1; ++i)
+					if(values[i] != std::numeric_limits<storage_type>::max())
+						return false;
+			constexpr auto mask{[] {
+				storage_type result{0};
+				if constexpr(mod != 0) {
+					const auto value{1 << mod};
+					result |= value;
+					for(std::size_t i{1}; i < (bits - mod); ++i) {
+						result = static_cast<storage_type>(result << 1);
+						result |= value;
+					}
+				}
+				return static_cast<storage_type>(~result);
+			}()};
+			return values[sizeof(values) - 1] == mask;
+		}
+
+		constexpr
 		auto any() const noexcept -> bool {
 			for(const auto & value : values)
 				if(value)
@@ -165,6 +186,9 @@ namespace ptl::internal {
 
 		constexpr
 		auto operator[](std::size_t) const noexcept -> bool { return false; }
+
+		constexpr
+		auto all() const noexcept -> bool { return true; }
 
 		constexpr
 		auto any() const noexcept -> bool { return false; }

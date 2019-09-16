@@ -7,7 +7,6 @@
 #pragma once
 #include <istream>
 #include <ostream>
-#include <boost/operators.hpp>
 #include "internal/bitset.hpp"
 #include "internal/compiler_detection.hpp"
 
@@ -16,7 +15,7 @@ namespace ptl {
 	//! @brief a fixed-size sequence of bits
 	//! @tparam Size size of the bitset
 	template<std::size_t Size>
-	class bitset final : boost::equality_comparable1<bitset<Size>, boost::bitwise1<bitset<Size>, boost::shiftable1<bitset<Size>>>> {
+	class bitset final {
 		internal::bitset_storage<Size> storage;
 
 		friend
@@ -128,15 +127,35 @@ namespace ptl {
 			storage &= other.storage;
 			return *this;
 		}
+		friend
+		constexpr
+		auto operator&(bitset lhs, const bitset & rhs) noexcept -> bitset {
+			lhs &= rhs;
+			return lhs;
+		}
+
 		constexpr
 		auto operator|=(const bitset & other) noexcept -> bitset & {
 			storage |= other.storage;
 			return *this;
 		}
+		friend
+		constexpr
+		auto operator|(bitset lhs, const bitset & rhs) noexcept -> bitset {
+			lhs |= rhs;
+			return lhs;
+		}
+
 		constexpr
 		auto operator^=(const bitset & other) noexcept -> bitset & {
 			storage ^= other.storage;
 			return *this;
+		}
+		friend
+		constexpr
+		auto operator^(bitset lhs, const bitset & rhs) noexcept -> bitset {
+			lhs ^= rhs;
+			return lhs;
 		}
 
 		constexpr
@@ -151,10 +170,23 @@ namespace ptl {
 			storage <<= count;
 			return *this;
 		}
+		friend
+		constexpr
+		auto operator<<(bitset lhs, size_type rhs) noexcept -> bitset {
+			lhs <<= rhs;
+			return lhs;
+		}
+
 		constexpr
 		auto operator>>=(size_type count) noexcept -> bitset & {
 			storage >>= count;
 			return *this;
+		}
+		friend
+		constexpr
+		auto operator>>(bitset lhs, size_type rhs) noexcept -> bitset {
+			lhs >>= rhs;
+			return lhs;
 		}
 
 		constexpr
@@ -225,7 +257,10 @@ namespace ptl {
 
 		friend
 		constexpr
-		auto operator==(const bitset & lhs, const bitset & rhs) noexcept -> bool { return lhs.storage == rhs.storage; }
+		auto operator==(const bitset & lhs, const bitset & rhs) noexcept { return lhs.storage == rhs.storage; }
+		friend
+		constexpr
+		auto operator!=(const bitset & lhs, const bitset & rhs) noexcept { return !(lhs == rhs); }
 	};
 	PTL_PACK_END
 

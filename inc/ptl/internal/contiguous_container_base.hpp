@@ -5,15 +5,15 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
+#include <iterator>
 #include <algorithm>
-#include <boost/operators.hpp>
 #include <boost/concept_check.hpp>
 #include "requires.hpp"
 #include "type_checks.hpp"
 
 namespace ptl::internal {
-	template<typename Implementation, typename Type, typename Base = boost::operators_detail::empty_base<Implementation>>
-	class contiguous_container_base : boost::totally_ordered1<Implementation, Base> {
+	template<typename Implementation, typename Type>
+	class contiguous_container_base {
 		static_assert(internal::is_abi_compatible_v<Type>);
 
 		constexpr
@@ -22,8 +22,14 @@ namespace ptl::internal {
 		auto self()       noexcept ->       Implementation & { return static_cast<      Implementation &>(*this); }
 
 		template<typename ValueType, bool IsConst>
-		struct contiguous_iterator final : boost::random_access_iterator_helper<contiguous_iterator<ValueType, IsConst>, ValueType, std::ptrdiff_t, std::conditional_t<IsConst, const ValueType, ValueType> *, std::conditional_t<IsConst, const ValueType, ValueType> &> {
+		struct contiguous_iterator final {
 			static_assert(!std::is_const_v<ValueType>);
+
+			using iterator_category = std::random_access_iterator_tag;
+			using value_type        = ValueType;
+			using difference_type   = std::ptrdiff_t;
+			using pointer           = std::conditional_t<IsConst, const ValueType, ValueType> *;
+			using reference         = std::conditional_t<IsConst, const ValueType, ValueType> &;
 
 			constexpr
 			contiguous_iterator() noexcept =default;
@@ -36,31 +42,81 @@ namespace ptl::internal {
 			constexpr
 			auto operator++() noexcept -> contiguous_iterator & { move(+1); return *this; }
 			constexpr
-			auto operator--() noexcept -> contiguous_iterator & { move(-1); return *this; }
-
-			constexpr
-			auto operator*() const noexcept -> decltype(auto) {
-				PTL_REQUIRES(ptr);
-				return *ptr;
+			auto operator++(int) noexcept -> contiguous_iterator {
+				auto tmp{*this};
+				++*this;
+				return tmp;
 			}
 
 			constexpr
-			auto operator+=(std::ptrdiff_t count) noexcept -> contiguous_iterator & { move(+count); return *this; }
+			auto operator--() noexcept -> contiguous_iterator & { move(-1); return *this; }
 			constexpr
-			auto operator-=(std::ptrdiff_t count) noexcept -> contiguous_iterator & { move(-count); return *this; }
+			auto operator--(int) noexcept -> contiguous_iterator {
+				auto tmp{*this};
+				--*this;
+				return tmp;
+			}
+
+			constexpr
+			auto operator*() const noexcept -> reference {
+				PTL_REQUIRES(ptr);
+				return *ptr;
+			}
+			constexpr
+			auto operator->() const noexcept -> pointer {
+				PTL_REQUIRES(ptr);
+				return ptr;
+			}
+
+			constexpr
+			auto operator[](difference_type index) const noexcept -> reference { return *(*this + index); }
+
+			constexpr
+			auto operator+=(difference_type count) noexcept -> contiguous_iterator & { move(+count); return *this; }
+			friend
+			constexpr
+			auto operator+(contiguous_iterator lhs, difference_type rhs) noexcept -> contiguous_iterator {
+				lhs += rhs;
+				return lhs;
+			}
+			friend
+			constexpr
+			auto operator+(difference_type lhs, contiguous_iterator rhs) noexcept -> contiguous_iterator { return rhs + lhs; }
+
+			constexpr
+			auto operator-=(difference_type count) noexcept -> contiguous_iterator & { move(-count); return *this; }
+			friend
+			constexpr
+			auto operator-(contiguous_iterator lhs, difference_type rhs) noexcept -> contiguous_iterator {
+				lhs -= rhs;
+				return lhs;
+			}
+
+			friend
+			constexpr
+			auto operator-(const contiguous_iterator & lhs, const contiguous_iterator & rhs) noexcept -> difference_type { return lhs.ptr - rhs.ptr; }
 
 			constexpr
 			operator contiguous_iterator<ValueType, true>() const noexcept { return contiguous_iterator<ValueType, true>{ptr}; }
 
 			friend
 			constexpr
-			auto operator-(const contiguous_iterator & lhs, const contiguous_iterator & rhs) noexcept -> std::ptrdiff_t { return lhs.ptr - rhs.ptr; }
-			friend
-			constexpr
 			auto operator==(const contiguous_iterator & lhs, const contiguous_iterator & rhs) noexcept { return lhs.ptr == rhs.ptr; }
 			friend
 			constexpr
+			auto operator!=(const contiguous_iterator & lhs, const contiguous_iterator & rhs) noexcept { return !(lhs == rhs); }
+			friend
+			constexpr
 			auto operator< (const contiguous_iterator & lhs, const contiguous_iterator & rhs) noexcept { return lhs.ptr <  rhs.ptr; }
+			friend
+			constexpr
+			auto operator> (const contiguous_iterator & lhs, const contiguous_iterator & rhs) noexcept { return rhs < lhs; }
+			friend
+			constexpr
+			auto operator<=(const contiguous_iterator & lhs, const contiguous_iterator & rhs) noexcept { return !(lhs > rhs); }
+			friend
+			constexpr
+			auto operator>=(const contiguous_iterator & lhs, const contiguous_iterator & rhs) noexcept { return !(lhs < rhs); }
 		private:
 			constexpr
 			operator contiguous_iterator<ValueType, false>() const noexcept { return contiguous_iterator<ValueType, false>{const_cast<ValueType *>(ptr)}; }
@@ -69,7 +125,7 @@ namespace ptl::internal {
 			friend Implementation;
 
 			constexpr
-			void move(std::ptrdiff_t count) noexcept {
+			void move(difference_type count) noexcept {
 				PTL_REQUIRES(ptr || (!ptr && !count));
 				ptr += count;
 			}
@@ -189,7 +245,19 @@ namespace ptl::internal {
 		auto operator==(const Implementation & lhs, const Implementation & rhs) noexcept { return equal(lhs, rhs); }
 		friend
 		constexpr
+		auto operator!=(const Implementation & lhs, const Implementation & rhs) noexcept { return !(lhs == rhs); }
+		friend
+		constexpr
 		auto operator< (const Implementation & lhs, const Implementation & rhs) noexcept { return less(lhs, rhs); }
+		friend
+		constexpr
+		auto operator> (const Implementation & lhs, const Implementation & rhs) noexcept { return rhs < lhs; }
+		friend
+		constexpr
+		auto operator<=(const Implementation & lhs, const Implementation & rhs) noexcept { return !(lhs > rhs); }
+		friend
+		constexpr
+		auto operator>=(const Implementation & lhs, const Implementation & rhs) noexcept { return !(lhs < rhs); }
 	};
 }
 

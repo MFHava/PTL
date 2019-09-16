@@ -5,7 +5,6 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include <boost/operators.hpp>
 #include "internal/tuple.hpp"
 
 namespace ptl {
@@ -13,7 +12,7 @@ namespace ptl {
 	//! @brief a fixed-size collection of heterogeneous value
 	//! @tparam Types types to store inside the tuple
 	template<typename... Types>
-	class tuple final : boost::totally_ordered1<tuple<Types...>> {
+	class tuple final {
 		internal::tuple_storage<Types...> storage;
 
 		template<std::size_t Index, typename... Ts>
@@ -53,7 +52,19 @@ namespace ptl {
 		auto operator==(const tuple & lhs, const tuple & rhs) noexcept { return lhs.storage == rhs.storage; }
 		friend
 		constexpr
+		auto operator!=(const tuple & lhs, const tuple & rhs) noexcept { return !(lhs == rhs); }
+		friend
+		constexpr
 		auto operator< (const tuple & lhs, const tuple & rhs) noexcept { return lhs.storage <  rhs.storage; }
+		friend
+		constexpr
+		auto operator> (const tuple & lhs, const tuple & rhs) noexcept { return rhs < lhs; }
+		friend
+		constexpr
+		auto operator<=(const tuple & lhs, const tuple & rhs) noexcept { return !(lhs > rhs); }
+		friend
+		constexpr
+		auto operator>=(const tuple & lhs, const tuple & rhs) noexcept { return !(lhs < rhs); }
 	};
 	PTL_PACK_END
 

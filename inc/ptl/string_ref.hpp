@@ -65,8 +65,6 @@ namespace ptl {
 		operator std::string_view() const { return {this->data(), this->size()}; }
 	};
 	PTL_PACK_END
-
-	BOOST_CONCEPT_ASSERT((boost::RandomAccessContainer<string_ref>));
 	static_assert(sizeof(string_ref) == 2 * sizeof(const char *));
 
 	namespace literals {

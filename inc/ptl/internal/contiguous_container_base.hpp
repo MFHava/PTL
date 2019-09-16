@@ -7,7 +7,6 @@
 #pragma once
 #include <iterator>
 #include <algorithm>
-#include <boost/concept_check.hpp>
 #include "requires.hpp"
 #include "type_checks.hpp"
 
@@ -158,10 +157,8 @@ namespace ptl::internal {
 		using const_pointer          = const value_type *;
 	private:
 		using mutable_iterator       = contiguous_iterator<value_type, false>;
-		BOOST_CONCEPT_ASSERT((boost::Mutable_RandomAccessIterator<mutable_iterator>));
 	public:
 		using const_iterator         = contiguous_iterator<value_type, true>;
-		BOOST_CONCEPT_ASSERT((boost::RandomAccessIterator<const_iterator>));
 		using iterator               = std::conditional_t<std::is_const_v<Type>, const_iterator, mutable_iterator>;
 		using reverse_iterator       = std::reverse_iterator<      iterator>;
 		using const_reverse_iterator = std::reverse_iterator<const_iterator>;

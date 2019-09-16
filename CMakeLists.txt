@@ -19,7 +19,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(Boost 1.59 REQUIRED)
 add_library(ptl_flags INTERFACE)
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	target_compile_options(ptl_flags INTERFACE -Wall -Wextra -Wpedantic -Wconversion)
@@ -40,7 +39,6 @@ endif()
 
 add_library(ptl INTERFACE)
 target_include_directories(ptl INTERFACE "inc")
-target_link_libraries(ptl INTERFACE ptl_flags Boost::boost)
 
 if(PTL_BUILD_TESTS)
 	find_package(Boost 1.59 REQUIRED unit_test_framework)

@@ -4,11 +4,10 @@
 //    (See accompanying file ../LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>
-#include "ptl/array_ref.hpp"
-
 #include <array>
 #include <vector>
+#include <boost/test/unit_test.hpp>
+#include "ptl/array_ref.hpp"
 
 BOOST_AUTO_TEST_SUITE(array_ref)
 

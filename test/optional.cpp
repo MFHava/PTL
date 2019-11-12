@@ -5,8 +5,8 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <boost/test/unit_test.hpp>
-#include "moveable.hpp"
 #include "ptl/optional.hpp"
+#include "moveable.hpp"
 
 BOOST_AUTO_TEST_SUITE(optional)
 

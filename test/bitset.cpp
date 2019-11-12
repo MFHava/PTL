@@ -4,11 +4,11 @@
 //    (See accompanying file ../LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>
 #include <bitset>
 #include <numeric>
 #include <sstream>
-#include <ptl/bitset.hpp>
+#include <boost/test/unit_test.hpp>
+#include "ptl/bitset.hpp"
 
 namespace {
 	template<std::size_t Size>

@@ -39,6 +39,7 @@ endif()
 
 add_library(ptl INTERFACE)
 target_include_directories(ptl INTERFACE "inc")
+target_link_libraries(ptl INTERFACE ptl_flags)
 
 if(PTL_BUILD_TESTS)
 	find_package(Boost 1.59 REQUIRED unit_test_framework)

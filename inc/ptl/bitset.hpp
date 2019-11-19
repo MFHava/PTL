@@ -7,6 +7,7 @@
 #pragma once
 #include <istream>
 #include <ostream>
+#include <algorithm>
 #include "internal/bitset.hpp"
 #include "internal/compiler_detection.hpp"
 

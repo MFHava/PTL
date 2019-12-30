@@ -54,7 +54,7 @@ if(PTL_BUILD_TESTS)
 	set_target_properties(test-ptl PROPERTIES FOLDER "Portable Template Library")
 endif()
 
-find_package(Doxygen)
+find_package(Doxygen 1.8.2) #Doxygen 1.8.2 is the first version to support C++11
 if(Doxygen_FOUND)
 	set(DOXYGEN_PROJECT_NAME "Portable Template Library")
 	set(DOXYGEN_PROJECT_BRIEF "A collection of binary stable types targeted at cross-compiler interop")

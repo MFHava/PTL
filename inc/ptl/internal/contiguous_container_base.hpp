@@ -138,6 +138,18 @@ namespace ptl::internal {
 			internal_type ptr{nullptr};
 		};
 	protected:
+		constexpr
+		contiguous_container_base() noexcept =default;
+		constexpr
+		contiguous_container_base(const contiguous_container_base &) noexcept =default;
+		constexpr
+		contiguous_container_base(contiguous_container_base &&) noexcept =default;
+		constexpr
+		auto operator=(const contiguous_container_base &) noexcept -> contiguous_container_base & =default;
+		constexpr
+		auto operator=(contiguous_container_base &&) noexcept -> contiguous_container_base & =default;
+		~contiguous_container_base() noexcept =default;
+
 		template<typename InputRange1, typename InputRange2>
 		static
 		constexpr

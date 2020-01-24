@@ -9,7 +9,9 @@
 
 namespace ptl::internal {
 	template<typename Type>
-	struct is_abi_compatible final : std::bool_constant<
+	inline
+	constexpr
+	auto is_abi_compatible_v{
 		std::is_standard_layout_v<std::remove_cv_t<Type>> &&
 		std::is_default_constructible_v<std::remove_cv_t<Type>> &&
 		std::is_copy_constructible_v<std::remove_cv_t<Type>> &&
@@ -18,10 +20,5 @@ namespace ptl::internal {
 		std::is_nothrow_move_assignable_v<std::remove_cv_t<Type>> &&
 		std::is_nothrow_destructible_v<std::remove_cv_t<Type>> &&
 		std::is_nothrow_swappable_v<std::remove_cv_t<Type>>
-	> {};
-
-	template<typename Type>
-	inline
-	constexpr
-	auto is_abi_compatible_v{is_abi_compatible<Type>::value};
+	};
 }

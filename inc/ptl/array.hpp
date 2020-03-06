@@ -37,10 +37,15 @@ namespace ptl {
 		auto data() const noexcept -> const Type * { return values; }
 		constexpr
 		auto data()       noexcept ->       Type * { return values; }
+		static
 		constexpr
-		auto size() const noexcept { return Size; }
+		auto size() noexcept { return Size; }
+		static
 		constexpr
-		auto max_size() const noexcept { return Size; }
+		auto empty() noexcept { return size() == 0; }
+		static
+		constexpr
+		auto max_size() noexcept { return Size; }
 
 		constexpr
 		void fill(const Type & value) { for(auto it{base_type::begin()}, end{base_type::end()}; it != end; ++it) *it = value; }

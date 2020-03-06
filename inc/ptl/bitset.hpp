@@ -116,12 +116,15 @@ namespace ptl {
 		constexpr
 		auto count() const noexcept -> size_type { return storage.count(); }
 
+		static
 		constexpr
-		auto size() const noexcept -> size_type { return Size; }
+		auto size() noexcept -> size_type { return Size; }
+		static
 		constexpr
-		auto empty() const noexcept -> bool { return size() == 0; }
+		auto empty() noexcept -> bool { return size() == 0; }
+		static
 		constexpr
-		auto max_size() const noexcept -> size_type { return size(); }
+		auto max_size() noexcept -> size_type { return size(); }
 
 		constexpr
 		auto operator&=(const bitset & other) noexcept -> bitset & {

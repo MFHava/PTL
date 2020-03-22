@@ -12,7 +12,6 @@ BOOST_AUTO_TEST_SUITE(variant)
 
 BOOST_AUTO_TEST_CASE(ctor) {
 	ptl::variant<int, double> var1;
-	BOOST_TEST(!var1.valueless_by_exception());
 	BOOST_TEST(ptl::get<int>(var1) == 0);
 
 	var1 = 10.;
@@ -41,16 +40,13 @@ BOOST_AUTO_TEST_CASE(ctor) {
 
 BOOST_AUTO_TEST_CASE(copy) {
 	ptl::variant<double, int> var{1000};
-	BOOST_TEST(!var.valueless_by_exception());
 	BOOST_TEST(!ptl::holds_alternative<double>(var));
 
 	auto copy1 = var;
-	BOOST_TEST(!copy1.valueless_by_exception());
 	BOOST_TEST(!ptl::holds_alternative<double>(copy1));
 	BOOST_TEST(ptl::get<int>(var) == ptl::get<int>(copy1));
 
 	decltype(var) copy2; copy2 = copy1;
-	BOOST_TEST(!copy2.valueless_by_exception());
 	BOOST_TEST(!ptl::holds_alternative<double>(copy2));
 	BOOST_TEST(ptl::get<int>(var) == ptl::get<int>(copy2));
 }

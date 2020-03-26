@@ -5,19 +5,46 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
+#include <climits>
 #include <istream>
 #include <ostream>
+#include <numeric>
 #include <algorithm>
-#include "internal/bitset.hpp"
+#include <functional>
 #include "internal/compiler_detection.hpp"
 
 namespace ptl {
+	static_assert(CHAR_BIT == 8);
+	//TODO: endianess
+
 	PTL_PACK_BEGIN
 	//! @brief a fixed-size sequence of bits
 	//! @tparam Size size of the bitset
 	template<std::size_t Size>
 	class bitset final {
-		internal::bitset_storage<Size> storage;
+		constexpr
+		void clear_trailing_bits() noexcept {
+			constexpr unsigned char masks[]{255, 1, 3, 7, 15, 31, 63, 127};
+			values[sizeof(values) - 1] &= masks[Size % 8];
+		}
+
+		[[noreturn]]
+		static
+		constexpr
+		void throw_invalid_index() { throw std::out_of_range{"invalid index"}; }
+
+		template<typename T>
+		struct storage_type { using type = T; };
+
+		static
+		constexpr //TODO(C++20): consteval
+		auto determine_storage() noexcept {
+			if constexpr(Size == 0) return internal::identity_type<unsigned char>{};
+			else if constexpr(Size % 8 == 0) return internal::identity_type<unsigned char[Size / 8]>{};
+			else return internal::identity_type<unsigned char[(Size / 8) + 1]>{};
+		}
+
+		typename decltype(determine_storage())::type values{};
 
 		friend
 		struct std::hash<bitset>;
@@ -27,14 +54,15 @@ namespace ptl {
 		class reference final {
 			friend bitset;
 
-			bitset * ptr;
+			bitset & self;
 			size_type index;
 
 			constexpr
-			reference(bitset & self, size_type index) noexcept : ptr{&self}, index{index} {
+			reference(bitset & self, size_type index) noexcept : self{self}, index{index} {
 				//pre-condition: index < self.size()
 			}
 		public:
+			constexpr
 			reference(const reference &) =default;
 
 			constexpr
@@ -42,30 +70,29 @@ namespace ptl {
 
 			constexpr
 			auto operator=(bool value) noexcept -> reference & {
-				ptr->set(index, value);
+				self.set(index, value);
 				return *this;
 			}
-			~reference() noexcept =default;
 
 			constexpr
-			operator bool() const noexcept { return static_cast<const bitset &>(*ptr)[index]; }
+			operator bool() const noexcept { return self[index]; }
 			constexpr
 			auto operator~() const noexcept -> bool { return !static_cast<bool>(*this); }
 
 			constexpr
 			auto flip() noexcept -> reference & {
-				ptr->flip(index);
+				self.flip(index);
 				return *this;
 			}
 
 			constexpr
 			void swap(reference & other) noexcept {
-				//pre-condition: ptr == other.ptr
 				if(index == other.index) return;
-				const auto this_set{static_cast<bool>(*this)};
-				const auto other_set{static_cast<bool>(other)};
-				ptr->set(index, other_set);
-				other.ptr->set(other.index, this_set);
+				const auto lhs{static_cast<bool>(*this)};
+				const auto rhs{static_cast<bool>(other)};
+				if(lhs == rhs) return;
+				*this = rhs;
+				other = lhs;
 			}
 			friend
 			constexpr
@@ -78,30 +105,29 @@ namespace ptl {
 
 		explicit
 		constexpr
-		bitset(std::uint64_t value) noexcept {
-			const auto size{std::min(size_type{64}, Size)};
+		bitset(size_type value) noexcept {
+			constexpr auto size{std::min(sizeof(size_type) * 8, Size)};
 			for(size_type i{0}; i < size; ++i)
-				if(value & (std::uint64_t{1} << i))
+				if(value & (size_type{1} << i))
 					set(i);
 		}
 
 		constexpr
-		bitset(const bitset &) noexcept =default;
-		constexpr
-		auto operator=(const bitset &) noexcept -> bitset & =default;
-
-		constexpr
-		auto operator[](size_type index) const noexcept -> const_reference { return storage[index]; }
+		auto operator[](size_type index) const noexcept -> const_reference {
+			//pre-condition: index < Size
+			if constexpr(Size == 0) return false;
+			else return values[index / 8] & (1 << (index % 8));
+		}
 		constexpr
 		auto operator[](size_type index)       noexcept ->       reference { return {*this, index}; }
 		constexpr
 		auto at(size_type index) const -> const_reference {
-			if(index >= size()) throw std::out_of_range{"invalid index"};
+			if(index >= size()) throw_invalid_index();
 			return (*this)[index];
 		}
 		constexpr
 		auto at(size_type index)       ->       reference {
-			if(index >= size()) throw std::out_of_range{"invalid index"};
+			if(index >= size()) throw_invalid_index();
 			return (*this)[index];
 		}
 
@@ -109,14 +135,30 @@ namespace ptl {
 		auto test(size_type index) const -> bool { return at(index); }
 
 		constexpr
-		auto all() const noexcept -> bool { return storage.all(); }
+		auto all() const noexcept -> bool {
+			if constexpr(Size == 0) return true;
+			else {
+				constexpr unsigned char masks[]{255, 1, 3, 7, 15, 31, 63, 127};
+				const auto it{values + sizeof(values) - 1};
+				return std::all_of(values, it, [](auto val) { return val == 255; }) && *it == masks[Size % 8];
+			}
+		}
 		constexpr
-		auto any() const noexcept -> bool { return storage.any(); }
+		auto any() const noexcept -> bool {
+			if constexpr(Size == 0) return false;
+			else return std::any_of(values, values + sizeof(values), [](auto val) { return val != 0; });
+		}
 		constexpr
 		auto none() const noexcept -> bool { return !any(); }
 
 		constexpr
-		auto count() const noexcept -> size_type { return storage.count(); }
+		auto count() const noexcept -> size_type {
+			if constexpr(Size == 0) return 0;
+			else return std::accumulate(values, values + sizeof(values), size_type{}, [](auto sum, auto val) {
+				constexpr unsigned char nibble_count[]{0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4};
+				return sum + (nibble_count[val >> 4] + nibble_count[val & 15]);
+			});
+		}
 
 		static
 		constexpr
@@ -130,7 +172,7 @@ namespace ptl {
 
 		constexpr
 		auto operator&=(const bitset & other) noexcept -> bitset & {
-			storage &= other.storage;
+			if constexpr(Size != 0) std::transform(values, values + sizeof(values), other.values, values, std::bit_and{});
 			return *this;
 		}
 		friend
@@ -142,7 +184,7 @@ namespace ptl {
 
 		constexpr
 		auto operator|=(const bitset & other) noexcept -> bitset & {
-			storage |= other.storage;
+			if constexpr(Size != 0) std::transform(values, values + sizeof(values), other.values, values, std::bit_or{});
 			return *this;
 		}
 		friend
@@ -154,7 +196,7 @@ namespace ptl {
 
 		constexpr
 		auto operator^=(const bitset & other) noexcept -> bitset & {
-			storage ^= other.storage;
+			if constexpr(Size != 0) std::transform(values, values + sizeof(values), other.values, values, std::bit_xor{});
 			return *this;
 		}
 		friend
@@ -173,7 +215,16 @@ namespace ptl {
 
 		constexpr
 		auto operator<<=(size_type count) noexcept -> bitset & {
-			storage <<= count;
+			if constexpr(Size != 0) {
+				for(size_type i{0}; i < count; ++i) {
+					for(size_type j{sizeof(values) - 1}; j > 0; --j) {
+						values[j] = static_cast<unsigned char>(values[j] << 1);
+						values[j] = static_cast<unsigned char>(values[j] | (values[j - 1] >> 7));
+					}
+					values[0] = static_cast<unsigned char>(values[0] << 1);
+					clear_trailing_bits();
+				}
+			}
 			return *this;
 		}
 		friend
@@ -185,7 +236,15 @@ namespace ptl {
 
 		constexpr
 		auto operator>>=(size_type count) noexcept -> bitset & {
-			storage >>= count;
+			if constexpr(Size != 0) {
+				for(size_type i{0}; i < count; ++i) {
+					values[0] = static_cast<unsigned char>(values[0] >> 1);
+					for(size_type j{1}; j < sizeof(values); ++j) {
+						values[j - 1] = static_cast<unsigned char>(values[j - 1] | (values[j] << 7));
+						values[j] = static_cast<unsigned char>(values[j] >> 1);
+					}
+				}
+			}
 			return *this;
 		}
 		friend
@@ -197,34 +256,53 @@ namespace ptl {
 
 		constexpr
 		auto set() noexcept -> bitset & {
-			storage.set();
+			if constexpr(Size != 0) {
+				std::fill_n(values, sizeof(values), 255);
+				clear_trailing_bits();
+			}
 			return *this;
 		}
 		constexpr
 		auto set(size_type index, bool value = true) -> bitset & {
-			storage.set(index, value);
+			if constexpr(Size == 0) throw_invalid_index();
+			else {
+				if(index >= Size) throw_invalid_index();
+				if(value) values[index / 8] = static_cast<unsigned char>(values[index / 8] | (1 << (index % 8)));
+				else reset(index);
+			}
 			return *this;
 		}
 
 		constexpr
 		auto reset() noexcept -> bitset & {
-			storage.reset();
+			if constexpr(Size != 0) std::fill_n(values, sizeof(values), 0);
 			return *this;
 		}
 		constexpr
 		auto reset(size_type index) -> bitset & {
-			storage.reset(index);
+			if constexpr(Size == 0) throw_invalid_index();
+			else {
+				if(index >= Size) throw_invalid_index();
+				values[index / 8] = static_cast<unsigned char>(values[index / 8] & (~(1 << (index % 8))));
+			}
 			return *this;
 		}
 
 		constexpr
 		auto flip() noexcept -> bitset & {
-			storage.flip();
+			if constexpr(Size != 0) {
+				std::transform(values, values + sizeof(values), values, std::bit_not{});
+				clear_trailing_bits();
+			}
 			return *this;
 		}
 		constexpr
 		auto flip(size_type index) -> bitset & {
-			storage.flip(index);
+			if constexpr(Size == 0) throw_invalid_index();
+			else {
+				if(index >= Size) throw_invalid_index();
+				values[index / 8] = static_cast<unsigned char>(values[index / 8] ^ (1 << (index % 8)));
+			}
 			return *this;
 		}
 
@@ -256,14 +334,19 @@ namespace ptl {
 		}
 
 		constexpr
-		void swap(bitset & other) noexcept { storage.swap(other.storage); }
+		void swap(bitset & other) noexcept {
+			if constexpr(Size != 0) std::swap_ranges(values, values + sizeof(values), other.values);
+		}
 		friend
 		constexpr
 		void swap(bitset & lhs, bitset & rhs) noexcept { lhs.swap(rhs); }
 
 		friend
 		constexpr
-		auto operator==(const bitset & lhs, const bitset & rhs) noexcept { return lhs.storage == rhs.storage; }
+		auto operator==(const bitset & lhs, const bitset & rhs) noexcept {
+			if constexpr(Size == 0) return true;
+			else return std::equal(lhs.values, lhs.values + sizeof(values), rhs.values);
+		}
 		friend
 		constexpr
 		auto operator!=(const bitset & lhs, const bitset & rhs) noexcept { return !(lhs == rhs); }
@@ -280,8 +363,35 @@ namespace ptl {
 
 namespace std {
 	template<std::size_t Size>
-	struct hash<ptl::bitset<Size>> final {
-		auto operator()(const ptl::bitset<Size> & self) const noexcept -> std::size_t { return self.storage.hash(); }
+	struct hash<ptl::bitset<Size>> {
+		auto operator()(const ptl::bitset<Size> & self) const noexcept -> std::size_t {
+			if constexpr(Size == 0) return 0;
+			else {
+				//fnv1a
+				const std::size_t basis{[&] {
+					if constexpr(constexpr auto bitness{8 * sizeof(std::size_t)}; bitness == 32) {
+						return 2166136261U;
+					} else {
+						static_assert(bitness == 64);
+						return 14695981039346656037ULL;
+					}
+				}()};
+				const std::size_t prime{[&] {
+					if constexpr(constexpr auto bitness{8 * sizeof(std::size_t)}; bitness == 32) {
+						return 16777619U;
+					} else {
+						static_assert(bitness == 64);
+						return 1099511628211ULL;
+					}
+				}()};
+
+				return std::accumulate(self.values, self.values + sizeof(self.values), basis, [&](auto hash, auto value) {
+					hash ^= value;
+					hash *= prime;
+					return hash;
+				});
+			}
+		}
 	};
 
 	template<std::size_t Size>

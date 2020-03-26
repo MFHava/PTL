@@ -6,8 +6,6 @@
 
 #pragma once
 #include "fnv.hpp"
-#include "adl_swap.hpp"
-#include "requires.hpp"
 
 namespace ptl::internal {
 	template<std::size_t Size>
@@ -54,7 +52,7 @@ namespace ptl::internal {
 
 		constexpr
 		auto operator[](std::size_t index) const noexcept -> bool {
-			PTL_REQUIRES(index < Size);
+			//pre-condition: index < Size
 			return values[index / bits] & (1 << (index % bits));
 		}
 
@@ -157,7 +155,7 @@ namespace ptl::internal {
 		}
 
 		constexpr
-		void swap(bitset_storage & other) noexcept { for(std::size_t i{0}; i < sizeof(values); ++i) internal::adl_swap(values[i], other.values[i]); }
+		void swap(bitset_storage & other) noexcept { for(std::size_t i{0}; i < sizeof(values); ++i) std::swap(values[i], other.values[i]); }
 
 		constexpr
 		auto hash() const noexcept -> std::size_t {

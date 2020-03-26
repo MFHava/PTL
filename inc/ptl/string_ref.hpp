@@ -8,7 +8,6 @@
 #include <ostream>
 #include <functional>
 #include <string_view>
-#include "internal/adl_swap.hpp"
 #include "internal/compiler_detection.hpp"
 #include "internal/contiguous_container_base.hpp"
 
@@ -32,7 +31,9 @@ namespace ptl {
 		//! @param[in] size size of string to reference
 		//! @attention [str, size) must be a valid range!
 		constexpr
-		string_ref(const_pointer str, size_type size) noexcept : first{str}, last{str + size} { PTL_REQUIRES(str || (!str && !size)); }
+		string_ref(const_pointer str, size_type size) noexcept : first{str}, last{str + size} {
+			//pre-condition: str || (!str && !size)
+		}
 
 		//! @brief construct string_ref from std::string_view
 		//! @param[in] str string to reference
@@ -53,10 +54,10 @@ namespace ptl {
 		constexpr
 		auto max_size() const noexcept { return std::numeric_limits<size_type>::max(); }
 
-		constexpr
+		//TODO(C++20): constexpr
 		void swap(string_ref & other) noexcept {
-			internal::adl_swap(first, other.first);
-			internal::adl_swap(last,  other.last);
+			std::swap(first, other.first);
+			std::swap(last,  other.last);
 		}
 
 		friend

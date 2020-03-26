@@ -7,8 +7,6 @@
 #pragma once
 #include <ostream>
 #include <optional>
-#include "internal/adl_swap.hpp"
-#include "internal/requires.hpp"
 #include "internal/type_checks.hpp"
 #include "internal/compiler_detection.hpp"
 
@@ -84,12 +82,12 @@ namespace ptl {
 
 		constexpr
 		auto operator*() const & noexcept -> const Type & {
-			PTL_REQUIRES(initialized);
+			//pre-condition: initialized
 			return reinterpret_cast<const Type &>(data);
 		}
 		constexpr
 		auto operator*()       & noexcept ->       Type & {
-			PTL_REQUIRES(initialized);
+			//pre-condition: initialized
 			return reinterpret_cast<      Type &>(data);
 		}
 
@@ -127,7 +125,10 @@ namespace ptl {
 			} else if(!*this && other) {
 				*this = std::move(*other);
 				other.reset();
-			} else internal::adl_swap(**this, *other);
+			} else {
+				using std::swap;
+				swap(**this, *other);
+			}
 		}
 		friend
 		void swap(optional & lhs, optional & rhs) noexcept { lhs.swap(rhs); }

@@ -10,7 +10,6 @@
 #include <utility>
 #include <variant>
 #include "type_list.hpp"
-#include "internal/adl_swap.hpp"
 #include "internal/type_checks.hpp"
 #include "internal/compiler_detection.hpp"
 
@@ -147,7 +146,10 @@ namespace ptl {
 		auto index() const noexcept -> std::size_t { return type; }
 
 		void swap(variant & other) noexcept {
-			if(type == other.type) visit([&](auto & value) { internal::adl_swap(value, *reinterpret_cast<std::decay_t<decltype(value)> *>(other.data)); });
+			if(type == other.type) visit([&](auto & value) {
+				using std::swap;
+				swap(value, *reinterpret_cast<std::decay_t<decltype(value)> *>(other.data));
+			});
 			else std::swap(*this, other);
 		}
 		friend

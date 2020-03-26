@@ -7,7 +7,6 @@
 #pragma once
 #include <limits>
 #include <iterator>
-#include "internal/adl_swap.hpp"
 #include "internal/compiler_detection.hpp"
 #include "internal/contiguous_container_base.hpp"
 
@@ -65,8 +64,8 @@ namespace ptl {
 
 		constexpr
 		void swap(array_ref & other) noexcept {
-			internal::adl_swap(first, other.first);
-			internal::adl_swap(last,  other.last);
+			std::swap(first, other.first);
+			std::swap(last,  other.last);
 		}
 	};
 	PTL_PACK_END

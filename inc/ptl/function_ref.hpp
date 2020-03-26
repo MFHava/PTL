@@ -6,8 +6,6 @@
 
 #pragma once
 #include <memory>
-#include "internal/adl_swap.hpp"
-#include "internal/requires.hpp"
 #include "internal/function_ref.hpp"
 #include "internal/compiler_detection.hpp"
 
@@ -28,7 +26,7 @@ namespace ptl {
 		template<typename Functor>
 		static
 		auto dispatcher(void * ctx, Args... args) -> Result {
-			PTL_REQUIRES(ctx);
+			//pre-condition: ctx
 			return (*reinterpret_cast<internal::remove_cvref_t<Functor> *>(ctx))(std::forward<Args>(args)...);
 		}
 
@@ -38,7 +36,9 @@ namespace ptl {
 		template<typename Functor, typename = std::enable_if_t<parameter_validation<Functor>::value>>
 		constexpr
 		function_ref(Functor && func) {
-			if constexpr(std::is_pointer_v<Functor>) PTL_REQUIRES(func);
+			if constexpr(std::is_pointer_v<Functor>) {
+				//pre-condition: func
+			}
 			functor = reinterpret_cast<void *>(std::addressof(func));
 			dispatch = function_ref::dispatcher<Functor>;
 		}
@@ -51,16 +51,16 @@ namespace ptl {
 
 		constexpr
 		void swap(function_ref & other) noexcept {
-			internal::adl_swap(functor,  other.functor);
-			internal::adl_swap(dispatch, other.dispatch);
+			std::swap(functor,  other.functor);
+			std::swap(dispatch, other.dispatch);
 		}
 		friend
 		constexpr
 		void swap(function_ref & lhs, function_ref & rhs) noexcept { lhs.swap(rhs); }
 
 		auto operator()(Args... args) const -> Result {
-			PTL_REQUIRES(functor);
-			PTL_REQUIRES(dispatch);
+			//pre-condition: functor
+			//pre-condition: dispatch
 			return dispatch(functor, std::forward<Args>(args)...);
 		}
 	};
@@ -75,7 +75,7 @@ namespace ptl {
 		template<typename Functor>
 		static
 		auto dispatcher(void * ctx, Args... args) noexcept -> Result {
-			PTL_REQUIRES(ctx);
+			//pre-condition: ctx
 			return (*reinterpret_cast<internal::remove_cvref_t<Functor> *>(ctx))(std::forward<Args>(args)...);
 		}
 
@@ -85,7 +85,9 @@ namespace ptl {
 		template<typename Functor, typename = std::enable_if_t<parameter_validation<Functor>::value>>
 		constexpr
 		function_ref(Functor && func) {
-			if constexpr(std::is_pointer_v<Functor>) PTL_REQUIRES(func);
+			if constexpr(std::is_pointer_v<Functor>) {
+				//pre-condition: func
+			}
 			functor = reinterpret_cast<void *>(std::addressof(func));
 			dispatch = function_ref::dispatcher<Functor>;
 		}
@@ -98,16 +100,16 @@ namespace ptl {
 
 		constexpr
 		void swap(function_ref & other) noexcept {
-			internal::adl_swap(functor,  other.functor);
-			internal::adl_swap(dispatch, other.dispatch);
+			std::swap(functor,  other.functor);
+			std::swap(dispatch, other.dispatch);
 		}
 		friend
 		constexpr
 		void swap(function_ref & lhs, function_ref & rhs) noexcept { lhs.swap(rhs); }
 
 		auto operator()(Args... args) const noexcept -> Result {
-			PTL_REQUIRES(functor);
-			PTL_REQUIRES(dispatch);
+			//pre-condition: functor
+			//pre-condition: dispatch
 			return dispatch(functor, std::forward<Args>(args)...);
 		}
 	};

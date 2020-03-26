@@ -5,7 +5,6 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include "adl_swap.hpp"
 #include "type_checks.hpp"
 #include "compiler_detection.hpp"
 
@@ -84,7 +83,8 @@ namespace ptl::internal {
 
 		constexpr
 		void swap(tuple_storage & other) noexcept {
-			internal::adl_swap(value, other.value);
+			using std::swap;
+			swap(value, other.value);
 			base_type::swap(other);
 		}
 

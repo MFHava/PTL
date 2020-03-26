@@ -7,7 +7,6 @@
 #pragma once
 #include <iterator>
 #include <algorithm>
-#include "requires.hpp"
 #include "type_checks.hpp"
 
 namespace ptl::internal {
@@ -58,12 +57,12 @@ namespace ptl::internal {
 
 			constexpr
 			auto operator*() const noexcept -> reference {
-				PTL_REQUIRES(ptr);
+				//pre-condition: ptr
 				return *ptr;
 			}
 			constexpr
 			auto operator->() const noexcept -> pointer {
-				PTL_REQUIRES(ptr);
+				//pre-condition: ptr
 				return ptr;
 			}
 
@@ -125,7 +124,7 @@ namespace ptl::internal {
 
 			constexpr
 			void move(difference_type count) noexcept {
-				PTL_REQUIRES(ptr || (!ptr && !count));
+				//pre-condition: ptr || (!ptr && !count)
 				ptr += count;
 			}
 
@@ -177,33 +176,33 @@ namespace ptl::internal {
 
 		constexpr
 		auto front() const noexcept -> decltype(auto) {
-			PTL_REQUIRES(!empty());
+			//pre-condition: !empty()
 			return (*this)[0];
 		}
 		constexpr
 		auto front()       noexcept -> decltype(auto) {
-			PTL_REQUIRES(!empty());
+			//pre-condition: !empty()
 			return (*this)[0];
 		}
 		constexpr
 		auto back() const noexcept -> decltype(auto) {
-			PTL_REQUIRES(!empty());
+			//pre-condition: !empty()
 			return (*this)[self().size() - 1];
 		}
 		constexpr
 		auto back()       noexcept -> decltype(auto) {
-			PTL_REQUIRES(!empty());
+			//pre-condition: !empty()
 			return (*this)[self().size() - 1];
 		}
 
 		constexpr
 		auto operator[](std::size_t index) const noexcept -> decltype(auto) {
-			PTL_REQUIRES(index < self().size());
+			//pre-condition: index < self().size()
 			return *(begin() + index);
 		}
 		constexpr
 		auto operator[](std::size_t index)       noexcept -> decltype(auto) {
-			PTL_REQUIRES(index < self().size());
+			//pre-condition: index < self().size()
 			return *(begin() + index);
 		}
 		constexpr

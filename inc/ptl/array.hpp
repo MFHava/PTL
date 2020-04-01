@@ -5,7 +5,6 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include "internal/array.hpp"
 #include "internal/compiler_detection.hpp"
 #include "internal/contiguous_container_base.hpp"
 
@@ -18,19 +17,21 @@ namespace ptl {
 	class array final : public internal::contiguous_container_base<array<Type, Size>, Type> {
 		using base_type = internal::contiguous_container_base<array<Type, Size>, Type>;
 
-		internal::array_storage_t<Type, Size> values;
+		template<typename T>
+		struct storage_type final { using type = T; };
+
+		static
+		constexpr //TODO(C++20): consteval
+		auto determine_storage() noexcept {
+			if constexpr(Size == 0) return storage_type<Type *>{};
+			else                    return storage_type<Type[Size]>{};
+		}
+
+		typename decltype(determine_storage())::type values;
 	public:
 		template<typename... Args, typename = std::enable_if_t<(std::is_convertible_v<Type, Args> &&...)>>
 		constexpr
 		array(Args &&... args) : values{std::forward<Args>(args)...} {}
-
-		constexpr
-		array(const array &) =default;
-
-		constexpr
-		auto operator=(const array &) -> array & =default;
-
-		~array() noexcept =default;
 
 		constexpr
 		auto data() const noexcept -> const Type * { return values; }
@@ -47,13 +48,10 @@ namespace ptl {
 		auto max_size() noexcept { return Size; }
 
 		constexpr
-		void fill(const Type & value) { for(auto it{base_type::begin()}, end{base_type::end()}; it != end; ++it) *it = value; }
+		void fill(const Type & value) { std::fill(base_type::begin(), base_type::end(), value); }
 
 		constexpr
-		void swap(array & other) noexcept {
-			for(auto it1{base_type::begin()}, it2{other.begin()}, end{base_type::end()}; it1 != end; ++it1, (void)++it2)
-				std::iter_swap(it1, it2);
-		}
+		void swap(array & other) noexcept { std::swap_ranges(base_type::begin(), base_type::end(), other.begin()); }
 	};
 	PTL_PACK_END
 

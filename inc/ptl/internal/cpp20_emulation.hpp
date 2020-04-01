@@ -5,11 +5,15 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
+#include <type_traits>
 
+//emulation of C++20 features
 namespace ptl::internal {
-	//emulating C++20 feature
 	template<typename T>
 	struct identity_type final {
 		using type = T;
 	};
+
+	template<typename T>
+	using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
 }

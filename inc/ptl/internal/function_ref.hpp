@@ -6,13 +6,9 @@
 
 #pragma once
 #include <type_traits>
+#include "cpp20_emulation.hpp"
 
 namespace ptl::internal {
-	//emulating C++20 feature
-	template<typename T>
-	using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
-
-
 	template<typename Func>
 	struct deduce_lambda;
 
@@ -37,5 +33,47 @@ namespace ptl::internal {
 	template<typename Result, typename Class, typename... Args>
 	struct deduce_lambda<Result(Class::*)(Args...) const noexcept> final {
 		using type = Result(Args...) noexcept;
+	};
+
+
+	template<typename Signature>
+	struct function_ref_traits;
+
+	template<typename Result, typename... Args>
+	struct function_ref_traits<Result(Args...)> {
+		static
+		constexpr
+		bool noexcept_{false};
+
+		using result_type = Result;
+		using dispatch_type = result_type(void *, Args...);
+
+		template<typename Functor>
+		static
+		auto dispatcher(void * ctx, Args... args) -> result_type { return (*reinterpret_cast<remove_cvref_t<Functor> *>(ctx))(std::forward<Args>(args)...); }
+
+		template<typename Functor>
+		static
+		constexpr
+		bool compatible{std::is_invocable_r_v<result_type, Functor &, Args...>};
+	};
+
+	template<typename Result, typename... Args>
+	struct function_ref_traits<Result(Args...) noexcept> {
+		static
+		constexpr
+		bool noexcept_{true};
+
+		using result_type = Result;
+		using dispatch_type = result_type(void *, Args...) noexcept;
+
+		template<typename Functor>
+		static
+		auto dispatcher(void * ctx, Args... args) noexcept -> result_type { return (*reinterpret_cast<remove_cvref_t<Functor> *>(ctx))(std::forward<Args>(args)...); }
+
+		template<typename Functor>
+		static
+		constexpr
+		bool compatible{std::is_nothrow_invocable_r_v<result_type, Functor &, Args...>};
 	};
 }

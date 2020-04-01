@@ -5,49 +5,31 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include <memory>
 #include "internal/function_ref.hpp"
 #include "internal/compiler_detection.hpp"
 
 namespace ptl {
+	static_assert(sizeof(void *) == sizeof(void(*)()), "implementation assumes that function pointers have the same size as object pointers");
+
 	PTL_PACK_BEGIN
 	//! @brief non-owning reference to a functor (either a plain function or a lambda)
 	//! @tparam Signature function signature of the referenced functor (including potential noexcept-qualifier)
 	template<typename Signature>
-	class function_ref;
-
-	template<typename Result, typename... Args>
-	class function_ref<Result(Args...)> final {//unfortunately you can't deduce noexcept-ness at the moment, so we need to split the implementation among two almost identical partial specialization...
-		using dispatch_func = Result(*)(void *, Args...);
+	class function_ref final {
+		using traits = internal::function_ref_traits<Signature>;
 
 		void * functor;
-		dispatch_func dispatch;
-
-		template<typename Functor>
-		static
-		auto dispatcher(void * ctx, Args... args) -> Result {
-			//pre-condition: ctx
-			return (*reinterpret_cast<internal::remove_cvref_t<Functor> *>(ctx))(std::forward<Args>(args)...);
-		}
-
-		template<typename Functor>
-		using parameter_validation = std::bool_constant<!std::is_same_v<internal::remove_cvref_t<Functor>, function_ref> && std::is_invocable_r_v<Result, Functor &, Args...>>;
+		typename traits::dispatch_type * dispatch;
 	public:
-		template<typename Functor, typename = std::enable_if_t<parameter_validation<Functor>::value>>
+		template<typename Functor, typename = std::enable_if_t<!std::is_same_v<internal::remove_cvref_t<Functor>, function_ref> && traits::template compatible<Functor>>>
 		constexpr
-		function_ref(Functor && func) {
+		function_ref(Functor && func) noexcept {
 			if constexpr(std::is_pointer_v<Functor>) {
 				//pre-condition: func
 			}
 			functor = reinterpret_cast<void *>(std::addressof(func));
-			dispatch = function_ref::dispatcher<Functor>;
+			dispatch = traits::template dispatcher<Functor>;
 		}
-
-		constexpr
-		function_ref(const function_ref &) =default;
-		constexpr
-		auto operator=(const function_ref &) -> function_ref & =default;
-		~function_ref() noexcept =default;
 
 		constexpr
 		void swap(function_ref & other) noexcept {
@@ -58,60 +40,8 @@ namespace ptl {
 		constexpr
 		void swap(function_ref & lhs, function_ref & rhs) noexcept { lhs.swap(rhs); }
 
-		auto operator()(Args... args) const -> Result {
-			//pre-condition: functor
-			//pre-condition: dispatch
-			return dispatch(functor, std::forward<Args>(args)...);
-		}
-	};
-
-	template<typename Result, typename... Args>
-	class function_ref<Result(Args...) noexcept> final {
-		using dispatch_func = Result(*)(void *, Args...) noexcept;
-
-		void * functor;
-		dispatch_func dispatch;
-
-		template<typename Functor>
-		static
-		auto dispatcher(void * ctx, Args... args) noexcept -> Result {
-			//pre-condition: ctx
-			return (*reinterpret_cast<internal::remove_cvref_t<Functor> *>(ctx))(std::forward<Args>(args)...);
-		}
-
-		template<typename Functor>
-		using parameter_validation = std::bool_constant<!std::is_same_v<internal::remove_cvref_t<Functor>, function_ref> && std::is_nothrow_invocable_r_v<Result, Functor &, Args...>>;
-	public:
-		template<typename Functor, typename = std::enable_if_t<parameter_validation<Functor>::value>>
-		constexpr
-		function_ref(Functor && func) {
-			if constexpr(std::is_pointer_v<Functor>) {
-				//pre-condition: func
-			}
-			functor = reinterpret_cast<void *>(std::addressof(func));
-			dispatch = function_ref::dispatcher<Functor>;
-		}
-
-		constexpr
-		function_ref(const function_ref &) =default;
-		constexpr
-		auto operator=(const function_ref &) -> function_ref & =default;
-		~function_ref() noexcept =default;
-
-		constexpr
-		void swap(function_ref & other) noexcept {
-			std::swap(functor,  other.functor);
-			std::swap(dispatch, other.dispatch);
-		}
-		friend
-		constexpr
-		void swap(function_ref & lhs, function_ref & rhs) noexcept { lhs.swap(rhs); }
-
-		auto operator()(Args... args) const noexcept -> Result {
-			//pre-condition: functor
-			//pre-condition: dispatch
-			return dispatch(functor, std::forward<Args>(args)...);
-		}
+		template<typename... Args, typename = std::enable_if_t<std::is_invocable_v<Signature, Args...>>>
+		auto operator()(Args &&... args) const noexcept(traits::noexcept_) -> typename traits::result_type { return dispatch(functor, std::forward<Args>(args)...); }
 	};
 	PTL_PACK_END
 

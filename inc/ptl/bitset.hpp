@@ -11,6 +11,7 @@
 #include <numeric>
 #include <algorithm>
 #include <functional>
+#include "internal/cpp20_emulation.hpp"
 #include "internal/compiler_detection.hpp"
 
 namespace ptl {
@@ -32,9 +33,6 @@ namespace ptl {
 		static
 		constexpr
 		void throw_invalid_index() { throw std::out_of_range{"invalid index"}; }
-
-		template<typename T>
-		struct storage_type { using type = T; };
 
 		static
 		constexpr //TODO(C++20): consteval

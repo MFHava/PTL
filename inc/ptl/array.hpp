@@ -5,6 +5,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
+#include "internal/cpp20_emulation.hpp"
 #include "internal/compiler_detection.hpp"
 #include "internal/contiguous_container_base.hpp"
 
@@ -17,14 +18,11 @@ namespace ptl {
 	class array final : public internal::contiguous_container_base<array<Type, Size>, Type> {
 		using base_type = internal::contiguous_container_base<array<Type, Size>, Type>;
 
-		template<typename T>
-		struct storage_type final { using type = T; };
-
 		static
 		constexpr //TODO(C++20): consteval
 		auto determine_storage() noexcept {
-			if constexpr(Size == 0) return storage_type<Type *>{};
-			else                    return storage_type<Type[Size]>{};
+			if constexpr(Size == 0) return internal::identity_type<Type *>{};
+			else                    return internal::identity_type<Type[Size]>{};
 		}
 
 		typename decltype(determine_storage())::type values;

@@ -16,7 +16,7 @@ namespace ptl {
 	//! @tparam Type type of the potentially contained object
 	template<typename Type>
 	class optional final {
-		std::uint8_t data[sizeof(Type)], initialized{false};
+		unsigned char data[sizeof(Type)], initialized{false};
 
 		static_assert(internal::is_abi_compatible_v<Type>);
 	public:
@@ -294,7 +294,7 @@ namespace ptl {
 
 namespace std {
 	template<typename Type>
-	struct hash<ptl::optional<Type>> final {
+	struct hash<ptl::optional<Type>> {
 		auto operator()(const ptl::optional<Type> & self) const noexcept -> std::size_t {
 			return self ? std::hash<Type>{}(*self) : 0;
 		}

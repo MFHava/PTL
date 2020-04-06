@@ -21,15 +21,7 @@ namespace ptl {
 		Type * first{nullptr}, * last{nullptr};
 	public:
 		constexpr
-		array_ref() =default;
-
-		constexpr
-		array_ref(const array_ref &) =default;
-
-		constexpr
-		auto operator=(const array_ref &) -> array_ref & =default;
-
-		~array_ref() noexcept =default;
+		array_ref() noexcept =default;
 
 		//! @brief construct array_ref from two pointers
 		//! @param[in] first start of the referenced array
@@ -59,8 +51,9 @@ namespace ptl {
 		auto data()       noexcept ->       Type * { return first; }
 		constexpr
 		auto size() const noexcept -> std::size_t { return last - first; }
+		static
 		constexpr
-		auto max_size() const noexcept { return std::numeric_limits<std::size_t>::max() / sizeof(Type); }
+		auto max_size() noexcept { return std::numeric_limits<std::size_t>::max() / sizeof(Type); }
 
 		constexpr
 		void swap(array_ref & other) noexcept {

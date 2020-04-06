@@ -40,19 +40,12 @@ namespace ptl {
 		string_ref(const std::string_view & str) noexcept : string_ref{str.data(), str.size()} {}
 
 		constexpr
-		string_ref(const string_ref &) noexcept =default;
-
-		constexpr
-		auto operator=(const string_ref &) noexcept -> string_ref & =default;
-
-		~string_ref() noexcept =default;
-
-		constexpr
 		auto data() const noexcept -> const_pointer { return first; }
 		constexpr
 		auto size() const noexcept -> size_type { return last - first; }
+		static
 		constexpr
-		auto max_size() const noexcept { return std::numeric_limits<size_type>::max(); }
+		auto max_size() noexcept { return std::numeric_limits<size_type>::max(); }
 
 		//TODO(C++20): constexpr
 		void swap(string_ref & other) noexcept {
@@ -77,7 +70,7 @@ namespace ptl {
 
 namespace std {
 	template<>
-	struct hash<ptl::string_ref> final {
+	struct hash<ptl::string_ref> {
 		auto operator()(const ptl::string_ref & self) const noexcept -> std::size_t { return std::hash<std::string_view>{}(self); }
 	};
 }

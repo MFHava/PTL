@@ -7,6 +7,7 @@
 #pragma once
 #include <iterator>
 #include <algorithm>
+#include <stdexcept>
 #include "type_checks.hpp"
 
 namespace ptl::internal {
@@ -33,12 +34,10 @@ namespace ptl::internal {
 			contiguous_iterator() noexcept =default;
 
 			constexpr
-			contiguous_iterator(const contiguous_iterator &) =default;
-
-			~contiguous_iterator() noexcept =default;
-
-			constexpr
-			auto operator++() noexcept -> contiguous_iterator & { move(+1); return *this; }
+			auto operator++() noexcept -> contiguous_iterator & {
+				move(+1);
+				return *this;
+			}
 			constexpr
 			auto operator++(int) noexcept -> contiguous_iterator {
 				auto tmp{*this};
@@ -47,7 +46,10 @@ namespace ptl::internal {
 			}
 
 			constexpr
-			auto operator--() noexcept -> contiguous_iterator & { move(-1); return *this; }
+			auto operator--() noexcept -> contiguous_iterator & {
+				move(-1);
+				return *this;
+			}
 			constexpr
 			auto operator--(int) noexcept -> contiguous_iterator {
 				auto tmp{*this};
@@ -70,7 +72,10 @@ namespace ptl::internal {
 			auto operator[](difference_type index) const noexcept -> reference { return *(*this + index); }
 
 			constexpr
-			auto operator+=(difference_type count) noexcept -> contiguous_iterator & { move(+count); return *this; }
+			auto operator+=(difference_type count) noexcept -> contiguous_iterator & {
+				move(+count);
+				return *this;
+			}
 			friend
 			constexpr
 			auto operator+(contiguous_iterator lhs, difference_type rhs) noexcept -> contiguous_iterator {
@@ -82,7 +87,10 @@ namespace ptl::internal {
 			auto operator+(difference_type lhs, contiguous_iterator rhs) noexcept -> contiguous_iterator { return rhs + lhs; }
 
 			constexpr
-			auto operator-=(difference_type count) noexcept -> contiguous_iterator & { move(-count); return *this; }
+			auto operator-=(difference_type count) noexcept -> contiguous_iterator & {
+				move(-count);
+				return *this;
+			}
 			friend
 			constexpr
 			auto operator-(contiguous_iterator lhs, difference_type rhs) noexcept -> contiguous_iterator {
@@ -120,7 +128,6 @@ namespace ptl::internal {
 			operator contiguous_iterator<ValueType, false>() const noexcept { return contiguous_iterator<ValueType, false>{const_cast<ValueType *>(ptr)}; }
 
 			friend contiguous_container_base;
-			friend Implementation;
 
 			constexpr
 			void move(difference_type count) noexcept {
@@ -128,36 +135,15 @@ namespace ptl::internal {
 				ptr += count;
 			}
 
-			using internal_type = std::conditional_t<IsConst, const ValueType, ValueType> *;
-
 			constexpr
 			explicit
-			contiguous_iterator(internal_type ptr) noexcept : ptr{ptr} {}
+			contiguous_iterator(pointer ptr) noexcept : ptr{ptr} {}
 
-			internal_type ptr{nullptr};
+			pointer ptr{nullptr};
 		};
 	protected:
 		constexpr
 		contiguous_container_base() noexcept =default;
-		constexpr
-		contiguous_container_base(const contiguous_container_base &) noexcept =default;
-		constexpr
-		contiguous_container_base(contiguous_container_base &&) noexcept =default;
-		constexpr
-		auto operator=(const contiguous_container_base &) noexcept -> contiguous_container_base & =default;
-		constexpr
-		auto operator=(contiguous_container_base &&) noexcept -> contiguous_container_base & =default;
-		~contiguous_container_base() noexcept =default;
-
-		template<typename InputRange1, typename InputRange2>
-		static
-		constexpr
-		auto equal(const InputRange1 & lhs, const InputRange2 & rhs) noexcept { return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()); }
-
-		template<typename InputRange1, typename InputRange2>
-		static
-		constexpr
-		auto less(const InputRange1 & lhs, const InputRange2 & rhs) noexcept { return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()); }
 	public:
 		using value_type             = std::remove_cv_t<Type>;
 		using size_type              = std::size_t;
@@ -175,43 +161,43 @@ namespace ptl::internal {
 		using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
 		constexpr
-		auto front() const noexcept -> decltype(auto) {
+		auto front() const noexcept -> const_reference {
 			//pre-condition: !empty()
 			return (*this)[0];
 		}
 		constexpr
-		auto front()       noexcept -> decltype(auto) {
+		auto front()       noexcept ->       reference {
 			//pre-condition: !empty()
 			return (*this)[0];
 		}
 		constexpr
-		auto back() const noexcept -> decltype(auto) {
+		auto back() const noexcept -> const_reference {
 			//pre-condition: !empty()
 			return (*this)[self().size() - 1];
 		}
 		constexpr
-		auto back()       noexcept -> decltype(auto) {
+		auto back()       noexcept ->       reference {
 			//pre-condition: !empty()
 			return (*this)[self().size() - 1];
 		}
 
 		constexpr
-		auto operator[](std::size_t index) const noexcept -> decltype(auto) {
+		auto operator[](std::size_t index) const noexcept -> const_reference {
 			//pre-condition: index < self().size()
 			return *(begin() + index);
 		}
 		constexpr
-		auto operator[](std::size_t index)       noexcept -> decltype(auto) {
+		auto operator[](std::size_t index)       noexcept ->       reference {
 			//pre-condition: index < self().size()
 			return *(begin() + index);
 		}
 		constexpr
-		auto at(std::size_t index) const -> decltype(auto) {
+		auto at(std::size_t index) const -> const_reference {
 			if(index >= self().size()) throw std::out_of_range{"index out of range"};
 			return (*this)[index];
 		}
 		constexpr
-		auto at(std::size_t index)       -> decltype(auto) {
+		auto at(std::size_t index)       ->       reference {
 			if(index >= self().size()) throw std::out_of_range{"index out of range"};
 			return (*this)[index];
 		}
@@ -250,13 +236,13 @@ namespace ptl::internal {
 
 		friend
 		constexpr
-		auto operator==(const Implementation & lhs, const Implementation & rhs) noexcept { return equal(lhs, rhs); }
+		auto operator==(const Implementation & lhs, const Implementation & rhs) noexcept { return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()); }
 		friend
 		constexpr
 		auto operator!=(const Implementation & lhs, const Implementation & rhs) noexcept { return !(lhs == rhs); }
 		friend
 		constexpr
-		auto operator< (const Implementation & lhs, const Implementation & rhs) noexcept { return less(lhs, rhs); }
+		auto operator< (const Implementation & lhs, const Implementation & rhs) noexcept { return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()); }
 		friend
 		constexpr
 		auto operator> (const Implementation & lhs, const Implementation & rhs) noexcept { return rhs < lhs; }

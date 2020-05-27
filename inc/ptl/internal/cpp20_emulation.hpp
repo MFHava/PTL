@@ -10,7 +10,7 @@
 //emulation of C++20 features
 namespace ptl::internal {
 	template<typename T>
-	struct identity_type final {
+	struct type_identity final {
 		using type = T;
 	};
 

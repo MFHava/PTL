@@ -68,12 +68,12 @@ namespace ptl {
 		static
 		constexpr //TODO(C++20): consteval
 		auto determine_storage() noexcept {
-			if constexpr(TL::empty) return internal::identity_type<Base>{};
+			if constexpr(TL::empty) return internal::type_identity<Base>{};
 			else {
 				using Head = typename TL::template at<0>;
 				using Tail = typename TL::template erase_at<0>;
 				constexpr auto tmp{determine_storage<Tail, Base>()};
-				return internal::identity_type<base<Head, typename decltype(tmp)::type>>{};
+				return internal::type_identity<base<Head, typename decltype(tmp)::type>>{};
 			}
 		}
 

@@ -21,8 +21,8 @@ namespace ptl {
 		static
 		constexpr //TODO(C++20): consteval
 		auto determine_storage() noexcept {
-			if constexpr(Size == 0) return internal::identity_type<Type *>{};
-			else                    return internal::identity_type<Type[Size]>{};
+			if constexpr(Size == 0) return internal::type_identity<Type *>{};
+			else                    return internal::type_identity<Type[Size]>{};
 		}
 
 		typename decltype(determine_storage())::type values;

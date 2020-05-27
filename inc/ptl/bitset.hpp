@@ -37,9 +37,9 @@ namespace ptl {
 		static
 		constexpr //TODO(C++20): consteval
 		auto determine_storage() noexcept {
-			if constexpr(Size == 0) return internal::identity_type<unsigned char>{};
-			else if constexpr(Size % 8 == 0) return internal::identity_type<unsigned char[Size / 8]>{};
-			else return internal::identity_type<unsigned char[(Size / 8) + 1]>{};
+			if constexpr(Size == 0) return internal::type_identity<unsigned char>{};
+			else if constexpr(Size % 8 == 0) return internal::type_identity<unsigned char[Size / 8]>{};
+			else return internal::type_identity<unsigned char[(Size / 8) + 1]>{};
 		}
 
 		typename decltype(determine_storage())::type values{};

@@ -148,10 +148,10 @@ namespace ptl::internal {
 		using value_type             = std::remove_cv_t<Type>;
 		using size_type              = std::size_t;
 		using difference_type        = std::ptrdiff_t;
-		using reference              =       value_type &;
-		using const_reference        = const value_type &;
-		using pointer                =       value_type *;
-		using const_pointer          = const value_type *;
+		using reference              =       Type &;
+		using const_reference        = const Type &;
+		using pointer                =       Type *;
+		using const_pointer          = const Type *;
 	private:
 		using mutable_iterator       = contiguous_iterator<value_type, false>;
 	public:

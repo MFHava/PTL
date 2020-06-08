@@ -11,13 +11,22 @@
 #include "ptl/bitset.hpp"
 
 namespace {
-	template<std::size_t Size>
-	auto operator==(const std::bitset<Size> & lhs, const ptl::bitset<Size> & rhs) noexcept -> bool {
+	template<std::size_t Size, typename Tag>
+	auto operator==(const std::bitset<Size> & lhs, const ptl::bitset<Size, Tag> & rhs) noexcept -> bool {
 		for(std::size_t i{0}; i < Size; ++i)
 			if(lhs[i] != rhs[i])
 				return false;
 		return true;
 	}
+
+	struct tag;
+}
+
+namespace ptl {
+	template<>
+	inline
+	constexpr
+	bool enable_bitset_operator_bool<tag>{true};
 }
 
 BOOST_AUTO_TEST_SUITE(bitset)
@@ -211,6 +220,19 @@ BOOST_AUTO_TEST_CASE(structured_binding) {
 	BOOST_TEST(!a);
 	BOOST_TEST( b);
 	BOOST_TEST(!c);
+}
+
+BOOST_AUTO_TEST_CASE(operator_bool) {
+	ptl::bitset<4, tag> pb;
+	BOOST_TEST(!pb);
+	pb.set(0);
+	BOOST_TEST(pb);
+	pb.reset(0);
+	BOOST_TEST(!pb);
+	pb.set();
+	BOOST_TEST(pb);
+	pb.reset();
+	BOOST_TEST(!pb);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

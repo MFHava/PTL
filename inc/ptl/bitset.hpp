@@ -17,9 +17,18 @@ namespace ptl {
 	static_assert(CHAR_BIT == 8);
 	//TODO: endianess?
 
+	//! @brief by default bitset does not provide operator bool() and operator!()
+	//! @brief these operators can be enabled for selected tags by specializing this global variable
+	//! @attention specializations must depend on a user-defined tag type
+	template<typename Tag>
+	inline
+	constexpr
+	bool enable_bitset_operator_bool{false};
+
 	//! @brief a fixed-size sequence of bits
 	//! @tparam Size size of the bitset
-	template<std::size_t Size>
+	//! @tparam Tag to differenciate unrelated bitsets of the same size
+	template<std::size_t Size, typename Tag = struct bitset_default_tag>
 	class bitset final { //TODO: static_assert(sizeof(bitset<Size>) == Size / 8 + (Size % 8 ? 1 : 0));
 		//TODO: [C++20] use functions from <bit>
 
@@ -57,6 +66,14 @@ namespace ptl {
 
 		friend
 		struct std::hash<bitset>;
+
+		template<std::size_t Index>
+		friend
+		constexpr
+		auto get(const bitset & self) noexcept -> bool {
+			static_assert(Index < Size);
+			return self[Index];
+		}
 	public:
 		using value_type = bool;
 		using size_type  = std::size_t;
@@ -311,6 +328,15 @@ namespace ptl {
 			return *this;
 		}
 
+		template<typename T = Tag, typename = std::enable_if_t<enable_bitset_operator_bool<T>>> //TODO: [C++20] replace with requires-clause
+		explicit
+		constexpr
+		operator bool() const noexcept { return any(); }
+
+		template<typename T = Tag, typename = std::enable_if_t<enable_bitset_operator_bool<T>>> //TODO: [C++20] replace with requires-clause
+		constexpr
+		auto operator!() const noexcept -> bool { return none(); }
+
 		friend
 		auto operator<<(std::ostream & os, const bitset & self) -> std::ostream & {
 			for(size_type i{Size}; i != 0; --i) os << (self.test(i - 1) ? '1' : '0');
@@ -356,19 +382,12 @@ namespace ptl {
 		constexpr
 		auto operator!=(const bitset & lhs, const bitset & rhs) noexcept -> bool { return !(lhs == rhs); } //TODO: [C++20] remove as implicitly generated
 	};
-
-	template<std::size_t Index, std::size_t Size>
-	constexpr
-	auto get(const bitset<Size> & self) noexcept -> bool {
-		static_assert(Index < Size);
-		return self[Index];
-	}
 }
 
 namespace std {
-	template<std::size_t Size>
-	struct hash<ptl::bitset<Size>> {
-		auto operator()(const ptl::bitset<Size> & self) const noexcept -> std::size_t {
+	template<std::size_t Size, typename Tag>
+	struct hash<ptl::bitset<Size, Tag>> {
+		auto operator()(const ptl::bitset<Size, Tag> & self) const noexcept -> std::size_t {
 			if constexpr(Size == 0) return 0;
 			else {
 				//fnv1a
@@ -398,9 +417,9 @@ namespace std {
 		}
 	};
 
-	template<std::size_t Size>
-	struct tuple_size<ptl::bitset<Size>> : std::integral_constant<std::size_t, Size> {};
+	template<std::size_t Size, typename Tag>
+	struct tuple_size<ptl::bitset<Size, Tag>> : std::integral_constant<std::size_t, Size> {};
 
-	template<std::size_t Index, std::size_t Size>
-	struct tuple_element<Index, ptl::bitset<Size>> { using type = bool; };
+	template<std::size_t Index, std::size_t Size, typename Tag>
+	struct tuple_element<Index, ptl::bitset<Size, Tag>> { using type = bool; };
 }

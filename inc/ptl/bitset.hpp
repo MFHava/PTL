@@ -11,35 +11,46 @@
 #include <numeric>
 #include <algorithm>
 #include <functional>
-#include "internal/cpp20_emulation.hpp"
-#include "internal/compiler_detection.hpp"
+#include <type_traits>
 
 namespace ptl {
 	static_assert(CHAR_BIT == 8);
-	//TODO: endianess
+	//TODO: endianess?
 
-	PTL_PACK_BEGIN
 	//! @brief a fixed-size sequence of bits
 	//! @tparam Size size of the bitset
 	template<std::size_t Size>
-	class bitset final {
-		constexpr
-		void clear_trailing_bits() noexcept {
-			constexpr unsigned char masks[]{255, 1, 3, 7, 15, 31, 63, 127};
-			values[sizeof(values) - 1] &= masks[Size % 8];
+	class bitset final { //TODO: static_assert(sizeof(bitset<Size>) == Size / 8 + (Size % 8 ? 1 : 0));
+		//TODO: [C++20] use functions from <bit>
+
+		static
+		constexpr //TODO: [C++20] replace with consteval
+		auto determine_trailing_mask() noexcept -> unsigned char {
+			const unsigned char masks[]{255, 1, 3, 7, 15, 31, 63, 127};
+			return masks[Size % 8];
 		}
+
+		static
+		constexpr
+		unsigned char trailing_bits{determine_trailing_mask()};
+
+		constexpr
+		void clear_trailing_bits() noexcept { values[sizeof(values) - 1] &= trailing_bits; }
 
 		[[noreturn]]
 		static
 		constexpr
 		void throw_invalid_index() { throw std::out_of_range{"invalid index"}; }
 
+		template<typename T>
+		struct type_identity final { using type = T; }; //TODO: [C++20] replace with std::type_identity
+
 		static
-		constexpr //TODO(C++20): consteval
+		constexpr //TODO: [C++20] replace with consteval
 		auto determine_storage() noexcept {
-			if constexpr(Size == 0) return internal::type_identity<unsigned char>{};
-			else if constexpr(Size % 8 == 0) return internal::type_identity<unsigned char[Size / 8]>{};
-			else return internal::type_identity<unsigned char[(Size / 8) + 1]>{};
+			if constexpr(Size == 0) return type_identity<unsigned char>{};
+			else if constexpr(Size % 8 == 0) return type_identity<unsigned char[Size / 8]>{};
+			else return type_identity<unsigned char[(Size / 8) + 1]>{};
 		}
 
 		typename decltype(determine_storage())::type values{};
@@ -56,9 +67,7 @@ namespace ptl {
 			size_type index;
 
 			constexpr
-			reference(bitset & self, size_type index) noexcept : self{self}, index{index} {
-				//pre-condition: index < self.size()
-			}
+			reference(bitset & self, size_type index) noexcept : self{self}, index{index} {}
 		public:
 			constexpr
 			reference(const reference &) =default;
@@ -111,13 +120,12 @@ namespace ptl {
 		}
 
 		constexpr
-		auto operator[](size_type index) const noexcept -> const_reference {
-			//pre-condition: index < Size
+		auto operator[](size_type index) const noexcept -> const_reference { //TODO: [C++??] precondition(index < Size);
 			if constexpr(Size == 0) return false;
 			else return values[index / 8] & (1 << (index % 8));
 		}
 		constexpr
-		auto operator[](size_type index)       noexcept ->       reference { return {*this, index}; }
+		auto operator[](size_type index)       noexcept ->       reference { return {*this, index}; } //TODO: [C++??] precondition(index < Size);
 		constexpr
 		auto at(size_type index) const -> const_reference {
 			if(index >= size()) throw_invalid_index();
@@ -136,9 +144,8 @@ namespace ptl {
 		auto all() const noexcept -> bool {
 			if constexpr(Size == 0) return true;
 			else {
-				constexpr unsigned char masks[]{255, 1, 3, 7, 15, 31, 63, 127};
 				const auto it{values + sizeof(values) - 1};
-				return std::all_of(values, it, [](auto val) { return val == 255; }) && *it == masks[Size % 8];
+				return std::all_of(values, it, [](auto val) { return val == 255; }) && *it == trailing_bits;
 			}
 		}
 		constexpr
@@ -341,15 +348,14 @@ namespace ptl {
 
 		friend
 		constexpr
-		auto operator==(const bitset & lhs, const bitset & rhs) noexcept {
+		auto operator==(const bitset & lhs, const bitset & rhs) noexcept -> bool {
 			if constexpr(Size == 0) return true;
 			else return std::equal(lhs.values, lhs.values + sizeof(values), rhs.values);
 		}
 		friend
 		constexpr
-		auto operator!=(const bitset & lhs, const bitset & rhs) noexcept { return !(lhs == rhs); }
+		auto operator!=(const bitset & lhs, const bitset & rhs) noexcept -> bool { return !(lhs == rhs); } //TODO: [C++20] remove as implicitly generated
 	};
-	PTL_PACK_END
 
 	template<std::size_t Index, std::size_t Size>
 	constexpr

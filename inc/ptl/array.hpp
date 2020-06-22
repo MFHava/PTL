@@ -5,6 +5,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
+#include "internal/type_checks.hpp"
 #include "internal/cpp20_emulation.hpp"
 #include "internal/compiler_detection.hpp"
 #include "internal/contiguous_container_base.hpp"
@@ -16,7 +17,7 @@ namespace ptl {
 	//! @tparam Size size of the stored array
 	template<typename Type, std::size_t Size>
 	class array final : public internal::contiguous_container_base<array<Type, Size>, Type> {
-		using base_type = internal::contiguous_container_base<array<Type, Size>, Type>;
+		static_assert(internal::is_abi_compatible_v<Type>);
 
 		static
 		constexpr //TODO(C++20): consteval
@@ -46,10 +47,10 @@ namespace ptl {
 		auto max_size() noexcept { return Size; }
 
 		constexpr
-		void fill(const Type & value) { std::fill(base_type::begin(), base_type::end(), value); }
+		void fill(const Type & value) { std::fill(this->begin(), this->end(), value); }
 
 		constexpr
-		void swap(array & other) noexcept { std::swap_ranges(base_type::begin(), base_type::end(), other.begin()); }
+		void swap(array & other) noexcept { std::swap_ranges(this->begin(), this->end(), other.begin()); }
 	};
 	PTL_PACK_END
 

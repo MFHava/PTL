@@ -8,13 +8,10 @@
 #include <iterator>
 #include <algorithm>
 #include <stdexcept>
-#include "type_checks.hpp"
 
 namespace ptl::internal {
 	template<typename Implementation, typename Type>
 	class contiguous_container_base {
-		static_assert(internal::is_abi_compatible_v<Type>);
-
 		constexpr
 		auto self() const noexcept -> const Implementation & { return static_cast<const Implementation &>(*this); }
 		constexpr

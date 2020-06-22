@@ -16,8 +16,6 @@ namespace ptl {
 	//! @tparam Type type of the referenced array
 	template<typename Type>
 	class array_ref final : public internal::contiguous_container_base<array_ref<Type>, Type> {
-		using base_type = internal::contiguous_container_base<array_ref<Type>, Type>;
-
 		Type * first{nullptr}, * last{nullptr};
 	public:
 		constexpr

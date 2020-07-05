@@ -6,7 +6,11 @@ Released under the Boost Software License - Version 1.0, see "LICENSE_1_0.txt" f
 
 Introduction
 ============
-The Portable Template Library (PTL) is a header-only library providing "standard library"-style class templates that are guaranteed to be binary stable (their binary representation NEVER changes) - this property enables them to be portable between different compiler(version)s and therefore suitable for the definition of C++-based interfaces of precompiled libraries on platforms that lack a standardised C++ ABI.
+The Portable Template Library (PTL) is a header-only library providing "standard library"-style...
+* class templates that are guaranteed to be binary stable
+  * their binary representation NEVER changes
+  * they can be passed between precompiled libraries on platforms that lack a standardised C++ ABI
+* function templates that fill "holes" in the algorithms library
 
 Requirements
 ============ 

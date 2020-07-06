@@ -4,6 +4,7 @@
 //    (See accompanying file ../LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <atomic>
 #include <vector>
 #include <numeric>
 #include <boost/test/unit_test.hpp>
@@ -32,6 +33,48 @@ BOOST_AUTO_TEST_CASE(transform_if_2) {
 
 	const std::vector expected{18, 48, 70, 84, 90};
 	BOOST_TEST(result == expected);
+}
+
+BOOST_AUTO_TEST_CASE(for_n_1) {
+	auto sum1{0};
+	ptl::for_n(1'000, [&](auto val) { sum1 += val; });
+	BOOST_TEST(sum1 == 499'500);
+
+	std::atomic sum2{0};
+	ptl::for_n(std::execution::seq, 1'000, [&](auto val) { sum2 += val; });
+	BOOST_TEST(sum2 == 499'500);
+
+	std::atomic sum3{0};
+	ptl::for_n(std::execution::par, 1'000, [&](auto val) { sum3 += val; });
+	BOOST_TEST(sum3 == 499'500);
+}
+
+BOOST_AUTO_TEST_CASE(for_n_2) {
+	auto sum1{0};
+	ptl::for_n(500, 1'000, [&](auto val) { sum1 += val; });
+	BOOST_TEST(sum1 == 374'750);
+
+	std::atomic sum2{0};
+	ptl::for_n(std::execution::seq, 500, 1'000, [&](auto val) { sum2 += val; });
+	BOOST_TEST(sum2 == 374'750);
+
+	std::atomic sum3{0};
+	ptl::for_n(std::execution::par, 500, 1'000, [&](auto val) { sum3 += val; });
+	BOOST_TEST(sum3 == 374'750);
+}
+
+BOOST_AUTO_TEST_CASE(for_n_3) {
+	auto sum1{0};
+	ptl::for_n(0, 1'000, 7, [&](auto val) { sum1 += val; });
+	BOOST_TEST(sum1 == 71'071);
+
+	std::atomic sum2{0};
+	ptl::for_n(std::execution::seq, 0, 1'000, 7, [&](auto val) { sum2 += val; });
+	BOOST_TEST(sum2 == 71'071);
+
+	std::atomic sum3{0};
+	ptl::for_n(std::execution::par, 0, 1'000, 7, [&](auto val) { sum3 += val; });
+	BOOST_TEST(sum3 == 71'071);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

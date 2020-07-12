@@ -13,26 +13,48 @@
 BOOST_AUTO_TEST_SUITE(algorithms)
 
 BOOST_AUTO_TEST_CASE(transform_if_1) {
+	const std::vector expected{0, 4, 16, 36, 64};
+
+	const auto pred{[](int val) { return val % 2 == 0; }};
+	const auto op{[](int val) { return val * val; }};
+
 	std::vector<int> input(10);
 	std::iota(std::begin(input), std::end(input), 0);
 
-	std::vector<int> result;
-	ptl::transform_if(input, std::back_inserter(result), [](int val) { return val % 2 == 0; }, [](int val) { return val * val; });
+	std::vector<int> result1;
+	ptl::transform_if(input, std::back_inserter(result1), pred, op);
+	BOOST_TEST(result1 == expected);
 
-	const std::vector expected{0, 4, 16, 36, 64};
-	BOOST_TEST(result == expected);
+	std::vector<int> result2(expected.size());
+	ptl::transform_if(std::execution::seq, input, std::begin(result2), pred, op);
+	BOOST_TEST(result2 == expected);
+
+	std::vector<int> result3(expected.size());
+	ptl::transform_if(std::execution::par, input, std::begin(result3), pred, op);
+	BOOST_TEST(result3 == expected);
 }
 
 BOOST_AUTO_TEST_CASE(transform_if_2) {
+	const std::vector expected{18, 48, 70, 84, 90};
+
+	const auto pred{[](int lhs, int rhs) { return lhs % 2 && rhs % 2 == 0; }};
+	const auto op{[](int lhs, int rhs) { return lhs * rhs; }};
+
 	std::vector<int> input1(10), input2(20);
 	std::iota(std::begin(input1), std::end(input1), 0);
 	std::iota(std::rbegin(input2), std::rend(input2), 0);
 
-	std::vector<int> result;
-	ptl::transform_if(std::begin(input1), std::end(input1), std::begin(input2), std::back_inserter(result), [](int lhs, int rhs) { return lhs % 2 && rhs % 2 == 0; }, [](int lhs, int rhs) { return lhs * rhs; });
+	std::vector<int> result1;
+	ptl::transform_if(std::begin(input1), std::end(input1), std::begin(input2), std::back_inserter(result1), pred, op);
+	BOOST_TEST(result1 == expected);
 
-	const std::vector expected{18, 48, 70, 84, 90};
-	BOOST_TEST(result == expected);
+	std::vector<int> result2(expected.size());
+	ptl::transform_if(std::execution::seq, std::begin(input1), std::end(input1), std::begin(input2), std::begin(result2), pred, op);
+	BOOST_TEST(result2 == expected);
+
+	std::vector<int> result3(expected.size());
+	ptl::transform_if(std::execution::par, std::begin(input1), std::end(input1), std::begin(input2), std::begin(result3), pred, op);
+	BOOST_TEST(result3 == expected);
 }
 
 BOOST_AUTO_TEST_CASE(for_n_1) {

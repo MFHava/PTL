@@ -17,7 +17,7 @@ namespace ptl {
 	constexpr
 	class {
 		template<typename ForwardIterator>
-		class unary_iterator final {
+		class iterator final {
 			ForwardIterator it, end{it};
 			std::vector<char>::const_iterator pred;
 
@@ -36,9 +36,9 @@ namespace ptl {
 			using reference         = typename nested_traits::reference;
 			using iterator_category = std::forward_iterator_tag;
 
-			unary_iterator() noexcept =default;
-			unary_iterator(ForwardIterator it) noexcept : it{it} {}
-			unary_iterator(ForwardIterator first, ForwardIterator last, const std::vector<char> & preds) noexcept : it{first}, end{last}, pred{std::begin(preds)} {
+			iterator() noexcept =default;
+			iterator(ForwardIterator it) noexcept : it{it} {}
+			iterator(ForwardIterator first, ForwardIterator last, const std::vector<char> & preds) noexcept : it{first}, end{last}, pred{std::begin(preds)} {
 				if(first == last) return;
 				if(!*pred) move();
 			}
@@ -46,69 +46,20 @@ namespace ptl {
 			auto operator*() const noexcept -> reference { return *it; }
 			auto operator->() const noexcept { return it; }
 
-			auto operator++() noexcept -> unary_iterator & {
+			auto operator++() noexcept -> iterator & {
 				move();
 				return *this;
 			}
-			auto operator++(int) noexcept -> unary_iterator {
+			auto operator++(int) noexcept -> iterator {
 				auto tmp{*this};
 				move();
 				return tmp;
 			}
 
 			friend
-			auto operator==(const unary_iterator & lhs, const unary_iterator & rhs) noexcept -> bool { return lhs.it == rhs.it; }
+			auto operator==(const iterator & lhs, const iterator & rhs) noexcept -> bool { return lhs.it == rhs.it; }
 			friend
-			auto operator!=(const unary_iterator & lhs, const unary_iterator & rhs) noexcept -> bool { return !(lhs == rhs); }
-		};
-
-		template<typename ForwardIterator1, typename ForwardIterator2>
-		class binary_iterator final {
-			ForwardIterator1 it1, end{it1};
-			ForwardIterator2 it2;
-			std::vector<char>::const_iterator pred;
-
-			using nested_traits1 = std::iterator_traits<ForwardIterator1>;
-			using nested_traits2 = std::iterator_traits<ForwardIterator2>;
-
-			void move() noexcept {
-				do {
-					++it1;
-					++it2;
-					++pred;
-				} while(it1 != end && !*pred);
-			}
-		public:
-			using difference_type   = std::common_type_t<typename nested_traits1::difference_type, typename nested_traits2::difference_type>;
-			using value_type        = std::pair<typename nested_traits1::value_type, typename nested_traits2::value_type>;
-			using pointer           = void; //TODO: this member is pretty hard to define, but is hopefully not needed for std::transform
-			using reference         = std::pair<typename nested_traits1::reference, typename nested_traits2::reference>;
-			using iterator_category = std::forward_iterator_tag;
-
-			binary_iterator() noexcept =default;
-			binary_iterator(ForwardIterator1 it) noexcept : it1{it} {}
-			binary_iterator(ForwardIterator1 first1, ForwardIterator1 last1, ForwardIterator2 first2, const std::vector<char> & preds) noexcept : it1{first1}, end{last1}, it2{first2}, pred{std::begin(preds)} {
-				if(first1 == last1) return;
-				if(!*pred) move();
-			}
-
-			auto operator*() const noexcept -> reference { return {*it1, *it2}; }
-			auto operator->() const noexcept -> pointer =delete;
-
-			auto operator++() noexcept -> binary_iterator & {
-				move();
-				return *this;
-			}
-			auto operator++(int) noexcept -> binary_iterator {
-				auto tmp{*this};
-				move();
-				return tmp;
-			}
-
-			friend
-			auto operator==(const binary_iterator & lhs, const binary_iterator & rhs) noexcept -> bool { return lhs.it1 == rhs.it1; }
-			friend
-			auto operator!=(const binary_iterator & lhs, const binary_iterator & rhs) noexcept -> bool { return !(lhs == rhs); }
+			auto operator!=(const iterator & lhs, const iterator & rhs) noexcept -> bool { return !(lhs == rhs); }
 		};
 	public:
 		template<typename ExecutionPolicy, typename ForwardIterator1, typename ForwardIterator2, typename UnaryPredicate, typename UnaryOperation, typename = std::enable_if_t<std::is_execution_policy_v<internal::remove_cvref_t<ExecutionPolicy>>>>
@@ -121,10 +72,9 @@ namespace ptl {
 			UnaryPredicate pred,       //!< [in] unary predicate which returns true for elements to transform
 			UnaryOperation op          //!< [in] unary operation to apply for transformation
 		) const -> ForwardIterator2 {
-			std::vector<char> flags(std::distance(first, last), false);
+			std::vector<char> flags(std::distance(first, last));
 			std::transform(policy, first, last, std::begin(flags), pred);
-
-			return std::transform(std::forward<ExecutionPolicy>(policy), unary_iterator{first, last, flags}, unary_iterator{last}, result, op);
+			return std::transform(std::forward<ExecutionPolicy>(policy), iterator{first, last, flags}, iterator{last}, result, op);
 		}
 
 		template<typename ExecutionPolicy, typename ForwardRange, typename ForwardIterator, typename UnaryPredicate, typename UnaryOperation, typename = std::enable_if_t<std::is_execution_policy_v<internal::remove_cvref_t<ExecutionPolicy>>>>
@@ -152,11 +102,9 @@ namespace ptl {
 				BinaryPredicate pred,      //!< [in] binary predicate which returns true for elements to transform
 				BinaryOperation op         //!< [in] binary operation to apply for transformation
 		) const -> ForwardIterator3 {
-			std::vector<char> flags(std::distance(first1, last1), false);
+			std::vector<char> flags(std::distance(first1, last1));
 			std::transform(policy, first1, last1, first2, std::begin(flags), pred);
-
-			using Iterator = binary_iterator<ForwardIterator1, ForwardIterator2>;
-			return std::transform(std::forward<ExecutionPolicy>(policy), Iterator{first1, last1, first2, flags}, Iterator{last1}, result, [&](const auto & pair) { return op(pair.first, pair.second); });
+			return std::transform(std::forward<ExecutionPolicy>(policy), iterator{first1, last1, flags}, iterator{last1}, iterator{first2, std::next(first2, flags.size()), flags}, result, op);
 		}
 
 

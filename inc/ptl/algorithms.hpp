@@ -30,11 +30,11 @@ namespace ptl {
 				} while(it != end && !*pred);
 			}
 		public:
-			using difference_type   = typename nested_traits::difference_type;
+			using iterator_category = std::forward_iterator_tag;
 			using value_type        = typename nested_traits::value_type;
+			using difference_type   = typename nested_traits::difference_type;
 			using pointer           = typename nested_traits::pointer;
 			using reference         = typename nested_traits::reference;
-			using iterator_category = std::forward_iterator_tag;
 
 			iterator() noexcept =default;
 			iterator(ForwardIterator it) noexcept : it{it} {}

@@ -13,10 +13,27 @@
 #include "internal/cpp20_emulation.hpp"
 
 namespace ptl {
+	namespace internal {
+		template<typename Type>
+		inline
+		constexpr
+		bool is_execution_policy_v{std::is_execution_policy_v<remove_cvref_t<Type>>};
+
+		template<typename ExecutionPolicy>
+		inline
+		constexpr
+		bool is_sequenced_v{std::is_same_v<remove_cvref_t<ExecutionPolicy>, std::execution::sequenced_policy>};
+	}
+
 	inline
 	constexpr
-	struct {
-		template<typename ExecutionPolicy, typename ForwardIterator1, typename ForwardIterator2, typename UnaryPredicate, typename UnaryOperation, typename = std::enable_if_t<std::is_execution_policy_v<internal::remove_cvref_t<ExecutionPolicy>>>>
+	class {
+		template<typename ForwardIterator, typename OutputIterator, typename UnaryPredicate, typename UnaryOperation>
+		auto sequenced(ForwardIterator first, ForwardIterator last, OutputIterator result, UnaryPredicate pred, UnaryOperation op) const noexcept -> OutputIterator { return (*this)(first, last, result, pred, op); }
+		template<typename ForwardIterator1, typename ForwardIterator2, typename OutputIterator, typename UnaryPredicate, typename UnaryOperation>
+		auto sequenced(ForwardIterator1 first1, ForwardIterator1 last1, ForwardIterator2 first2, OutputIterator result, UnaryPredicate pred, UnaryOperation op) const noexcept -> OutputIterator { return (*this)(first1, last1, first2, result, pred, op); }
+	public:
+		template<typename ExecutionPolicy, typename ForwardIterator1, typename ForwardIterator2, typename UnaryPredicate, typename UnaryOperation, typename = std::enable_if_t<internal::is_execution_policy_v<ExecutionPolicy>>>
 		constexpr
 		auto operator()(
 			ExecutionPolicy && policy, //!< [in] execution policy
@@ -25,17 +42,20 @@ namespace ptl {
 			ForwardIterator2 result,   //!< [in] begin of destination range, may be equal to first
 			UnaryPredicate pred,       //!< [in] unary predicate which returns true for elements to transform
 			UnaryOperation op          //!< [in] unary operation to apply for transformation
-		) const -> ForwardIterator2 {
-			using Pointer = typename std::iterator_traits<ForwardIterator1>::pointer;
-			constexpr Pointer none{nullptr};
+		) const {
+			if constexpr(internal::is_sequenced_v<ExecutionPolicy>) return sequenced(first, last, result, pred, op);
+			else {
+				using Pointer = typename std::iterator_traits<ForwardIterator1>::pointer;
+				constexpr Pointer none{nullptr};
 
-			std::vector<Pointer> ptrs(std::distance(first, last));
-			std::transform(policy, first, last, std::begin(ptrs), [&](auto && val) { return pred(val) ? &val : none; });
-			const auto end{std::remove(policy, std::begin(ptrs), std::end(ptrs), none)};
-			return std::transform(std::forward<ExecutionPolicy>(policy), std::begin(ptrs), end, result, [&](auto && ptr) { return op(*ptr); });
+				std::vector<Pointer> ptrs(std::distance(first, last));
+				std::transform(policy, first, last, std::begin(ptrs), [&](auto && val) { return pred(val) ? &val : none; });
+				const auto end{std::remove(policy, std::begin(ptrs), std::end(ptrs), none)};
+				return std::transform(std::forward<ExecutionPolicy>(policy), std::begin(ptrs), end, result, [&](auto && ptr) { return op(*ptr); });
+			}
 		}
 
-		template<typename ExecutionPolicy, typename ForwardRange, typename ForwardIterator, typename UnaryPredicate, typename UnaryOperation, typename = std::enable_if_t<std::is_execution_policy_v<internal::remove_cvref_t<ExecutionPolicy>>>>
+		template<typename ExecutionPolicy, typename ForwardRange, typename ForwardIterator, typename UnaryPredicate, typename UnaryOperation, typename = std::enable_if_t<internal::is_execution_policy_v<ExecutionPolicy>>>
 		constexpr
 		auto operator()(
 			ExecutionPolicy && policy, //!< [in] execution policy
@@ -43,30 +63,33 @@ namespace ptl {
 			ForwardIterator result,    //!< [in] begin of destination range, may be equal to first
 			UnaryPredicate pred,       //!< [in] unary predicate which returns true for elements to transform
 			UnaryOperation op          //!< [in] unary operation to apply for transformation
-		) const -> ForwardIterator {
+		) const {
 			using std::begin;
 			using std::end;
 			return (*this)(std::forward<ExecutionPolicy>(policy), begin(range), end(range), result, pred, op);
 		}
 
-		template<typename ExecutionPolicy, typename ForwardIterator1, typename ForwardIterator2, typename ForwardIterator3, typename BinaryPredicate, typename BinaryOperation, typename = std::enable_if_t<std::is_execution_policy_v<internal::remove_cvref_t<ExecutionPolicy>>>>
+		template<typename ExecutionPolicy, typename ForwardIterator1, typename ForwardIterator2, typename ForwardIterator3, typename BinaryPredicate, typename BinaryOperation, typename = std::enable_if_t<internal::is_execution_policy_v<ExecutionPolicy>>>
 		constexpr
-			auto operator()(
-				ExecutionPolicy && policy, //!< [in] execution policy
-				ForwardIterator1 first1,   //!< [in] begin of first range
-				ForwardIterator1 last1,    //!< [in] end of first range
-				ForwardIterator2 first2,   //!< [in] begin of second range - will be [first2, N) with N=distance(first1, last1)
-				ForwardIterator3 result,   //!< [in] begin of destination range, may be equal to first1 or first2
-				BinaryPredicate pred,      //!< [in] binary predicate which returns true for elements to transform
-				BinaryOperation op         //!< [in] binary operation to apply for transformation
-		) const -> ForwardIterator3 {
-			using Pointers = std::pair<typename std::iterator_traits<ForwardIterator1>::pointer, typename std::iterator_traits<ForwardIterator2>::pointer>;
-			constexpr Pointers none{nullptr, nullptr};
+		auto operator()(
+			ExecutionPolicy && policy, //!< [in] execution policy
+			ForwardIterator1 first1,   //!< [in] begin of first range
+			ForwardIterator1 last1,    //!< [in] end of first range
+			ForwardIterator2 first2,   //!< [in] begin of second range - will be [first2, N) with N=distance(first1, last1)
+			ForwardIterator3 result,   //!< [in] begin of destination range, may be equal to first1 or first2
+			BinaryPredicate pred,      //!< [in] binary predicate which returns true for elements to transform
+			BinaryOperation op         //!< [in] binary operation to apply for transformation
+		) const {
+			if constexpr(internal::is_sequenced_v<ExecutionPolicy>) return sequenced(first1, last1, first2, result, pred, op);
+			else {
+				using Pointers = std::pair<typename std::iterator_traits<ForwardIterator1>::pointer, typename std::iterator_traits<ForwardIterator2>::pointer>;
+				constexpr Pointers none{nullptr, nullptr};
 
-			std::vector<Pointers> ptrs(std::distance(first1, last1));
-			std::transform(policy, first1, last1, first2, std::begin(ptrs), [&](auto && val1, auto && val2) { return pred(val1, val2) ? Pointers{&val1, &val2} : none; });
-			const auto end{std::remove(policy, std::begin(ptrs), std::end(ptrs), none)};
-			return std::transform(std::forward<ExecutionPolicy>(policy), std::begin(ptrs), end, result, [&](auto && pair) { return op(*pair.first, *pair.second); });
+				std::vector<Pointers> ptrs(std::distance(first1, last1));
+				std::transform(policy, first1, last1, first2, std::begin(ptrs), [&](auto && val1, auto && val2) { return pred(val1, val2) ? Pointers{&val1, &val2} : none; });
+				const auto end{std::remove(policy, std::begin(ptrs), std::end(ptrs), none)};
+				return std::transform(std::forward<ExecutionPolicy>(policy), std::begin(ptrs), end, result, [&](auto && pair) { return op(*pair.first, *pair.second); });
+			}
 		}
 
 
@@ -161,8 +184,11 @@ namespace ptl {
 			constexpr
 			auto operator!=(const iterator & lhs, const iterator & rhs) noexcept { return !(lhs == rhs); }
 		};
+
+		template<typename Integral, typename UnaryFunction>
+		void sequenced(Integral first, Integral last, Integral step, UnaryFunction f) const noexcept { (*this)(first, last, step, f); }
 	public:
-		template<typename ExecutionPolicy, typename Integral, typename UnaryFunction, typename = std::enable_if_t<std::is_execution_policy_v<internal::remove_cvref_t<ExecutionPolicy>>>>
+		template<typename ExecutionPolicy, typename Integral, typename UnaryFunction, typename = std::enable_if_t<internal::is_execution_policy_v<ExecutionPolicy>>>
 		constexpr
 		void operator()(
 			ExecutionPolicy && policy, //!< [in] execution policy
@@ -171,32 +197,29 @@ namespace ptl {
 			Integral step,             //!< [in] stride between successive calls to f
 			UnaryFunction f            //!< [in] function to be called for every index in range
 		) const {
-			assert(first <= last && step > Integral{0});
-			std::for_each(std::forward<ExecutionPolicy>(policy), iterator<Integral>{first, step}, iterator<Integral>{last}, f);
+			if constexpr(internal::is_sequenced_v<ExecutionPolicy>) sequenced(first, last, step, f);
+			else {
+				assert(first <= last && step > Integral{0});
+				std::for_each(std::forward<ExecutionPolicy>(policy), iterator<Integral>{first, step}, iterator<Integral>{last}, f);
+			}
 		}
 
-		template<typename ExecutionPolicy, typename Integral, typename UnaryFunction, typename = std::enable_if_t<std::is_execution_policy_v<internal::remove_cvref_t<ExecutionPolicy>>>>
+		template<typename ExecutionPolicy, typename Integral, typename UnaryFunction, typename = std::enable_if_t<internal::is_execution_policy_v<ExecutionPolicy>>>
 		constexpr
 		void operator()(
 			ExecutionPolicy && policy, //!< [in] execution policy
 			Integral first,            //!< [in] first index
 			Integral last,             //!< [in] last index
 			UnaryFunction f            //!< [in] function to be called for every index in range
-		) const {
-			assert(first <= last);
-			std::for_each(std::forward<ExecutionPolicy>(policy), iterator<Integral>{first, Integral{1}}, iterator<Integral>{last}, f);
-		}
+		) const { (*this)(std::forward<ExecutionPolicy>(policy), first, last, Integral{1}, f); }
 
-		template<typename ExecutionPolicy, typename Integral, typename UnaryFunction, typename = std::enable_if_t<std::is_execution_policy_v<internal::remove_cvref_t<ExecutionPolicy>>>>
+		template<typename ExecutionPolicy, typename Integral, typename UnaryFunction, typename = std::enable_if_t<internal::is_execution_policy_v<ExecutionPolicy>>>
 		constexpr
 		void operator()(
 			ExecutionPolicy && policy, //!< [in] execution policy
 			Integral count,            //!< [in] count of loop iterations - range will be [0, count)
 			UnaryFunction f            //!< [in] function to be called for every index in range
-		) const {
-			assert(count >= Integral{0});
-			std::for_each(std::forward<ExecutionPolicy>(policy), iterator<Integral>{Integral{0}, Integral{1}}, iterator<Integral>{count}, f);
-		}
+		) const { (*this)(std::forward<ExecutionPolicy>(policy), Integral{0}, count, f); }
 
 
 		template<typename Integral, typename UnaryFunction>
@@ -217,18 +240,13 @@ namespace ptl {
 			Integral first, //!< [in] first index
 			Integral last,  //!< [in] last index
 			UnaryFunction f //!< [in] function to be called for every index in range
-		) const {
-			assert(first <= last);
-			for(; first < last; ++first) f(first);
-		}
+		) const { (*this)(first, last, Integral{1}, f); }
 
 		template<typename Integral, typename UnaryFunction>
 		constexpr
 		void operator()(
 			Integral count, //!< [in] count of loop iterations - range will be [0, count)
 			UnaryFunction f //!< [in] function to be called for every index in range
-		) const {
-			for(Integral i{0}; i < count; ++i) f(i);
-		}
+		) const { (*this)(Integral{0}, count, f); }
 	} for_n;
 }

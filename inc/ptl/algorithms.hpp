@@ -15,53 +15,7 @@
 namespace ptl {
 	inline
 	constexpr
-	class {
-		template<typename ForwardIterator>
-		class iterator final {
-			ForwardIterator it, end{it};
-			std::vector<char>::const_iterator pred;
-
-			using nested_traits = std::iterator_traits<ForwardIterator>;
-
-			void move() noexcept {
-				do {
-					++it;
-					++pred;
-				} while(it != end && !*pred);
-			}
-		public:
-			using iterator_category = std::forward_iterator_tag;
-			using value_type        = typename nested_traits::value_type;
-			using difference_type   = typename nested_traits::difference_type;
-			using pointer           = typename nested_traits::pointer;
-			using reference         = typename nested_traits::reference;
-
-			iterator() noexcept =default;
-			iterator(ForwardIterator it) noexcept : it{it} {}
-			iterator(ForwardIterator first, ForwardIterator last, const std::vector<char> & preds) noexcept : it{first}, end{last}, pred{std::begin(preds)} {
-				if(first == last) return;
-				if(!*pred) move();
-			}
-
-			auto operator*() const noexcept -> reference { return *it; }
-			auto operator->() const noexcept { return it; }
-
-			auto operator++() noexcept -> iterator & {
-				move();
-				return *this;
-			}
-			auto operator++(int) noexcept -> iterator {
-				auto tmp{*this};
-				move();
-				return tmp;
-			}
-
-			friend
-			auto operator==(const iterator & lhs, const iterator & rhs) noexcept -> bool { return lhs.it == rhs.it; }
-			friend
-			auto operator!=(const iterator & lhs, const iterator & rhs) noexcept -> bool { return !(lhs == rhs); }
-		};
-	public:
+	struct {
 		template<typename ExecutionPolicy, typename ForwardIterator1, typename ForwardIterator2, typename UnaryPredicate, typename UnaryOperation, typename = std::enable_if_t<std::is_execution_policy_v<internal::remove_cvref_t<ExecutionPolicy>>>>
 		constexpr
 		auto operator()(
@@ -72,9 +26,13 @@ namespace ptl {
 			UnaryPredicate pred,       //!< [in] unary predicate which returns true for elements to transform
 			UnaryOperation op          //!< [in] unary operation to apply for transformation
 		) const -> ForwardIterator2 {
-			std::vector<char> flags(std::distance(first, last));
-			std::transform(policy, first, last, std::begin(flags), pred);
-			return std::transform(std::forward<ExecutionPolicy>(policy), iterator{first, last, flags}, iterator{last}, result, op);
+			using Pointer = typename std::iterator_traits<ForwardIterator1>::pointer;
+			constexpr Pointer none{nullptr};
+
+			std::vector<Pointer> ptrs(std::distance(first, last));
+			std::transform(policy, first, last, std::begin(ptrs), [&](auto && val) { return pred(val) ? &val : none; });
+			const auto end{std::remove(policy, std::begin(ptrs), std::end(ptrs), none)};
+			return std::transform(std::forward<ExecutionPolicy>(policy), std::begin(ptrs), end, result, [&](auto && ptr) { return op(*ptr); });
 		}
 
 		template<typename ExecutionPolicy, typename ForwardRange, typename ForwardIterator, typename UnaryPredicate, typename UnaryOperation, typename = std::enable_if_t<std::is_execution_policy_v<internal::remove_cvref_t<ExecutionPolicy>>>>
@@ -102,9 +60,13 @@ namespace ptl {
 				BinaryPredicate pred,      //!< [in] binary predicate which returns true for elements to transform
 				BinaryOperation op         //!< [in] binary operation to apply for transformation
 		) const -> ForwardIterator3 {
-			std::vector<char> flags(std::distance(first1, last1));
-			std::transform(policy, first1, last1, first2, std::begin(flags), pred);
-			return std::transform(std::forward<ExecutionPolicy>(policy), iterator{first1, last1, flags}, iterator{last1}, iterator{first2, std::next(first2, flags.size()), flags}, result, op);
+			using Pointers = std::pair<typename std::iterator_traits<ForwardIterator1>::pointer, typename std::iterator_traits<ForwardIterator2>::pointer>;
+			constexpr Pointers none{nullptr, nullptr};
+
+			std::vector<Pointers> ptrs(std::distance(first1, last1));
+			std::transform(policy, first1, last1, first2, std::begin(ptrs), [&](auto && val1, auto && val2) { return pred(val1, val2) ? Pointers{&val1, &val2} : none; });
+			const auto end{std::remove(policy, std::begin(ptrs), std::end(ptrs), none)};
+			return std::transform(std::forward<ExecutionPolicy>(policy), std::begin(ptrs), end, result, [&](auto && pair) { return op(*pair.first, *pair.second); });
 		}
 
 

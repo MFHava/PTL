@@ -45,15 +45,22 @@ namespace ptl {
 			using Functors::operator()...;
 		};
 
-		template<typename TypeList, typename Visitor, typename Ptr, typename Result = decltype(std::declval<Visitor &>()(std::declval<typename TL::template at<0> &>()))>
+		template<typename TypeList, typename Self, typename Visitor, typename Result = decltype(std::declval<Visitor &>()(std::declval<typename TL::template at<0> &>()))>
 		static
-		auto dispatch(std::size_t index, [[maybe_unused]] Ptr * ptr, [[maybe_unused]] Visitor && visitor) -> Result {
-			if constexpr(TypeList::empty) throw std::bad_variant_access{};
-			else if(index) return dispatch<typename TypeList::pop_front, Visitor, Ptr, Result>(index - 1, ptr, std::forward<Visitor>(visitor));
-			else {
-				using Type = typename TypeList::template at<0>;
-				using TargetType = std::conditional_t<std::is_const_v<Ptr>, const Type, Type>;
-				return visitor(*reinterpret_cast<TargetType *>(ptr));
+		constexpr
+		auto dispatch(Self & self, std::size_t index, Visitor && visitor) -> Result {
+			if constexpr(TypeList::empty) {
+				(void)self;
+				(void)index;
+				(void)visitor;
+				throw std::bad_variant_access{};
+			} else {
+				if(index) return dispatch<typename TypeList::pop_front>(self, index - 1, std::forward<Visitor>(visitor));
+				else {
+					using Type = typename TypeList::template at<0>;
+					using TargetType = std::conditional_t<std::is_const_v<Self>, const Type, Type>;
+					return visitor(*reinterpret_cast<TargetType *>(self.data));
+				}
 			}
 		}
 
@@ -131,7 +138,7 @@ namespace ptl {
 			if constexpr(sizeof...(Visitors)) {
 				combined_visitor<Visitor, Visitors...> tmp{std::forward<Visitor>(visitor), std::forward<Visitors>(visitors)...};
 				return visit(tmp);
-			} else return dispatch<TL>(type, data, std::forward<Visitor>(visitor));
+			} else return dispatch<TL>(*this, type, std::forward<Visitor>(visitor));
 		}
 		template<typename Visitor, typename... Visitors>
 		constexpr
@@ -139,7 +146,7 @@ namespace ptl {
 			if constexpr(sizeof...(Visitors)) {
 				combined_visitor<Visitor, Visitors...> tmp{std::forward<Visitor>(visitor), std::forward<Visitors>(visitors)...};
 				return visit(tmp);
-			} else return dispatch<TL>(type, data, std::forward<Visitor>(visitor));
+			} else return dispatch<TL>(*this, type, std::forward<Visitor>(visitor));
 		}
 
 		constexpr
@@ -207,10 +214,9 @@ namespace ptl {
 	template<typename Type, typename... Types>
 	constexpr
 	auto holds_alternative(const variant<Types...> & self) noexcept -> bool {
-		return self.visit(
-			[](const Type &) { return true; },
-			[](const auto &) { return false; }
-		);
+		constexpr auto id{type_list<Types...>::template find<Type>};
+		static_assert(id != not_found);
+		return self.index() == static_cast<std::size_t>(id);
 	}
 
 	template<typename Type, typename... Types>
@@ -249,7 +255,6 @@ namespace std {
 			return self.visit([](const auto & value) { return std::hash<std::decay_t<decltype(value)>>{}(value); });
 		}
 	};
-
 
 	template<typename... Types>
 	struct variant_size<ptl::variant<Types...>> : std::integral_constant<std::size_t, sizeof...(Types)> {};

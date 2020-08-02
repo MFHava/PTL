@@ -76,9 +76,9 @@ namespace ptl {
 		~optional() noexcept { reset(); }
 
 		constexpr
-		auto operator->() const noexcept -> const Type * { return &**this; }
+		auto operator->() const noexcept -> const Type * { return std::addressof(**this); }
 		constexpr
-		auto operator->()       noexcept ->       Type * { return &**this; }
+		auto operator->()       noexcept ->       Type * { return std::addressof(**this); }
 
 		constexpr
 		auto operator*() const & noexcept -> const Type & {
@@ -259,9 +259,6 @@ namespace ptl {
 		}
 	};
 	PTL_PACK_END
-
-	template<typename Type>
-	optional(Type) -> optional<Type>;
 
 	template<typename Type>
 	constexpr

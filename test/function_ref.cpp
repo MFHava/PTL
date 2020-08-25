@@ -24,7 +24,7 @@ namespace {
 	int func2b() noexcept        { return 0; }
 }
 
-BOOST_AUTO_TEST_CASE(free_function) {
+BOOST_AUTO_TEST_CASE(free_function_ref) {
 	ptl::function_ref ref1a{func1a};
 	BOOST_TEST(ref1a() == 0);
 	static_assert(std::is_same_v<decltype(ref1a), ptl::function_ref<free_throwing>>);
@@ -35,6 +35,21 @@ BOOST_AUTO_TEST_CASE(free_function) {
 	BOOST_TEST(ref2a() == 0);
 	static_assert(std::is_same_v<decltype(ref2a), ptl::function_ref<free_noexcept>>);
 	ptl::function_ref ref2b{func2b};
+	BOOST_TEST(ref2a() == 0);
+	static_assert(std::is_same_v<decltype(ref2b), ptl::function_ref<free_noexcept>>);
+}
+
+BOOST_AUTO_TEST_CASE(free_function_ptr) {
+	ptl::function_ref ref1a{&func1a};
+	BOOST_TEST(ref1a() == 0);
+	static_assert(std::is_same_v<decltype(ref1a), ptl::function_ref<free_throwing>>);
+	ptl::function_ref ref1b{&func1b};
+	BOOST_TEST(ref1b() == 0);
+	static_assert(std::is_same_v<decltype(ref1b), ptl::function_ref<free_throwing>>);
+	ptl::function_ref ref2a{&func2a};
+	BOOST_TEST(ref2a() == 0);
+	static_assert(std::is_same_v<decltype(ref2a), ptl::function_ref<free_noexcept>>);
+	ptl::function_ref ref2b{&func2b};
 	BOOST_TEST(ref2a() == 0);
 	static_assert(std::is_same_v<decltype(ref2b), ptl::function_ref<free_noexcept>>);
 }

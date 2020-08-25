@@ -26,9 +26,12 @@ namespace ptl {
 		function_ref(Functor && func) noexcept {
 			if constexpr(std::is_pointer_v<Functor>) {
 				//pre-condition: func
+				functor = reinterpret_cast<void *>(func);
+				dispatch = traits::template dispatcher<std::remove_pointer_t<Functor>>;
+			} else {
+				functor = reinterpret_cast<void *>(std::addressof(func));
+				dispatch = traits::template dispatcher<Functor>;
 			}
-			functor = reinterpret_cast<void *>(std::addressof(func));
-			dispatch = traits::template dispatcher<Functor>;
 		}
 
 		constexpr

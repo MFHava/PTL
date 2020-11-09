@@ -33,17 +33,6 @@ BOOST_AUTO_TEST_CASE(size) {
 	BOOST_TEST(a0.size() == r11.size());
 }
 
-BOOST_AUTO_TEST_CASE(comparison) {
-	const std::array<int, 0> a0{};
-	const std::array<int, 3> a1{};
-	const ptl::array_ref<const int> r0{a0};
-	const ptl::array_ref<const int> r1{a1};
-	BOOST_TEST(r0 < r1);
-	BOOST_TEST(!(r0 == r1));
-	BOOST_TEST(!(r1 < a1));
-	BOOST_TEST(r1 == a1);
-}
-
 BOOST_AUTO_TEST_CASE(ctad) {
 	int arr[]{0};
 	const int carr[]{0};
@@ -55,7 +44,7 @@ BOOST_AUTO_TEST_CASE(ctad) {
 
 	std::vector<int> vec{0};
 	const std::vector<int> cvec{0};
-
+	
 	ptl::array_ref ref2{vec};
 	static_assert(std::is_same_v<decltype(ref2), ptl::array_ref<      int>>);
 	ptl::array_ref ref3{cvec};

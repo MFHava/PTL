@@ -191,6 +191,15 @@ namespace ptl {
 		auto operator[](size_type index) const noexcept -> reference { return *(data() + index); } //TODO: [C++??] precondition(index < size());
 
 		constexpr
+		auto first(size_type count) const noexcept -> array_ref { return {data(), count}; } //TODO: [C++??] precondition(count <= size());
+		constexpr
+		auto last(size_type count) const noexcept -> array_ref { return {data() + (size() - count), count}; } //TODO: [C++??] precondition(count <= size());
+		constexpr
+		auto subrange(size_type offset) const noexcept -> array_ref { return {data() + offset, size() - offset}; } //TODO: [C++??] precondition(offset <= size());
+		constexpr
+		auto subrange(size_type offset, size_type count) const noexcept -> array_ref { return {data() + offset, count}; } //TODO: [C++??] precondition(offset + count <= size());
+
+		constexpr
 		auto begin() const noexcept -> iterator { return data(); }
 		constexpr
 		auto end() const noexcept -> iterator { return begin() + size(); }

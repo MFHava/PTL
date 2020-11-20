@@ -50,4 +50,35 @@ BOOST_AUTO_TEST_CASE(comparisons) {
 	BOOST_TEST(!(r1 == s));
 }
 
+BOOST_AUTO_TEST_CASE(substr) {
+	const std::string_view str{"Hello World"};
+	const ptl::string_ref ref{str};
+
+	BOOST_TEST(std::string_view{ref} == str);
+
+	auto strFirst{str};
+	auto refFirst{ref};
+	strFirst.remove_prefix(3);
+	refFirst.remove_prefix(3);
+	BOOST_TEST(refFirst.size() == strFirst.size());
+	for(std::size_t i{0}; i < strFirst.size(); ++i) BOOST_TEST(refFirst[i] == strFirst[i]);
+
+	auto strLast{str};
+	auto refLast{ref};
+	strLast.remove_suffix(3);
+	refLast.remove_suffix(3);
+	BOOST_TEST(refLast.size() == strLast.size());
+	for(std::size_t i{0}; i < strLast.size(); ++i) BOOST_TEST(refLast[i] == strLast[i]);
+
+	const auto substr0{str.substr(4)};
+	const auto subref0{ref.substr(4)};
+	BOOST_TEST(substr0.size() == substr0.size());
+	for(std::size_t i{0}; i < substr0.size(); ++i) BOOST_TEST(subref0[i] == substr0[i]);
+
+	const auto substr1{str.substr(5, 3)};
+	const auto subref1{ref.substr(5, 3)};
+	BOOST_TEST(substr1.size() == substr1.size());
+	for(std::size_t i{0}; i < substr1.size(); ++i) BOOST_TEST(subref1[i] == substr1[i]);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

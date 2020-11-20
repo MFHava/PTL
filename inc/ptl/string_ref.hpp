@@ -156,6 +156,16 @@ namespace ptl {
 		auto operator[](size_type index) const noexcept -> const_reference { return *(data() + index); } //TODO: [C++??] precondition(index < size());
 
 		constexpr
+		void remove_prefix(size_type count) noexcept { ptrs[0] += count; } //TODO: [C++??] precondition(count <= size());
+		constexpr
+		void remove_suffix(size_type count) noexcept { ptrs[1] -= count; } //TODO: [C++??] precondition(count <= size());
+
+		constexpr
+		auto substr(size_type offset) const noexcept -> basic_string_ref { return {data() + offset, size() - offset}; } //TODO: [C++??] precondition(offset <= size());
+		constexpr
+		auto substr(size_type offset, size_type count) const noexcept -> basic_string_ref { return {data() + offset, count}; } //TODO: [C++??] precondition(offset + count <= size());
+
+		constexpr
 		auto begin() const noexcept -> iterator { return data(); }
 		constexpr
 		auto cbegin() const noexcept -> const_iterator { return begin(); }

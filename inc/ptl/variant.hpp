@@ -65,9 +65,9 @@ namespace ptl {
 		}
 
 		template<typename Type>
-		using compatible_check = std::enable_if_t<!std::is_same_v<std::decay_t<Type>, variant> && TL::template find<std::decay_t<Type>> != not_found>;
+		using compatible_check = std::enable_if_t<!std::is_same_v<std::decay_t<Type>, variant> && TL::template find<std::decay_t<Type>> != not_found>; //TODO: [C++20] replace with concepts/requires-clause
 		template<std::size_t Index>
-		using compatible_index_check = compatible_check<typename TL::template at<Index>>;
+		using compatible_index_check = compatible_check<typename TL::template at<Index>>; //TODO: [C++20] replace with concepts/requires-clause
 	public:
 		constexpr
 		variant() : type{0} { new(data) typename TL::template at<0>{}; }
@@ -75,7 +75,7 @@ namespace ptl {
 		variant(const variant & other) { other.visit([&](const auto & value) { construct(value); }); }
 		variant(variant && other) noexcept { other.visit([&](auto & value) { construct(std::move(value)); }); }
 
-		template<typename Type, typename = compatible_check<Type>>
+		template<typename Type, typename = compatible_check<Type>> //TODO: [C++20] replace with concepts/requires-clause
 		constexpr
 		variant(Type && value) { construct(std::forward<Type>(value)); }
 
@@ -83,12 +83,12 @@ namespace ptl {
 		constexpr
 		explicit
 		variant(std::in_place_index_t<Index>, Args &&... args) {
-			static_assert(Index != not_found);
+			static_assert(Index != not_found); //TODO: [C++20] replace with requires-clause
 			using Type = typename TL::template at<Index>;
 			new(data) Type{std::forward<Args>(args)...};
 			type = Index;
 		}
-		template<typename Type, typename... Args>
+		template<typename Type, typename... Args> //TODO: [C++20] add requires-clause for Type being part of Types
 		constexpr
 		explicit
 		variant(std::in_place_type_t<Type>, Args &&... args) : variant{std::in_place_index<TL::template find<Type>>, std::forward<Args>(args)...} {}
@@ -102,11 +102,11 @@ namespace ptl {
 			return *this;
 		}
 
-		template<typename Type, typename = compatible_check<Type>>
+		template<typename Type, typename = compatible_check<Type>> //TODO: [C++20] replace with concepts/requires-clause
 		auto operator=(Type && value) -> variant & {
 			using DecayedType = std::decay_t<Type>;
 			constexpr auto id{TL::template find<DecayedType>};
-			static_assert(id != not_found);
+			static_assert(id != not_found); //TODO: [C++20] replace with requires-clause
 			if(type == id) *reinterpret_cast<DecayedType *>(data) = std::forward<Type>(value);
 			else emplace<Type>(std::forward<Type>(value));
 			return *this;
@@ -119,9 +119,9 @@ namespace ptl {
 			});
 		}
 
-		template<std::size_t Index, typename... Args, typename = compatible_index_check<Index>>
+		template<std::size_t Index, typename... Args, typename = compatible_index_check<Index>> //TODO: [C++20] replace with concepts/requires-clause
 		auto emplace(Args &&... args) -> decltype(auto) {
-			static_assert(Index != not_found);
+			static_assert(Index != not_found); //TODO: [C++20] replace with requires-clause
 			using Type = typename TL::template at<Index>;
 			using DecayedType = std::decay_t<Type>;
 			DecayedType storage{std::forward<Args>(args)...};
@@ -129,7 +129,7 @@ namespace ptl {
 			new(this) variant{std::move(storage)};
 			return *reinterpret_cast<DecayedType *>(data);
 		}
-		template<typename Type, typename... Args, typename = compatible_check<Type>>
+		template<typename Type, typename... Args, typename = compatible_check<Type>> //TODO: [C++20] replace with concepts/requires-clause
 		auto emplace(Args &&... args) -> Type & { return emplace<TL::template find<std::decay_t<Type>>>(std::forward<Args>(args)...); }
 
 		template<typename Visitor, typename... Visitors>
@@ -164,40 +164,41 @@ namespace ptl {
 
 		friend
 		constexpr
-		auto operator==(const variant & lhs, const variant & rhs) noexcept {
+		auto operator==(const variant & lhs, const variant & rhs) noexcept -> bool {
 			if(lhs.type != rhs.type) return false;
 			return lhs.visit([&](const auto & value) { return value == *reinterpret_cast<const std::decay_t<decltype(value)> *>(rhs.data); });
 		}
 		friend
 		constexpr
-		auto operator!=(const variant & lhs, const variant & rhs) noexcept {
+		auto operator!=(const variant & lhs, const variant & rhs) noexcept -> bool { //TODO: [C++20] remove as implicitly generated
 			if(lhs.type != rhs.type) return true;
 			return lhs.visit([&](const auto & value) { return value != *reinterpret_cast<const std::decay_t<decltype(value)> *>(rhs.data); });
 		}
+		//TODO: [C++20] replace the ordering operators by <=>
 		friend
 		constexpr
-		auto operator< (const variant & lhs, const variant & rhs) noexcept {
+		auto operator< (const variant & lhs, const variant & rhs) noexcept -> bool {
 			if(lhs.type < rhs.type) return true;
 			if(lhs.type > rhs.type) return false;
 			return lhs.visit([&](const auto & value) { return value <  *reinterpret_cast<const std::decay_t<decltype(value)> *>(rhs.data); });
 		}
 		friend
 		constexpr
-		auto operator<=(const variant & lhs, const variant & rhs) noexcept {
+		auto operator<=(const variant & lhs, const variant & rhs) noexcept -> bool {
 			if(lhs.type < rhs.type) return true;
 			if(lhs.type > rhs.type) return false;
 			return lhs.visit([&](const auto & value) { return value <= *reinterpret_cast<const std::decay_t<decltype(value)> *>(rhs.data); });
 		}
 		friend
 		constexpr
-		auto operator> (const variant & lhs, const variant & rhs) noexcept {
+		auto operator> (const variant & lhs, const variant & rhs) noexcept -> bool {
 			if(lhs.type > rhs.type) return true;
 			if(lhs.type < rhs.type) return false;
 			return lhs.visit([&](const auto & value) { return value >  *reinterpret_cast<const std::decay_t<decltype(value)> *>(rhs.data); });
 		}
 		friend
 		constexpr
-		auto operator>=(const variant & lhs, const variant & rhs) noexcept {
+		auto operator>=(const variant & lhs, const variant & rhs) noexcept -> bool {
 			if(lhs.type > rhs.type) return true;
 			if(lhs.type < rhs.type) return false;
 			return lhs.visit([&](const auto & value) { return value >= *reinterpret_cast<const std::decay_t<decltype(value)> *>(rhs.data); });
@@ -211,39 +212,39 @@ namespace ptl {
 	};
 	PTL_PACK_END
 
-	template<typename Type, typename... Types>
+	template<typename Type, typename... Types> //TODO: [C++20] add requires-clause for Type being part of Types
 	constexpr
 	auto holds_alternative(const variant<Types...> & self) noexcept -> bool {
 		constexpr auto id{type_list<Types...>::template find<Type>};
-		static_assert(id != not_found);
+		static_assert(id != not_found); //TODO: [C++20] replace with requires-clause
 		return self.index() == static_cast<std::size_t>(id);
 	}
 
-	template<typename Type, typename... Types>
+	template<typename Type, typename... Types> //TODO: [C++20] add requires-clause for Type being part of Types
 	constexpr
 	auto get(const variant<Types...> & self) -> const Type & {
-		static_assert(type_list<Types...>::template find<Type> != not_found);
+		static_assert(type_list<Types...>::template find<Type> != not_found); //TODO: [C++20] replace with requires-clause
 		return self.visit(
 			[](const Type & self) -> const Type & { return self; },
 			[](const auto &) -> const Type & { throw std::bad_variant_access{}; }
 		);
 	}
 
-	template<typename Type, typename... Types>
+	template<typename Type, typename... Types> //TODO: [C++20] add requires-clause for Type being part of Types
 	constexpr
 	auto get(      variant<Types...> & self) ->       Type & {
-		static_assert(type_list<Types...>::template find<Type> != not_found);
+		static_assert(type_list<Types...>::template find<Type> != not_found); //TODO: [C++20] replace with requires-clause
 		return self.visit(
 			[](Type & self) -> Type & { return self; },
 			[](auto &) -> Type & { throw std::bad_variant_access{}; }
 		);
 	}
 
-	template<typename Type, typename... Types>
+	template<typename Type, typename... Types> //TODO: [C++20] add requires-clause for Type being part of Types
 	constexpr
 	auto get(const variant<Types...> && self) -> const Type && { return std::move(get<Type>(self)); }
 
-	template<typename Type, typename... Types>
+	template<typename Type, typename... Types> //TODO: [C++20] add requires-clause for Type being part of Types
 	constexpr
 	auto get(      variant<Types...> && self) ->       Type && { return std::move(get<Type>(self)); }
 }
@@ -254,13 +255,5 @@ namespace std {
 		auto operator()(const ptl::variant<Types...> & self) const noexcept -> std::size_t {
 			return self.visit([](const auto & value) { return std::hash<std::decay_t<decltype(value)>>{}(value); });
 		}
-	};
-
-	template<typename... Types>
-	struct variant_size<ptl::variant<Types...>> : std::integral_constant<std::size_t, sizeof...(Types)> {};
-
-	template<std::size_t Index, typename... Types>
-	struct variant_alternative<Index, ptl::variant<Types...>> {
-		using type = typename ptl::type_list<Types...>::template at<Index>;
 	};
 }

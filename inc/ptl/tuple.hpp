@@ -5,7 +5,6 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include "type_list.hpp"
 #include "internal/type_checks.hpp"
 #include "internal/compiler_detection.hpp"
 
@@ -19,19 +18,6 @@ namespace ptl {
 
 		template<typename T>
 		struct type_identity final { using type = T; }; //TODO: [C++20] replace with std::type_identity
-
-		struct empty_base {
-			static
-			constexpr
-			void swap(empty_base &) noexcept {}
-
-			static
-			constexpr
-			auto equal(const empty_base &) noexcept { return true; }
-			static
-			constexpr
-			auto less(const empty_base &) noexcept { return false; }
-		};
 
 		template<typename Type, typename Base>
 		struct base : Base {
@@ -66,34 +52,50 @@ namespace ptl {
 			Type value;
 		};
 
-		template<typename TL>
+		template<typename... Ts>
 		static
 		constexpr //TODO: [C++20] replace with consteval
 		auto determine_storage() noexcept {
-			if constexpr(TL::empty) return type_identity<empty_base>{};
-			else {
-				using Head = typename TL::template at<0>;
-				using Tail = typename TL::template erase_at<0>;
-				using Base = typename decltype(determine_storage<Tail>())::type;
-				return type_identity<base<Head, Base>>{};
-			}
+			if constexpr(sizeof...(Ts) == 0) {
+				struct empty_base {
+					static
+					constexpr
+					void swap(empty_base &) noexcept {}
+
+					static
+					constexpr
+					auto equal(const empty_base &) noexcept { return true; }
+					static
+					constexpr
+					auto less(const empty_base &) noexcept { return false; }
+				};
+				return type_identity<empty_base>{};
+			} else return determine_storage_impl<Ts...>();
 		}
 
-		typename decltype(determine_storage<type_list<Types...>>())::type storage;
+		template<typename T, typename... Ts>
+		static
+		constexpr //TODO: [C++20] replace with consteval
+		auto determine_storage_impl() noexcept { return type_identity<base<T, typename decltype(determine_storage<Ts...>())::type>>{}; }
 
-		template<std::size_t Index, typename... Ts>
-		friend
-		constexpr
-		auto get(const tuple<Ts...> &) noexcept -> decltype(auto);
-		
-		template<std::size_t Index, typename... Ts>
-		friend
-		constexpr
-		auto get(      tuple<Ts...> &) noexcept -> decltype(auto);
+		typename decltype(determine_storage<Types...>())::type storage;
 	public:
 		template<typename... Args, typename = std::enable_if_t<sizeof...(Args) == sizeof...(Types) || sizeof...(Args) == 0>> //TODO: [C++20] replace with concepts/requires-clause
 		constexpr
 		tuple(Args &&... args) : storage{std::forward<Args>(args)...} {}
+
+		template<std::size_t Index>
+		constexpr
+		auto get() const &  noexcept -> decltype(auto) { return storage.template get<Index>(); }
+		template<std::size_t Index>
+		constexpr
+		auto get()       &  noexcept -> decltype(auto) { return storage.template get<Index>(); }
+		template<std::size_t Index>
+		constexpr
+		auto get() const && noexcept -> decltype(auto) { return std::move(get<Index>()); }
+		template<std::size_t Index>
+		constexpr
+		auto get()       && noexcept -> decltype(auto) { return std::move(get<Index>()); }
 
 		constexpr
 		void swap(tuple & other) noexcept { storage.swap(other.storage); }
@@ -125,22 +127,6 @@ namespace ptl {
 
 	template<typename... Types>
 	tuple(Types...) -> tuple<Types...>;
-
-	template<std::size_t Index, typename... Types>
-	constexpr
-	auto get(const tuple<Types...> & self) noexcept -> decltype(auto) { return self.storage.template get<Index>(); }
-
-	template<std::size_t Index, typename... Types>
-	constexpr
-	auto get(      tuple<Types...> & self) noexcept -> decltype(auto) { return self.storage.template get<Index>(); }
-
-	template<std::size_t Index, typename... Types>
-	constexpr
-	auto get(const tuple<Types...> && self) noexcept -> decltype(auto) { return std::move(get<Index>(self)); }
-
-	template<std::size_t Index, typename... Types>
-	constexpr
-	auto get(      tuple<Types...> && self) noexcept -> decltype(auto) { return std::move(get<Index>(self)); }
 }
 
 namespace std {

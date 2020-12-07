@@ -7,7 +7,6 @@
 #pragma once
 #include "type_list.hpp"
 #include "internal/type_checks.hpp"
-#include "internal/cpp20_emulation.hpp"
 #include "internal/compiler_detection.hpp"
 
 namespace ptl {
@@ -17,6 +16,9 @@ namespace ptl {
 	template<typename... Types>
 	class tuple final {
 		static_assert((internal::is_abi_compatible_v<Types> && ...));
+
+		template<typename T>
+		struct type_identity final { using type = T; }; //TODO: [C++20] replace with std::type_identity
 
 		struct empty_base {
 			static
@@ -64,16 +66,16 @@ namespace ptl {
 			Type value;
 		};
 
-		template<typename TL, typename Base = empty_base>
+		template<typename TL>
 		static
-		constexpr //TODO(C++20): consteval
+		constexpr //TODO: [C++20] replace with consteval
 		auto determine_storage() noexcept {
-			if constexpr(TL::empty) return internal::type_identity<Base>{};
+			if constexpr(TL::empty) return type_identity<empty_base>{};
 			else {
 				using Head = typename TL::template at<0>;
 				using Tail = typename TL::template erase_at<0>;
-				constexpr auto tmp{determine_storage<Tail, Base>()};
-				return internal::type_identity<base<Head, typename decltype(tmp)::type>>{};
+				using Base = typename decltype(determine_storage<Tail>())::type;
+				return type_identity<base<Head, Base>>{};
 			}
 		}
 
@@ -83,13 +85,13 @@ namespace ptl {
 		friend
 		constexpr
 		auto get(const tuple<Ts...> &) noexcept -> decltype(auto);
-
+		
 		template<std::size_t Index, typename... Ts>
 		friend
 		constexpr
 		auto get(      tuple<Ts...> &) noexcept -> decltype(auto);
 	public:
-		template<typename... Args, typename = std::enable_if_t<sizeof...(Args) == sizeof...(Types) || sizeof...(Args) == 0>>
+		template<typename... Args, typename = std::enable_if_t<sizeof...(Args) == sizeof...(Types) || sizeof...(Args) == 0>> //TODO: [C++20] replace with concepts/requires-clause
 		constexpr
 		tuple(Args &&... args) : storage{std::forward<Args>(args)...} {}
 
@@ -101,22 +103,23 @@ namespace ptl {
 
 		friend
 		constexpr
-		auto operator==(const tuple & lhs, const tuple & rhs) noexcept { return lhs.storage.equal(rhs.storage); }
+		auto operator==(const tuple & lhs, const tuple & rhs) noexcept -> bool { return lhs.storage.equal(rhs.storage); }
 		friend
 		constexpr
-		auto operator!=(const tuple & lhs, const tuple & rhs) noexcept { return !(lhs == rhs); }
+		auto operator!=(const tuple & lhs, const tuple & rhs) noexcept -> bool { return !(lhs == rhs); } //TODO: [C++20] remove as implicitly generated
+		//TODO: [C++20] replace the ordering operators by <=>
 		friend
 		constexpr
-		auto operator< (const tuple & lhs, const tuple & rhs) noexcept { return lhs.storage.less(rhs.storage); }
+		auto operator< (const tuple & lhs, const tuple & rhs) noexcept -> bool { return lhs.storage.less(rhs.storage); }
 		friend
 		constexpr
-		auto operator> (const tuple & lhs, const tuple & rhs) noexcept { return rhs < lhs; }
+		auto operator> (const tuple & lhs, const tuple & rhs) noexcept -> bool { return rhs < lhs; }
 		friend
 		constexpr
-		auto operator<=(const tuple & lhs, const tuple & rhs) noexcept { return !(lhs > rhs); }
+		auto operator<=(const tuple & lhs, const tuple & rhs) noexcept -> bool { return !(lhs > rhs); }
 		friend
 		constexpr
-		auto operator>=(const tuple & lhs, const tuple & rhs) noexcept { return !(lhs < rhs); }
+		auto operator>=(const tuple & lhs, const tuple & rhs) noexcept -> bool { return !(lhs < rhs); }
 	};
 	PTL_PACK_END
 

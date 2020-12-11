@@ -76,25 +76,18 @@ namespace ptl {
 		~optional() noexcept { reset(); }
 
 		constexpr
-		auto operator->() const noexcept -> const Type * { return std::addressof(**this); }
+		auto operator->() const noexcept -> const Type * { return std::addressof(**this); } //TODO: [C++??] precondition(*this);
 		constexpr
-		auto operator->()       noexcept ->       Type * { return std::addressof(**this); }
+		auto operator->()       noexcept ->       Type * { return std::addressof(**this); } //TODO: [C++??] precondition(*this);
 
 		constexpr
-		auto operator*() const & noexcept -> const Type & {
-			//pre-condition: initialized
-			return reinterpret_cast<const Type &>(data);
-		}
+		auto operator*() const & noexcept -> const Type & { return reinterpret_cast<const Type &>(data); } //TODO: [C++??] precondition(*this);
 		constexpr
-		auto operator*()       & noexcept ->       Type & {
-			//pre-condition: initialized
-			return reinterpret_cast<      Type &>(data);
-		}
-
+		auto operator*()       & noexcept ->       Type & { return reinterpret_cast<      Type &>(data); } //TODO: [C++??] precondition(*this);
 		constexpr
-		auto operator*() const && noexcept -> const Type && { return std::move(**this); }
+		auto operator*() const && noexcept -> const Type && { return std::move(**this); } //TODO: [C++??] precondition(*this);
 		constexpr
-		auto operator*()       && noexcept ->       Type && { return std::move(**this); }
+		auto operator*()       && noexcept ->       Type && { return std::move(**this); } //TODO: [C++??] precondition(*this);
 
 		constexpr
 		explicit
@@ -117,7 +110,7 @@ namespace ptl {
 			return **this;
 		}
 
-		void swap(optional & other) noexcept {
+		void swap(optional & other) noexcept { //TODO: does this survive self-swap?!
 			if(!*this && !other) return;
 			else if(*this && !other) {
 				other = std::move(**this);
@@ -135,42 +128,43 @@ namespace ptl {
 
 		friend
 		constexpr
-		auto operator==(const optional & lhs, const optional & rhs) noexcept {
+		auto operator==(const optional & lhs, const optional & rhs) noexcept -> bool {
 			if(static_cast<bool>(lhs) != static_cast<bool>(rhs)) return false;
 			if(static_cast<bool>(lhs) == false) return true;
 			return *lhs == *rhs;
 		}
 		friend
 		constexpr
-		auto operator!=(const optional & lhs, const optional & rhs) noexcept {
+		auto operator!=(const optional & lhs, const optional & rhs) noexcept -> bool { //TODO: [C++20] remove as implicitly generated
 			if(static_cast<bool>(lhs) != static_cast<bool>(rhs)) return true;
 			if(static_cast<bool>(lhs) == false) return false;
 			return *lhs != *rhs;
 		}
+		//TODO: [C++20] replace the ordering operators by <=>
 		friend
 		constexpr
-		auto operator< (const optional & lhs, const optional & rhs) noexcept {
+		auto operator< (const optional & lhs, const optional & rhs) noexcept -> bool {
 			if(static_cast<bool>(rhs) == false) return false;
 			if(static_cast<bool>(lhs) == false) return true;
 			return *lhs <  *rhs;
 		}
 		friend
 		constexpr
-		auto operator<=(const optional & lhs, const optional & rhs) noexcept {
+		auto operator<=(const optional & lhs, const optional & rhs) noexcept -> bool {
 			if(static_cast<bool>(lhs) == false) return true;
 			if(static_cast<bool>(rhs) == false) return false;
 			return *lhs <= *rhs;
 		}
 		friend
 		constexpr
-		auto operator> (const optional & lhs, const optional & rhs) noexcept {
+		auto operator> (const optional & lhs, const optional & rhs) noexcept -> bool {
 			if(static_cast<bool>(lhs) == false) return false;
 			if(static_cast<bool>(rhs) == false) return true;
 			return *lhs >  *rhs;
 		}
 		friend
 		constexpr
-		auto operator>=(const optional & lhs, const optional & rhs) noexcept {
+		auto operator>=(const optional & lhs, const optional & rhs) noexcept -> bool {
 			if(static_cast<bool>(rhs) == false) return true;
 			if(static_cast<bool>(lhs) == false) return false;
 			return *lhs >= *rhs;
@@ -178,79 +172,83 @@ namespace ptl {
 
 		friend
 		constexpr
-		auto operator==(const optional & opt, std::nullopt_t) noexcept { return !opt; }
+		auto operator==(const optional & opt, std::nullopt_t) noexcept -> bool { return !opt; }
 		friend
 		constexpr
-		auto operator!=(const optional & opt, std::nullopt_t) noexcept { return static_cast<bool>(opt); }
+		auto operator!=(const optional & opt, std::nullopt_t) noexcept -> bool { return static_cast<bool>(opt); } //TODO: [C++20] remove as implicitly generated
+		//TODO: [C++20] replace the ordering operators by <=>
 		friend
 		constexpr
-		auto operator< (const optional & opt, std::nullopt_t) noexcept { return false; }
+		auto operator< (const optional & opt, std::nullopt_t) noexcept -> bool { return false; }
 		friend
 		constexpr
-		auto operator<=(const optional & opt, std::nullopt_t) noexcept { return !opt; }
+		auto operator<=(const optional & opt, std::nullopt_t) noexcept -> bool { return !opt; }
 		friend
 		constexpr
-		auto operator> (const optional & opt, std::nullopt_t) noexcept { return static_cast<bool>(opt); }
+		auto operator> (const optional & opt, std::nullopt_t) noexcept -> bool { return static_cast<bool>(opt); }
 		friend
 		constexpr
-		auto operator>=(const optional & opt, std::nullopt_t) noexcept { return true; }
+		auto operator>=(const optional & opt, std::nullopt_t) noexcept -> bool { return true; }
 
 		friend
 		constexpr
-		auto operator==(std::nullopt_t, const optional & opt) noexcept { return !opt; }
+		auto operator==(std::nullopt_t, const optional & opt) noexcept -> bool { return !opt; }
 		friend
 		constexpr
-		auto operator!=(std::nullopt_t, const optional & opt) noexcept { return static_cast<bool>(opt); }
+		auto operator!=(std::nullopt_t, const optional & opt) noexcept -> bool { return static_cast<bool>(opt); } //TODO: [C++20] remove as implicitly generated
+		//TODO: [C++20] replace the ordering operators by <=>
 		friend
 		constexpr
-		auto operator< (std::nullopt_t, const optional & opt) noexcept { return static_cast<bool>(opt); }
+		auto operator< (std::nullopt_t, const optional & opt) noexcept -> bool { return static_cast<bool>(opt); }
 		friend
 		constexpr
-		auto operator<=(std::nullopt_t, const optional & opt) noexcept { return true; }
+		auto operator<=(std::nullopt_t, const optional & opt) noexcept -> bool { return true; }
 		friend
 		constexpr
-		auto operator> (std::nullopt_t, const optional & opt) noexcept { return false; }
+		auto operator> (std::nullopt_t, const optional & opt) noexcept -> bool { return false; }
 		friend
 		constexpr
-		auto operator>=(std::nullopt_t, const optional & opt) noexcept { return !opt; }
+		auto operator>=(std::nullopt_t, const optional & opt) noexcept -> bool { return !opt; }
 
 		friend
 		constexpr
-		auto operator==(const optional & opt, const Type & value) noexcept { return opt ? *opt == value : false; }
+		auto operator==(const optional & opt, const Type & value) noexcept -> bool { return opt ? *opt == value : false; }
 		friend
 		constexpr
-		auto operator!=(const optional & opt, const Type & value) noexcept { return opt ? *opt != value : true; }
+		auto operator!=(const optional & opt, const Type & value) noexcept -> bool { return opt ? *opt != value : true; } //TODO: [C++20] remove as implicitly generated
+		//TODO: [C++20] replace the ordering operators by <=>
 		friend
 		constexpr
-		auto operator< (const optional & opt, const Type & value) noexcept { return opt ? *opt <  value : true; }
+		auto operator< (const optional & opt, const Type & value) noexcept -> bool { return opt ? *opt <  value : true; }
 		friend
 		constexpr
-		auto operator<=(const optional & opt, const Type & value) noexcept { return opt ? *opt <= value : true; }
+		auto operator<=(const optional & opt, const Type & value) noexcept -> bool { return opt ? *opt <= value : true; }
 		friend
 		constexpr
-		auto operator> (const optional & opt, const Type & value) noexcept { return opt ? *opt >  value : false; }
+		auto operator> (const optional & opt, const Type & value) noexcept -> bool { return opt ? *opt >  value : false; }
 		friend
 		constexpr
-		auto operator>=(const optional & opt, const Type & value) noexcept { return opt ? *opt >= value : false; }
+		auto operator>=(const optional & opt, const Type & value) noexcept -> bool { return opt ? *opt >= value : false; }
 
 		friend
 		constexpr
-		auto operator==(const Type & value, const optional & opt) noexcept { return opt ? value == *opt : false; }
+		auto operator==(const Type & value, const optional & opt) noexcept -> bool { return opt ? value == *opt : false; }
 		friend
 		constexpr
-		auto operator!=(const Type & value, const optional & opt) noexcept { return opt ? value != *opt : true; }
+		auto operator!=(const Type & value, const optional & opt) noexcept -> bool { return opt ? value != *opt : true; } //TODO: [C++20] remove as implicitly generated
+		//TODO: [C++20] replace the ordering operators by <=>
 		friend
 		constexpr
-		auto operator< (const Type & value, const optional & opt) noexcept { return opt ? value <  *opt : false; }
+		auto operator< (const Type & value, const optional & opt) noexcept -> bool { return opt ? value <  *opt : false; }
 		friend
 		constexpr
-		auto operator<=(const Type & value, const optional & opt) noexcept { return opt ? value <= *opt : false; }
+		auto operator<=(const Type & value, const optional & opt) noexcept -> bool { return opt ? value <= *opt : false; }
 		friend
 		constexpr
-		auto operator> (const Type & value, const optional & opt) noexcept { return opt ? value >  *opt : true; }
+		auto operator> (const Type & value, const optional & opt) noexcept -> bool { return opt ? value >  *opt : true; }
 		friend
 		constexpr
-		auto operator>=(const Type & value, const optional & opt) noexcept { return opt ? value >= *opt : true; }
+		auto operator>=(const Type & value, const optional & opt) noexcept -> bool { return opt ? value >= *opt : true; }
 
 		friend
 		auto operator<<(std::ostream & os, const optional & self) -> std::ostream & {

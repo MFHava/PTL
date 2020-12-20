@@ -249,49 +249,6 @@ namespace ptl {
 		friend
 		constexpr
 		auto operator>=(const Type & value, const optional & opt) noexcept -> bool { return opt ? value >= *opt : true; }
-
-		friend
-		auto operator<<(std::ostream & os, const optional & self) -> std::ostream & {
-			if(!self) return os << "<nullopt>";
-			return os << *self;
-		}
 	};
 	PTL_PACK_END
-
-	template<typename Type>
-	constexpr
-	auto get(const optional<Type> & self) -> const Type & {
-		if(!self) throw std::bad_optional_access{};
-		return *self;
-	}
-
-	template<typename Type>
-	constexpr
-	auto get(      optional<Type> & self) ->       Type & {
-		if(!self) throw std::bad_optional_access{};
-		return *self;
-	}
-
-	template<typename Type>
-	constexpr
-	auto get(const optional<Type> && self) -> const Type && {
-		if(!self) throw std::bad_optional_access{};
-		return *std::move(self);
-	}
-
-	template<typename Type>
-	constexpr
-	auto get(      optional<Type> && self) ->       Type && {
-		if(!self) throw std::bad_optional_access{};
-		return *std::move(self);
-	}
-}
-
-namespace std {
-	template<typename Type>
-	struct hash<ptl::optional<Type>> {
-		auto operator()(const ptl::optional<Type> & self) const noexcept -> std::size_t {
-			return self ? std::hash<Type>{}(*self) : 0;
-		}
-	};
 }

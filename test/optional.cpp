@@ -12,25 +12,20 @@ BOOST_AUTO_TEST_SUITE(optional)
 
 BOOST_AUTO_TEST_CASE(ctor) {
 	ptl::optional<int> op1;
-	BOOST_TEST(!op1);
 	BOOST_TEST(!static_cast<bool>(op1));
 
 	op1 = 1;
-	BOOST_TEST(!!op1);
 	BOOST_TEST(static_cast<bool>(op1));
 	BOOST_TEST(*op1 == 1);
 
 	ptl::optional<int> op2{std::in_place, 5};
-	BOOST_TEST(!!op2);
 	BOOST_TEST(static_cast<bool>(op2));
 	BOOST_TEST(*op2 == 5);
 
 	ptl::optional<int> op3;
-	BOOST_TEST(!op3);
 	BOOST_TEST(!static_cast<bool>(op3));
 
 	op3.emplace(10);
-	BOOST_TEST(!!op3);
 	BOOST_TEST(static_cast<bool>(op3));
 	BOOST_TEST(*op3 == 10);
 }
@@ -38,11 +33,11 @@ BOOST_AUTO_TEST_CASE(ctor) {
 BOOST_AUTO_TEST_CASE(copy) {
 	ptl::optional<float> op1;
 	auto op2{op1};
-	BOOST_TEST(op1 == op2);
+	BOOST_TEST((op1 == op2));
 	
 	ptl::optional<float> op3{5};
 	op2 = op3;
-	BOOST_TEST(op3 == op2);
+	BOOST_TEST((op3 == op2));
 }
 
 namespace {
@@ -68,11 +63,11 @@ BOOST_AUTO_TEST_CASE(move) {
 	using ptl::test::moveable;
 	ptl::optional<moveable> var1{moveable{}};
 	decltype(var1) var2{std::move(var1)};
-	BOOST_TEST( ptl::get(var1).moved);
-	BOOST_TEST(!ptl::get(var2).moved);
+	BOOST_TEST( var1->moved);
+	BOOST_TEST(!var2->moved);
 	var1 = std::move(var2);
-	BOOST_TEST(!ptl::get(var1).moved);
-	BOOST_TEST( ptl::get(var2).moved);
+	BOOST_TEST(!var1->moved);
+	BOOST_TEST( var2->moved);
 }
 
 BOOST_AUTO_TEST_CASE(swapping) {
@@ -85,18 +80,18 @@ BOOST_AUTO_TEST_CASE(swapping) {
 	swap(op1, op3);
 	BOOST_TEST(!op1);
 	BOOST_TEST(static_cast<bool>(op3));
-	BOOST_TEST(*op3 == 10);
+	BOOST_TEST((*op3 == 10));
 }
 
 BOOST_AUTO_TEST_CASE(comparison) {
 	ptl::optional<int> op1, op2{5}, op3{10}, op4, op5{10};
-	BOOST_TEST(op1 != op2);
-	BOOST_TEST(op1 != op3);
-	BOOST_TEST(op1 == op4);
-	BOOST_TEST(op1 != op5);
-	BOOST_TEST(op2 <  op3);
-	BOOST_TEST(op2 <  op5);
-	BOOST_TEST(op3 == op5);
+	BOOST_TEST((op1 != op2));
+	BOOST_TEST((op1 != op3));
+	BOOST_TEST((op1 == op4));
+	BOOST_TEST((op1 != op5));
+	BOOST_TEST((op2 <  op3));
+	BOOST_TEST((op2 <  op5));
+	BOOST_TEST((op3 == op5));
 }
 
 BOOST_AUTO_TEST_CASE(ctad) {

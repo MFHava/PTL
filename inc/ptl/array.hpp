@@ -33,6 +33,35 @@ namespace ptl {
 
 		typename decltype(determine_storage())::type values;
 
+		template<std::size_t Index>
+		friend
+		constexpr
+		auto get(const array & self) noexcept -> const Type & {
+			static_assert(Index < Size);
+			return self[Index];
+		}
+		template<std::size_t Index>
+		friend
+		constexpr
+		auto get(      array & self) noexcept ->       Type & {
+			static_assert(Index < Size);
+			return self[Index];
+		}
+		template<std::size_t Index>
+		friend
+		constexpr
+		auto get(const array && self) noexcept -> const Type && {
+			static_assert(Index < Size);
+			return std::move(self[Index]);
+		}
+		template<std::size_t Index>
+		friend
+		constexpr
+		auto get(      array && self) noexcept ->       Type && {
+			static_assert(Index < Size);
+			return std::move(self[Index]);
+		}
+
 		template<bool IsConst>
 		struct contiguous_iterator final {
 			using iterator_category = std::random_access_iterator_tag; //TODO: [C++20] use contiguous_iterator_tag
@@ -238,28 +267,6 @@ namespace ptl {
 
 	template<typename Type, typename... Types>
 	array(Type, Types...) -> array<Type, 1 + sizeof...(Types)>;
-
-	template<std::size_t Index, typename Type, std::size_t Size>
-	constexpr
-	auto get(const array<Type, Size> & self) noexcept -> const Type & {
-		static_assert(Index < Size);
-		return self[Index];
-	}
-
-	template<std::size_t Index, typename Type, std::size_t Size>
-	constexpr
-	auto get(      array<Type, Size> & self) noexcept ->       Type & {
-		static_assert(Index < Size);
-		return self[Index];
-	}
-
-	template<std::size_t Index, typename Type, std::size_t Size>
-	constexpr
-	auto get(const array<Type, Size> && self) noexcept -> const Type && { return std::move(get<Index>(self)); }
-
-	template<std::size_t Index, typename Type, std::size_t Size>
-	constexpr
-	auto get(      array<Type, Size> && self) noexcept ->       Type && { return std::move(get<Index>(self)); }
 }
 
 namespace std {

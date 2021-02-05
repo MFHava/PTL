@@ -146,7 +146,7 @@ namespace ptl {
 		auto size() const noexcept -> size_type { return ptrs[1] - ptrs[0]; }
 		static
 		constexpr
-		auto max_size() noexcept-> size_type { return std::numeric_limits<size_type>::max(); }
+		auto max_size() noexcept-> size_type { return std::numeric_limits<size_type>::max() / sizeof(Char); }
 
 		constexpr
 		auto front() const noexcept -> const_reference { return (*this)[0]; } //TODO: [C++??] precondition(!empty());
@@ -216,7 +216,7 @@ namespace ptl {
 		operator string_view() const noexcept { return {data(), size()}; }
 	};
 
-	using string_ref  = basic_string_ref<char>;
+	using string_ref = basic_string_ref<char>;
 	static_assert(sizeof(string_ref) == 2 * sizeof(const char *));
 	using wstring_ref = basic_string_ref<wchar_t>;
 	static_assert(sizeof(wstring_ref) == 2 * sizeof(const wchar_t *));

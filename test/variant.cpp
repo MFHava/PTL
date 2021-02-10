@@ -4,23 +4,21 @@
 //    (See accompanying file ../LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>
+#include <catch2/catch.hpp>
 #include "ptl/variant.hpp"
 #include "moveable.hpp"
 
-BOOST_AUTO_TEST_SUITE(variant)
-
-BOOST_AUTO_TEST_CASE(ctor) {
+TEST_CASE("variant ctor", "[variant]") {
 	ptl::variant<int, double> var1;
-	BOOST_TEST(var1.get<int>() == 0);
+	REQUIRE(var1.get<int>() == 0);
 
 	var1 = 10.;
-	BOOST_TEST(var1.holds<double>());
-	BOOST_TEST(var1.get<double>() == 10.);
+	REQUIRE(var1.holds<double>());
+	REQUIRE(var1.get<double>() == 10.);
 
 	var1 = 10;
-	BOOST_TEST(var1.holds<int>());
-	BOOST_TEST(var1.get<int>() == 10);
+	REQUIRE(var1.holds<int>());
+	REQUIRE(var1.get<int>() == 10);
 
 	struct X {
 		X() {}
@@ -32,96 +30,94 @@ BOOST_AUTO_TEST_CASE(ctor) {
 	};
 
 	ptl::variant<int, double, X, Y> var2{std::in_place_type<X>, 4, 5};
-	BOOST_TEST(var2.holds<X>());
+	REQUIRE(var2.holds<X>());
 
 	var2.emplace<Y>(1, 2, 3);
-	BOOST_TEST(var2.holds<Y>());
+	REQUIRE(var2.holds<Y>());
 }
 
-BOOST_AUTO_TEST_CASE(copy) {
+TEST_CASE("variant copy", "[variant]") {
 	ptl::variant<double, int> var{1000};
-	BOOST_TEST(!var.holds<double>());
+	REQUIRE(!var.holds<double>());
 
 	auto copy1 = var;
-	BOOST_TEST(!copy1.holds<double>());
-	BOOST_TEST(var.get<int>() == copy1.get<int>());
+	REQUIRE(!copy1.holds<double>());
+	REQUIRE(var.get<int>() == copy1.get<int>());
 
 	decltype(var) copy2; copy2 = copy1;
-	BOOST_TEST(!copy2.holds<double>());
-	BOOST_TEST(var.get<int>() == copy2.get<int>());
+	REQUIRE(!copy2.holds<double>());
+	REQUIRE(var.get<int>() == copy2.get<int>());
 }
 
-BOOST_AUTO_TEST_CASE(move) {
+TEST_CASE("variant move", "[variant]") {
 	using ptl::test::moveable;
 	ptl::variant<moveable> var1;
 	decltype(var1) var2{std::move(var1)};
-	BOOST_TEST( var1.get<moveable>().moved);
-	BOOST_TEST(!var2.get<moveable>().moved);
+	REQUIRE( var1.get<moveable>().moved);
+	REQUIRE(!var2.get<moveable>().moved);
 	var1 = std::move(var2);
-	BOOST_TEST(!var1.get<moveable>().moved);
-	BOOST_TEST( var2.get<moveable>().moved);
+	REQUIRE(!var1.get<moveable>().moved);
+	REQUIRE( var2.get<moveable>().moved);
 }
 
-BOOST_AUTO_TEST_CASE(visit) {
+TEST_CASE("variant visit", "[variant]") {
 	ptl::variant<int, double> var;
 	var.visit(
-		[](int) { BOOST_TEST(true); },
-		[](double) { BOOST_TEST(false); }
+		[](int) { REQUIRE(true); },
+		[](double) { REQUIRE(false); }
 	);
 
 	var = 1.5;
 	var.visit(
-		[](int) { BOOST_TEST(false); },
-		[](double) { BOOST_TEST(true); }
+		[](int) { REQUIRE(false); },
+		[](double) { REQUIRE(true); }
 	);
-	BOOST_TEST(var.visit([](const auto & value) -> double { return value; }) == 1.5);
+	REQUIRE(var.visit([](const auto & value) -> double { return value; }) == 1.5);
 
 	var = 1;
 	var.visit(
-		[](int) { BOOST_TEST(true); },
-		[](double) { BOOST_TEST(false); }
+		[](int) { REQUIRE(true); },
+		[](double) { REQUIRE(false); }
 	);
-	BOOST_TEST(var.visit([](const auto & value) -> double { return value; }) == 1.0);
+	REQUIRE(var.visit([](const auto & value) -> double { return value; }) == 1.0);
 }
 
-BOOST_AUTO_TEST_CASE(swapping) {
+TEST_CASE("variant swapping", "[variant]") {
 	ptl::variant<int, double> var1{10}, var2{20.2};
-	BOOST_TEST(var1.holds<int>());
-	BOOST_TEST(var2.holds<double>());
+	REQUIRE(var1.holds<int>());
+	REQUIRE(var2.holds<double>());
 
 	swap(var1, var2);
-	BOOST_TEST(var1.holds<double>());
-	BOOST_TEST(var1.get<double>() == 20.2);
-	BOOST_TEST(var2.holds<int>());
-	BOOST_TEST(var2.get<int>() == 10);
+	REQUIRE(var1.holds<double>());
+	REQUIRE(var1.get<double>() == 20.2);
+	REQUIRE(var2.holds<int>());
+	REQUIRE(var2.get<int>() == 10);
 
 	decltype(var1) var3{20};
 	swap(var2, var3);
-	BOOST_TEST(var2.holds<int>());
-	BOOST_TEST(var2.get<int>() == 20);
-	BOOST_TEST(var3.holds<int>());
-	BOOST_TEST(var3.get<int>() == 10);
+	REQUIRE(var2.holds<int>());
+	REQUIRE(var2.get<int>() == 20);
+	REQUIRE(var3.holds<int>());
+	REQUIRE(var3.get<int>() == 10);
 }
 
-BOOST_AUTO_TEST_CASE(comparison) {
+TEST_CASE("variant comparison", "[variant]") {
 	const ptl::variant<int, double> var1{10}, var2{10.};
 
-	BOOST_TEST(!(var1 == var2));
-	BOOST_TEST( (var1 != var2));
+	REQUIRE(!(var1 == var2));
+	REQUIRE(var1 != var2);
 
 	const auto var3{var1};
 
-	BOOST_TEST( (var1 == var3));
-	BOOST_TEST(!(var1 != var3));
+	REQUIRE(var1 == var3);
+	REQUIRE(!(var1 != var3));
 
-	BOOST_TEST( (var1 < var2));
-	BOOST_TEST(!(var1 > var2));
-	BOOST_TEST( (var2 > var1));
-	BOOST_TEST(!(var2 < var1));
+	REQUIRE(var1 < var2);
+	REQUIRE(!(var1 > var2));
+	REQUIRE(var2 > var1);
+	REQUIRE(!(var2 < var1));
 
 	decltype(var1) var4{1};
-	BOOST_TEST((var1 > var4));
-	BOOST_TEST((var4 < var1));
+	REQUIRE(var1 > var4);
+	REQUIRE(var4 < var1);
 }
-
-BOOST_AUTO_TEST_SUITE_END()

@@ -6,67 +6,65 @@
 
 #include <array>
 #include <vector>
-#include <boost/test/unit_test.hpp>
+#include <catch2/catch.hpp>
 #include "ptl/array_ref.hpp"
 
-BOOST_AUTO_TEST_SUITE(array_ref)
-
-BOOST_AUTO_TEST_CASE(ctor) {
+TEST_CASE("array_ref construction", "[array_ref]") {
 	int a0[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 	ptl::array_ref<      int> r0{a0};
 	ptl::array_ref<const int> r1{a0};
-	BOOST_TEST(std::size(a0) == r0.size());
-	BOOST_TEST(r0[0] == a0[0]);
+	REQUIRE(std::size(a0) == r0.size());
+	REQUIRE(r0[0] == a0[0]);
 }
 
-BOOST_AUTO_TEST_CASE(size) {
+TEST_CASE("array_ref size", "[array_ref]") {
 	std::vector<int> v0;
 	ptl::array_ref<      int> r00{v0};
 	ptl::array_ref<const int> r01{v0};
-	BOOST_TEST(v0.size() == r00.size());
-	BOOST_TEST(v0.size() == r01.size());
+	REQUIRE(v0.size() == r00.size());
+	REQUIRE(v0.size() == r01.size());
 
 	std::vector<int> a0(10);
 	ptl::array_ref<      int> r10{a0};
 	ptl::array_ref<const int> r11{a0};
-	BOOST_TEST(a0.size() == r10.size());
-	BOOST_TEST(a0.size() == r11.size());
+	REQUIRE(a0.size() == r10.size());
+	REQUIRE(a0.size() == r11.size());
 }
 
-BOOST_AUTO_TEST_CASE(subview) {
+TEST_CASE("array_ref subviews", "[array_ref]") {
 	const int arr[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 	const ptl::array_ref<const int> ref{arr};
 
 	const auto first{ref.first(3)};
-	BOOST_TEST(first.size() == 3);
-	BOOST_TEST(first[0] == 0);
-	BOOST_TEST(first[1] == 1);
-	BOOST_TEST(first[2] == 2);
+	REQUIRE(first.size() == 3);
+	REQUIRE(first[0] == 0);
+	REQUIRE(first[1] == 1);
+	REQUIRE(first[2] == 2);
 
 	const auto last{ref.last(4)};
-	BOOST_TEST(last.size() == 4);
-	BOOST_TEST(last[0] == 6);
-	BOOST_TEST(last[1] == 7);
-	BOOST_TEST(last[2] == 8);
-	BOOST_TEST(last[3] == 9);
+	REQUIRE(last.size() == 4);
+	REQUIRE(last[0] == 6);
+	REQUIRE(last[1] == 7);
+	REQUIRE(last[2] == 8);
+	REQUIRE(last[3] == 9);
 
 	const auto sub0{ref.subrange(4)};
-	BOOST_TEST(sub0.size() == 6);
-	BOOST_TEST(sub0[0] == 4);
-	BOOST_TEST(sub0[1] == 5);
-	BOOST_TEST(sub0[2] == 6);
-	BOOST_TEST(sub0[3] == 7);
-	BOOST_TEST(sub0[4] == 8);
-	BOOST_TEST(sub0[5] == 9);
+	REQUIRE(sub0.size() == 6);
+	REQUIRE(sub0[0] == 4);
+	REQUIRE(sub0[1] == 5);
+	REQUIRE(sub0[2] == 6);
+	REQUIRE(sub0[3] == 7);
+	REQUIRE(sub0[4] == 8);
+	REQUIRE(sub0[5] == 9);
 
 	const auto sub1{ref.subrange(5, 3)};
-	BOOST_TEST(sub1.size() == 3);
-	BOOST_TEST(sub1[0] == 5);
-	BOOST_TEST(sub1[1] == 6);
-	BOOST_TEST(sub1[2] == 7);
+	REQUIRE(sub1.size() == 3);
+	REQUIRE(sub1[0] == 5);
+	REQUIRE(sub1[1] == 6);
+	REQUIRE(sub1[2] == 7);
 }
 
-BOOST_AUTO_TEST_CASE(ctad) {
+TEST_CASE("array_ref ctad", "[array_ref]") {
 	int arr[]{0};
 	const int carr[]{0};
 
@@ -83,5 +81,3 @@ BOOST_AUTO_TEST_CASE(ctad) {
 	ptl::array_ref ref3{cvec};
 	static_assert(std::is_same_v<decltype(ref3), ptl::array_ref<const int>>);
 }
-
-BOOST_AUTO_TEST_SUITE_END()

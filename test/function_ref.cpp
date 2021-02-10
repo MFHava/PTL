@@ -4,15 +4,13 @@
 //    (See accompanying file ../LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>
+#include <catch2/catch.hpp>
 #include "ptl/function_ref.hpp"
 
 static_assert(sizeof(ptl::function_ref<int()>) == sizeof(void *) * 2);
 static_assert(sizeof(ptl::function_ref<int(int)>) == sizeof(void *) * 2);
 static_assert(sizeof(ptl::function_ref<int() noexcept>) == sizeof(void *) * 2);
 static_assert(sizeof(ptl::function_ref<int(int) noexcept>) == sizeof(void *) * 2);
-
-BOOST_AUTO_TEST_SUITE(function_ref)
 
 namespace {
 	using free_throwing = int();
@@ -24,37 +22,37 @@ namespace {
 	int func2b() noexcept        { return 0; }
 }
 
-BOOST_AUTO_TEST_CASE(free_function_ref) {
+TEST_CASE("free function ref", "[function_ref]") {
 	ptl::function_ref ref1a{func1a};
-	BOOST_TEST(ref1a() == 0);
+	REQUIRE(ref1a() == 0);
 	static_assert(std::is_same_v<decltype(ref1a), ptl::function_ref<free_throwing>>);
 	ptl::function_ref ref1b{func1b};
-	BOOST_TEST(ref1b() == 0);
+	REQUIRE(ref1b() == 0);
 	static_assert(std::is_same_v<decltype(ref1b), ptl::function_ref<free_throwing>>);
 	ptl::function_ref ref2a{func2a};
-	BOOST_TEST(ref2a() == 0);
+	REQUIRE(ref2a() == 0);
 	static_assert(std::is_same_v<decltype(ref2a), ptl::function_ref<free_noexcept>>);
 	ptl::function_ref ref2b{func2b};
-	BOOST_TEST(ref2a() == 0);
+	REQUIRE(ref2a() == 0);
 	static_assert(std::is_same_v<decltype(ref2b), ptl::function_ref<free_noexcept>>);
 }
 
-BOOST_AUTO_TEST_CASE(free_function_ptr) {
+TEST_CASE("free function ptr", "[function_ref]") {
 	ptl::function_ref ref1a{&func1a};
-	BOOST_TEST(ref1a() == 0);
+	REQUIRE(ref1a() == 0);
 	static_assert(std::is_same_v<decltype(ref1a), ptl::function_ref<free_throwing>>);
 	ptl::function_ref ref1b{&func1b};
-	BOOST_TEST(ref1b() == 0);
+	REQUIRE(ref1b() == 0);
 	static_assert(std::is_same_v<decltype(ref1b), ptl::function_ref<free_throwing>>);
 	ptl::function_ref ref2a{&func2a};
-	BOOST_TEST(ref2a() == 0);
+	REQUIRE(ref2a() == 0);
 	static_assert(std::is_same_v<decltype(ref2a), ptl::function_ref<free_noexcept>>);
 	ptl::function_ref ref2b{&func2b};
-	BOOST_TEST(ref2a() == 0);
+	REQUIRE(ref2a() == 0);
 	static_assert(std::is_same_v<decltype(ref2b), ptl::function_ref<free_noexcept>>);
 }
 
-BOOST_AUTO_TEST_CASE(lambda_stateless) {
+TEST_CASE("stateless lambda", "[function_ref]") {
 	auto func1a = []                           { return 0; };
 	auto func1b = []()         noexcept(false) { return 0; };
 	auto func2a = []()         noexcept(true)  { return 0; };
@@ -65,33 +63,33 @@ BOOST_AUTO_TEST_CASE(lambda_stateless) {
 	auto func4b = []() mutable noexcept        { return 0; };
 
 	ptl::function_ref ref1a{func1a};
-	BOOST_TEST(ref1a() == 0);
+	REQUIRE(ref1a() == 0);
 	static_assert(std::is_same_v<decltype(ref1a), ptl::function_ref<free_throwing>>);
 	ptl::function_ref ref1b{func1b};
-	BOOST_TEST(ref1b() == 0);
+	REQUIRE(ref1b() == 0);
 	static_assert(std::is_same_v<decltype(ref1b), ptl::function_ref<free_throwing>>);
 	ptl::function_ref ref2a{func2a};
-	BOOST_TEST(ref2a() == 0);
+	REQUIRE(ref2a() == 0);
 	static_assert(std::is_same_v<decltype(ref2a), ptl::function_ref<free_noexcept>>);
 	ptl::function_ref ref2b{func2b};
-	BOOST_TEST(ref2a() == 0);
+	REQUIRE(ref2a() == 0);
 	static_assert(std::is_same_v<decltype(ref2b), ptl::function_ref<free_noexcept>>);
 
 	ptl::function_ref ref3a{func3a};
-	BOOST_TEST(ref3a() == 0);
+	REQUIRE(ref3a() == 0);
 	static_assert(std::is_same_v<decltype(ref3a), ptl::function_ref<free_throwing>>);
 	ptl::function_ref ref3b{func3b};
-	BOOST_TEST(ref3b() == 0);
+	REQUIRE(ref3b() == 0);
 	static_assert(std::is_same_v<decltype(ref3b), ptl::function_ref<free_throwing>>);
 	ptl::function_ref ref4a{func4a};
-	BOOST_TEST(ref4a() == 0);
+	REQUIRE(ref4a() == 0);
 	static_assert(std::is_same_v<decltype(ref4a), ptl::function_ref<free_noexcept>>);
 	ptl::function_ref ref4b{func4b};
-	BOOST_TEST(ref4a() == 0);
+	REQUIRE(ref4a() == 0);
 	static_assert(std::is_same_v<decltype(ref4b), ptl::function_ref<free_noexcept>>);
 }
 
-BOOST_AUTO_TEST_CASE(lambda_statefull) {
+TEST_CASE("statefull lambda", "[function_ref]") {
 	auto func1a = [value{0}]                           { return value; };
 	auto func1b = [value{0}]()         noexcept(false) { return value; };
 	auto func2a = [value{0}]()         noexcept(true)  { return value; };
@@ -102,30 +100,28 @@ BOOST_AUTO_TEST_CASE(lambda_statefull) {
 	auto func4b = [value{0}]() mutable noexcept        { return value; };
 
 	ptl::function_ref ref1a{func1a};
-	BOOST_TEST(ref1a() == 0);
+	REQUIRE(ref1a() == 0);
 	static_assert(std::is_same_v<decltype(ref1a), ptl::function_ref<free_throwing>>);
 	ptl::function_ref ref1b{func1b};
-	BOOST_TEST(ref1b() == 0);
+	REQUIRE(ref1b() == 0);
 	static_assert(std::is_same_v<decltype(ref1b), ptl::function_ref<free_throwing>>);
 	ptl::function_ref ref2a{func2a};
-	BOOST_TEST(ref2a() == 0);
+	REQUIRE(ref2a() == 0);
 	static_assert(std::is_same_v<decltype(ref2a), ptl::function_ref<free_noexcept>>);
 	ptl::function_ref ref2b{func2b};
-	BOOST_TEST(ref2a() == 0);
+	REQUIRE(ref2a() == 0);
 	static_assert(std::is_same_v<decltype(ref2b), ptl::function_ref<free_noexcept>>);
 
 	ptl::function_ref ref3a{func3a};
-	BOOST_TEST(ref3a() == 0);
+	REQUIRE(ref3a() == 0);
 	static_assert(std::is_same_v<decltype(ref3a), ptl::function_ref<free_throwing>>);
 	ptl::function_ref ref3b{func3b};
-	BOOST_TEST(ref3b() == 0);
+	REQUIRE(ref3b() == 0);
 	static_assert(std::is_same_v<decltype(ref3b), ptl::function_ref<free_throwing>>);
 	ptl::function_ref ref4a{func4a};
-	BOOST_TEST(ref4a() == 0);
+	REQUIRE(ref4a() == 0);
 	static_assert(std::is_same_v<decltype(ref4a), ptl::function_ref<free_noexcept>>);
 	ptl::function_ref ref4b{func4b};
-	BOOST_TEST(ref4a() == 0);
+	REQUIRE(ref4a() == 0);
 	static_assert(std::is_same_v<decltype(ref4b), ptl::function_ref<free_noexcept>>);
 }
-
-BOOST_AUTO_TEST_SUITE_END()

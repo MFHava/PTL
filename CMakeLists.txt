@@ -42,15 +42,14 @@ target_include_directories(ptl INTERFACE "inc")
 target_link_libraries(ptl INTERFACE ptl_flags)
 
 if(PTL_BUILD_TESTS)
-	find_package(Boost 1.59 REQUIRED unit_test_framework)
+	find_package(Catch2 CONFIG REQUIRED)
 
 	file(GLOB_RECURSE PTL "inc/*")
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/inc FILES ${PTL})
 	file(GLOB_RECURSE PTL_TEST "test/*")
 	source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/test FILES ${PTL_TEST})
 	add_executable(test-ptl ${PTL} ${PTL_TEST}) #including PTL sources here to have them included in IDEs
-	target_compile_definitions(test-ptl PRIVATE PTL_ENABLE_DEBUGGING)
-	target_link_libraries(test-ptl ptl Boost::unit_test_framework)
+	target_link_libraries(test-ptl PRIVATE ptl Catch2::Catch2)
 	set_target_properties(test-ptl PROPERTIES FOLDER "Portable Template Library")
 endif()
 

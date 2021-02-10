@@ -4,40 +4,38 @@
 //    (See accompanying file ../LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>
+#include <catch2/catch.hpp>
 #include "ptl/optional.hpp"
 #include "moveable.hpp"
 
-BOOST_AUTO_TEST_SUITE(optional)
-
-BOOST_AUTO_TEST_CASE(ctor) {
+TEST_CASE("optional ctor", "[optional]") {
 	ptl::optional<int> op1;
-	BOOST_TEST(!static_cast<bool>(op1));
+	REQUIRE(!static_cast<bool>(op1));
 
 	op1 = 1;
-	BOOST_TEST(static_cast<bool>(op1));
-	BOOST_TEST(*op1 == 1);
+	REQUIRE(static_cast<bool>(op1));
+	REQUIRE(*op1 == 1);
 
 	ptl::optional<int> op2{std::in_place, 5};
-	BOOST_TEST(static_cast<bool>(op2));
-	BOOST_TEST(*op2 == 5);
+	REQUIRE(static_cast<bool>(op2));
+	REQUIRE(*op2 == 5);
 
 	ptl::optional<int> op3;
-	BOOST_TEST(!static_cast<bool>(op3));
+	REQUIRE(!static_cast<bool>(op3));
 
 	op3.emplace(10);
-	BOOST_TEST(static_cast<bool>(op3));
-	BOOST_TEST(*op3 == 10);
+	REQUIRE(static_cast<bool>(op3));
+	REQUIRE(*op3 == 10);
 }
 
-BOOST_AUTO_TEST_CASE(copy) {
+TEST_CASE("optional copy", "[optional]") {
 	ptl::optional<float> op1;
 	auto op2{op1};
-	BOOST_TEST((op1 == op2));
+	REQUIRE(op1 == op2);
 	
 	ptl::optional<float> op3{5};
 	op2 = op3;
-	BOOST_TEST((op3 == op2));
+	REQUIRE(op3 == op2);
 }
 
 namespace {
@@ -59,44 +57,42 @@ namespace {
 	};
 }
 
-BOOST_AUTO_TEST_CASE(move) {
+TEST_CASE("optional move", "[optional]") {
 	using ptl::test::moveable;
 	ptl::optional<moveable> var1{moveable{}};
 	decltype(var1) var2{std::move(var1)};
-	BOOST_TEST( var1->moved);
-	BOOST_TEST(!var2->moved);
+	REQUIRE( var1->moved);
+	REQUIRE(!var2->moved);
 	var1 = std::move(var2);
-	BOOST_TEST(!var1->moved);
-	BOOST_TEST( var2->moved);
+	REQUIRE(!var1->moved);
+	REQUIRE( var2->moved);
 }
 
-BOOST_AUTO_TEST_CASE(swapping) {
+TEST_CASE("optional swapping", "[optional]") {
 	ptl::optional<int> op1{5}, op2{10};
 	swap(op1, op2);
-	BOOST_TEST(*op1 == 10);
-	BOOST_TEST(*op2 ==  5);
+	REQUIRE(*op1 == 10);
+	REQUIRE(*op2 ==  5);
 
 	ptl::optional<int> op3;
 	swap(op1, op3);
-	BOOST_TEST(!op1);
-	BOOST_TEST(static_cast<bool>(op3));
-	BOOST_TEST((*op3 == 10));
+	REQUIRE(!op1);
+	REQUIRE(static_cast<bool>(op3));
+	REQUIRE(*op3 == 10);
 }
 
-BOOST_AUTO_TEST_CASE(comparison) {
+TEST_CASE("optional comparison", "[optional]") {
 	ptl::optional<int> op1, op2{5}, op3{10}, op4, op5{10};
-	BOOST_TEST((op1 != op2));
-	BOOST_TEST((op1 != op3));
-	BOOST_TEST((op1 == op4));
-	BOOST_TEST((op1 != op5));
-	BOOST_TEST((op2 <  op3));
-	BOOST_TEST((op2 <  op5));
-	BOOST_TEST((op3 == op5));
+	REQUIRE(op1 != op2);
+	REQUIRE(op1 != op3);
+	REQUIRE(op1 == op4);
+	REQUIRE(op1 != op5);
+	REQUIRE(op2 <  op3);
+	REQUIRE(op2 <  op5);
+	REQUIRE(op3 == op5);
 }
 
-BOOST_AUTO_TEST_CASE(ctad) {
+TEST_CASE("optional ctad", "[optional]") {
 	ptl::optional op{0};
 	static_assert(std::is_same_v<decltype(op), ptl::optional<int>>);
 }
-
-BOOST_AUTO_TEST_SUITE_END()

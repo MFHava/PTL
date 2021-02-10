@@ -64,7 +64,8 @@ namespace ptl {
 
 		template<bool IsConst>
 		struct contiguous_iterator final {
-			using iterator_category = std::random_access_iterator_tag; //TODO: [C++20] use contiguous_iterator_tag
+			//TODO: [C++20] using iterator_concept = std::contiguous_iterator_tag;
+			using iterator_category = std::random_access_iterator_tag;
 			using value_type        = Type;
 			using difference_type   = std::ptrdiff_t;
 			using pointer           = std::conditional_t<IsConst, const Type, Type> *;

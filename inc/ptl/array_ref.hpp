@@ -63,7 +63,8 @@ namespace ptl {
 		using pointer          =       element_type *;
 		using const_pointer    = const element_type *;
 		struct iterator final {
-			using iterator_category = std::random_access_iterator_tag; //TODO: [C++20] use contiguous_iterator_tag
+			//TODO: [C++20] using iterator_concept = std::contiguous_iterator_tag;
+			using iterator_category = std::random_access_iterator_tag;
 			using value_type        = array_ref::value_type;
 			using difference_type   = array_ref::difference_type;
 			using pointer           = array_ref::pointer;

@@ -6,7 +6,7 @@
 
 #include <catch2/catch.hpp>
 #include "ptl/variant.hpp"
-#include "moveable.hpp"
+#include "utils.hpp"
 
 TEST_CASE("variant ctor", "[variant]") {
 	ptl::variant<int, double> var1;

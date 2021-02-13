@@ -6,7 +6,7 @@
 
 #include <catch2/catch.hpp>
 #include "ptl/optional.hpp"
-#include "moveable.hpp"
+#include "utils.hpp"
 
 TEST_CASE("optional ctor", "[optional]") {
 	ptl::optional<int> op1;
@@ -36,25 +36,6 @@ TEST_CASE("optional copy", "[optional]") {
 	ptl::optional<float> op3{5};
 	op2 = op3;
 	REQUIRE(op3 == op2);
-}
-
-namespace {
-	struct moveable final {
-		bool moved{false};
-
-		moveable() {}
-		moveable(const moveable &) { throw std::runtime_error{"copy called"}; }
-		moveable(moveable && other) noexcept : moved{other.moved} { other.moved = true; }
-
-		auto operator=(const moveable &) -> moveable & { throw std::runtime_error{"copy called"}; }
-		auto operator=(moveable && other) noexcept -> moveable & {
-			moved = other.moved;
-			other.moved = true;
-			return *this;
-		}
-
-		~moveable() noexcept =default;
-	};
 }
 
 TEST_CASE("optional move", "[optional]") {

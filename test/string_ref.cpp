@@ -53,15 +53,6 @@ TEST_CASE("string_ref swapping", "[string_ref]") {
 	REQUIRE(r0 != r1);
 }
 
-TEST_CASE("string_ref comparisons", "[string_ref]") {
-	const auto r0{"abcd"_sr}, r1{"edfg"_sr};
-	const char * s = "hjkl";
-	REQUIRE(r0 < r1);
-	REQUIRE(!(r0 == r1));
-	REQUIRE(r1 < s);
-	REQUIRE(!(r1 == s));
-}
-
 TEST_CASE("string_ref substr", "[string_ref]") {
 	const std::string_view str{"Hello World"};
 	const ptl::string_ref ref{str};

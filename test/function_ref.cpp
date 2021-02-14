@@ -22,7 +22,7 @@ namespace {
 	int func2b() noexcept        { return 0; }
 }
 
-TEST_CASE("free function ref", "[function_ref]") {
+TEST_CASE("function_ref free function ref", "[function_ref]") {
 	ptl::function_ref ref1a{func1a};
 	REQUIRE(ref1a() == 0);
 	static_assert(std::is_same_v<decltype(ref1a), ptl::function_ref<free_throwing>>);
@@ -37,7 +37,7 @@ TEST_CASE("free function ref", "[function_ref]") {
 	static_assert(std::is_same_v<decltype(ref2b), ptl::function_ref<free_noexcept>>);
 }
 
-TEST_CASE("free function ptr", "[function_ref]") {
+TEST_CASE("function_ref free function ptr", "[function_ref]") {
 	ptl::function_ref ref1a{&func1a};
 	REQUIRE(ref1a() == 0);
 	static_assert(std::is_same_v<decltype(ref1a), ptl::function_ref<free_throwing>>);
@@ -52,7 +52,7 @@ TEST_CASE("free function ptr", "[function_ref]") {
 	static_assert(std::is_same_v<decltype(ref2b), ptl::function_ref<free_noexcept>>);
 }
 
-TEST_CASE("stateless lambda", "[function_ref]") {
+TEST_CASE("function_ref stateless lambda", "[function_ref]") {
 	auto func1a = []                           { return 0; };
 	auto func1b = []()         noexcept(false) { return 0; };
 	auto func2a = []()         noexcept(true)  { return 0; };
@@ -89,7 +89,7 @@ TEST_CASE("stateless lambda", "[function_ref]") {
 	static_assert(std::is_same_v<decltype(ref4b), ptl::function_ref<free_noexcept>>);
 }
 
-TEST_CASE("statefull lambda", "[function_ref]") {
+TEST_CASE("function_ref stateful lambda", "[function_ref]") {
 	auto func1a = [value{0}]                           { return value; };
 	auto func1b = [value{0}]()         noexcept(false) { return value; };
 	auto func2a = [value{0}]()         noexcept(true)  { return value; };

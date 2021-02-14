@@ -12,7 +12,7 @@ static_assert(sizeof(ptl::array<int,  0>) == sizeof(void *));
 static_assert(std::is_same_v<decltype(ptl::array{1, 2, 3, 4}), ptl::array<int, 4>>);
 static_assert(std::is_same_v<decltype(ptl::array{1., 2., 3.}), ptl::array<double, 3>>);
 
-TEST_CASE("array construction", "[array]") {
+TEST_CASE("array ctor", "[array]") {
 	const ptl::array<int, 10> a0;
 	for(const auto & tmp : a0) REQUIRE(tmp == 0);
 	const ptl::array<int, 10> a1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -30,7 +30,6 @@ TEST_CASE("array size", "[array]") {
 	REQUIRE(a1.max_size() == 0);
 }
 
-
 TEST_CASE("array comparison", "[array]") {
 	const ptl::array<int, 3> a0{0, 1, 2}, a1{a0};
 	REQUIRE(a0 == a1);
@@ -44,6 +43,21 @@ TEST_CASE("array fill", "[array]") {
 	ptl::array<int, 10> arr;
 	arr.fill(10);
 	for(const auto & tmp : arr) REQUIRE(tmp == 10);
+}
+
+TEST_CASE("array swapping", "[array]") {
+	ptl::array<int, 3> a0{0, 1, 2}, a1{3, 4, 5};
+
+	const auto tmp0{a0}, tmp1{a1};
+	REQUIRE(a0 == tmp0);
+	REQUIRE(a1 == tmp1);
+	REQUIRE(a0 != a1);
+
+
+	a0.swap(a1);
+	REQUIRE(a0 == tmp1);
+	REQUIRE(a1 == tmp0);
+	REQUIRE(a0 != a1);
 }
 
 TEST_CASE("array structured_binding", "[array]") {

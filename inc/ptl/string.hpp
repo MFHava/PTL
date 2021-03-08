@@ -5,15 +5,13 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include <locale>
-#include <istream>
 #include <iterator>
 #include <algorithm>
 #include <stdexcept>
 #include <string_view>
 
 namespace ptl {
-	class string final { //TODO: constexpr
+	class string final { //TODO: [C++20] constexpr
 		class rep_t final {
 			static
 			constexpr
@@ -278,9 +276,6 @@ namespace ptl {
 		friend
 		auto operator+(const string & lhs, std::string_view rhs) -> string { return concat(lhs, rhs); }
 
-		//TODO: countless overloads for implemented (member) functions
-		//TODO: countless additional index-based member functions
-
 		auto operator[](size_type index) const noexcept -> const_reference { return data()[index]; } //TODO: [C++??] precondition(index < size());
 		auto operator[](size_type index)       noexcept ->       reference { return data()[index]; } //TODO: [C++??] precondition(index < size());
 		auto at(size_type index) const -> const_reference { return index < size() ? (*this)[index] : throw std::out_of_range{"ptl::string::at - index out of range"}; }
@@ -380,7 +375,6 @@ namespace ptl {
 			return begin() + index;
 		}
 		auto insert(const_iterator pos, std::string_view str) -> iterator { return insert(pos, str.begin(), str.end()); } //TODO: [C++??] precondition(begin() <= pos && pos <= end());
-		auto insert(const_iterator pos, char ch) -> iterator { return insert(pos, std::string_view{&ch, 1}); } //TODO: [C++??] precondition(begin() <= pos && pos <= end());
 
 		template<typename InputIterator, typename = std::enable_if_t<std::is_base_of_v<std::input_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>>> //TODO: [C++20] replace with concepts/requires-clause
 		auto replace(const_iterator first, const_iterator last, InputIterator first2, InputIterator last2) -> string & { //TODO: [C++??] precondition(begin() <= first && first <= last && last <= end());
@@ -467,35 +461,6 @@ namespace ptl {
 
 		friend
 		auto operator<<(std::ostream & os, const string & self) -> std::ostream & { return os << static_cast<std::string_view>(self); }
-		friend
-		auto operator>>(std::istream & is,       string & self) -> std::istream & { //TODO: verify implementation - https://en.cppreference.com/w/cpp/string/basic_string/operator_ltltgtgt
-			std::ios::iostate state{std::ios::goodbit};
-			auto extracted{false};
-
-			if(const std::istream::sentry s{is}; s) {
-				self.clear();
-				try {
-					const auto count{is.width() <= 0 ? self.max_size() : std::min(static_cast<size_type>(is.width()), self.max_size())};
-					for(size_type i{0}; i < count; ++i) {
-						if(traits_type::eq_int_type(traits_type::eof(), is.peek())) {
-							state |= std::ios::eofbit;
-							break;
-						}
-						if(std::isspace(is.peek(), is.getloc())) break;
-						self.push_back(traits_type::to_char_type(is.get()));
-						extracted = true;
-					}
-				} catch(...) {
-					is.setstate(std::ios::badbit);
-					throw;
-				}
-			}
-
-			is.width(0);
-			if(!extracted) state |= std::ios::failbit;
-			is.setstate(state);
-			return is;
-		}
 	};
 
 	static_assert(sizeof(string) == 2 * sizeof(void *) + 2 * sizeof(std::size_t));

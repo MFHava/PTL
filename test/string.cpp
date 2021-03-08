@@ -5,6 +5,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <cstring>
+#include <sstream>
 #include <catch2/catch.hpp>
 #include "ptl/string.hpp"
 #include "utils.hpp"
@@ -132,7 +133,15 @@ TEST_CASE("string shrinking", "[string]") {
 	REQUIRE(s0.capacity() == s0.size());
 }
 
-//TODO: io
+TEST_CASE("string io", "[string]") {
+	const ptl::string s0{"Hello world"};
+
+	std::stringstream ss;
+	ss << s0;
+	std::string s1;
+	std::getline(ss, s1);
+	REQUIRE(s0 == s1);
+}
 
 TEST_CASE("string clear", "[string]") {
 	ptl::string s;

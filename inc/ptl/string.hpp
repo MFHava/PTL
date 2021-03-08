@@ -39,7 +39,7 @@ namespace ptl {
 		public:
 			rep_t() noexcept { clear_to_sso(); }
 
-			rep_t(std::size_t capacity) { //TODO: [C++??] precondition(capacity);
+			rep_t(std::size_t capacity) {
 				if(capacity > sso_size) {
 					dealloc = +[](char * ptr) noexcept { delete[] ptr; }; 
 					heap.ptr = new char[capacity + 1];
@@ -265,14 +265,7 @@ namespace ptl {
 		string(std::string_view str) : string{str.begin(), str.end()} {}
 
 		auto operator=(std::string_view str) -> string & {
-			if(str.empty()) rep = {};
-			else if(capacity() < str.size()) {
-				string tmp{str};
-				rep = std::move(tmp.rep);
-			} else {
-				rep.set_size(str.size());
-				std::copy(str.begin(), str.end(), data());
-			}
+			assign(str);
 			return *this;
 		}
 

@@ -12,8 +12,6 @@
 using namespace std::string_literals;
 using namespace ptl::literals;
 
-//TODO: EXTENSIVE SSO-Testing
-
 TEST_CASE("string ctor", "[string]") {
 	using ptl::test::input_iterator;
 

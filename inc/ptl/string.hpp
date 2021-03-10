@@ -375,6 +375,7 @@ namespace ptl {
 			return begin() + index;
 		}
 		auto insert(const_iterator pos, std::string_view str) -> iterator { return insert(pos, str.begin(), str.end()); } //TODO: [C++??] precondition(begin() <= pos && pos <= end());
+		auto insert(const_iterator pos, char ch) -> iterator { return insert(pos, std::string_view{&ch, 1}); } //TODO: [C++??] precondition(begin() <= pos && pos <= end());
 
 		template<typename InputIterator, typename = std::enable_if_t<std::is_base_of_v<std::input_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>>> //TODO: [C++20] replace with concepts/requires-clause
 		auto replace(const_iterator first, const_iterator last, InputIterator first2, InputIterator last2) -> string & { //TODO: [C++??] precondition(begin() <= first && first <= last && last <= end());

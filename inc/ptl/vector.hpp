@@ -8,23 +8,25 @@
 #include <iterator>
 #include <algorithm>
 #include <stdexcept>
+#include "internal/type_checks.hpp"
 
 namespace ptl {
-	using T = char; //TODO: make into template parameter of vector
-
-	//TODO: check exception guarantees
+	//TODO: documentation
+	template<typename Type>
 	class vector final { //TODO: [C++20] constexpr
-		class rep_t final {
-			void(*dealloc)(T *) noexcept{nullptr};
+		static_assert(internal::is_abi_compatible_v<Type>);
 
-			T * ptr{nullptr};
+		class rep_t final {
+			void(*dealloc)(Type *) noexcept{nullptr};
+
+			Type * ptr{nullptr};
 			std::size_t cap{0}, siz{0};
 		public:
 			rep_t() noexcept =default;
 
 			rep_t(std::size_t capacity) {
-				dealloc = +[](T * ptr) noexcept { std::free(ptr); }; 
-				ptr = static_cast<T *>(std::calloc(capacity, sizeof(T)));
+				dealloc = +[](Type * ptr) noexcept { std::free(ptr); };
+				ptr = static_cast<Type *>(std::calloc(capacity, sizeof(Type)));
 				cap = capacity;
 				siz = 0;
 			}
@@ -48,40 +50,30 @@ namespace ptl {
 			}
 
 			~rep_t() noexcept {
-				if(dealloc) {
-					clear();
-					dealloc(ptr);
-				}
+				clear();
+				if(dealloc) dealloc(ptr);
 			}
 
-			auto data() const noexcept -> const T * { return ptr; }
-			auto data()       noexcept ->       T * { return ptr; }
+			auto data() const noexcept -> const Type * { return ptr; }
+			auto data()       noexcept ->       Type * { return ptr; }
 
 			auto size() const noexcept -> std::size_t { return siz; }
 			auto capacity() const noexcept -> std::size_t { return cap; }
 
-			//TODO: needed?
-			void set_size_uninitialized(std::size_t val) noexcept { siz = val; } //TODO: [C++??] precondition(val >= siz && val <= capacity());
-
-			//TODO: needed?
-			void set_size(std::size_t val) noexcept { //TODO: [C++??] precondition(val <= capacity());
-				//TODO: validate that this is correct - looks like past one access in first loop...
-				for(; siz > val; --siz) (ptr + siz)->~T();
-				for(; siz < val; ++siz) new(ptr + siz) T;
-			}
+			void set_size(std::size_t val) noexcept { siz = val; } //TODO: [C++??] precondition(val <= capacity());
 
 			template<typename... Args>
 			void emplace_back(Args &&... args) { //TODO: [C++??] precondition(size() != capacity());
-				new(ptr + siz) T{std::forward<Args>(args)...};
+				new(ptr + siz) Type{std::forward<Args>(args)...};
 				++siz;
 			}
 
 			void pop_back() { //TODO: [C++??] precondition(!empty());
 				--siz;
-				(ptr + siz)->~T();
+				(ptr + siz)->~Type();
 			}
 
-			void clear() noexcept { for(; siz; --siz) (ptr + (siz - 1))->~T(); }
+			void clear() noexcept { for(; siz; --siz) (ptr + (siz - 1))->~Type(); }
 
 			void shrink_to_fit() noexcept {
 				//TODO: implement
@@ -99,10 +91,10 @@ namespace ptl {
 		struct contiguous_iterator final {
 			//TODO: [C++20] using iterator_concept = std::contiguous_iterator_tag;
 			using iterator_category = std::random_access_iterator_tag;
-			using value_type        = T;
+			using value_type        = Type;
 			using difference_type   = std::ptrdiff_t;
-			using pointer           = std::conditional_t<IsConst, const T, T> *;
-			using reference         = std::conditional_t<IsConst, const T, T> &;
+			using pointer           = std::conditional_t<IsConst, const Type, Type> *;
+			using reference         = std::conditional_t<IsConst, const Type, Type> &;
 
 			constexpr
 			contiguous_iterator() noexcept =default;
@@ -187,12 +179,12 @@ namespace ptl {
 			contiguous_iterator(pointer ptr) noexcept : ptr{ptr} {}
 
 			constexpr
-			operator contiguous_iterator<false>() const noexcept { return contiguous_iterator<false>{const_cast<T *>(ptr)}; }
+			operator contiguous_iterator<false>() const noexcept { return contiguous_iterator<false>{const_cast<Type *>(ptr)}; }
 
 			pointer ptr{nullptr};
 		};
 	public:
-		using value_type             = T;
+		using value_type             = Type;
 		using size_type              = std::size_t;
 		using difference_type        = std::ptrdiff_t;
 		using reference              =       value_type &;
@@ -222,7 +214,7 @@ namespace ptl {
 				const auto size{std::distance(first, last)};
 				rep = size;
 				std::uninitialized_copy_n(first, size, data());
-				rep.set_size_uninitialized(size);
+				rep.set_size(size);
 			}
 		}
 
@@ -242,11 +234,11 @@ namespace ptl {
 		auto empty() const noexcept -> bool { return size() == 0; }
 		auto size() const noexcept -> size_type { return rep.size(); }
 		static
-		auto max_size() noexcept-> size_type { return std::numeric_limits<size_type>::max() / sizeof(T); }
+		auto max_size() noexcept-> size_type { return std::numeric_limits<size_type>::max() / sizeof(Type); }
 		auto capacity() const noexcept -> size_type { return rep.capacity(); }
 
-		void push_back(const T & val) { emplace_back(val); }
-		void push_back(T && val) { emplace_back(std::move(val)); }
+		void push_back(const Type & val) { emplace_back(val); }
+		void push_back(Type && val) { emplace_back(std::move(val)); }
 
 		template<typename... Args>
 		void emplace_back(Args &&... args) {
@@ -256,38 +248,43 @@ namespace ptl {
 
 		void pop_back() noexcept { rep.pop_back(); } //TODO: [C++??] precondition(!empty());
 
-		void reserve(size_type new_capacity) { //TODO: implement
+		void reserve(size_type new_capacity) {
 			if(new_capacity <= capacity()) return;
 			rep_t tmp{new_capacity};
-			if(!empty()) std::uninitialized_copy_n(data(), size(), rep.data());
+			if(!empty()) std::uninitialized_move_n(data(), size(), rep.data());
 			tmp.set_size(size());
 			rep = std::move(tmp);
 		}
 
-		void resize(size_type count) { resize(count, 0); }
-		void resize(size_type count, const T & ch) { //TODO: implement
-			const auto old{size()};
-			reserve(count);
-			rep.set_size(count);
-			if(old < size()) std::fill(data() + old, data() + size(), ch);
+		void resize(size_type count) { resize(count, Type{}); }
+		void resize(size_type count, const Type & value) {
+			if(count == size()) return;
+			if(count < size()) erase(begin() + count, end());
+			else {
+				const auto old{size()};
+				reserve(count);
+				std::fill(data() + old, data() + size(), value); //TODO: if this throws we have no information on size
+				rep.set_size(count);
+			}
 		}
 
 		void shrink_to_fit() noexcept { rep.shrink_to_fit(); }
 
 		void clear() noexcept { rep.clear(); }
 
-		template<typename InputIterator, typename = std::enable_if_t<std::is_base_of_v<std::input_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>>> //TODO: [C++20] replace with concepts/requires-clause
-		void append(InputIterator first, InputIterator last) {
-			if constexpr(std::is_same_v<typename std::iterator_traits<InputIterator>::iterator_category, std::input_iterator_tag>) {
-				const vector tmp(first, last);
-				append(tmp.begin(), tmp.end());
-			} else {
-				const auto count{std::distance(first, last)};
-				reserve(size() + count);
-				std::uninitialized_copy_n(first, count, data() + size());
-				rep.set_size_uninitialized(size() + count);
-			}
-		}
+		//TODO: only string, not vector
+		//template<typename InputIterator, typename = std::enable_if_t<std::is_base_of_v<std::input_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>>> //TODO: [C++20] replace with concepts/requires-clause
+		//void append(InputIterator first, InputIterator last) {
+		//	if constexpr(std::is_same_v<typename std::iterator_traits<InputIterator>::iterator_category, std::input_iterator_tag>) {
+		//		const vector tmp(first, last);
+		//		append(tmp.begin(), tmp.end());
+		//	} else {
+		//		const auto count{std::distance(first, last)};
+		//		reserve(size() + count);
+		//		std::uninitialized_copy_n(first, count, data() + size());
+		//		rep.set_size(size() + count);
+		//	}
+		//}
 
 		template<typename InputIterator, typename = std::enable_if_t<std::is_base_of_v<std::input_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>>> //TODO: [C++20] replace with concepts/requires-clause
 		void assign(InputIterator first, InputIterator last) {
@@ -298,7 +295,7 @@ namespace ptl {
 				const auto count{std::distance(first, last)};
 				reserve(count);
 				std::uninitialized_copy_n(first, count, data());
-				rep.set_size_uninitialized(count);
+				rep.set_size(count);
 			}
 		}
 
@@ -316,39 +313,25 @@ namespace ptl {
 			if constexpr(std::is_same_v<typename std::iterator_traits<InputIterator>::iterator_category, std::input_iterator_tag>) {
 				const vector tmp(first, last);
 				insert(pos, tmp.begin(), tmp.end());
-			} else { //TODO: implement
-				const auto old{size()};
+			} else {
 				const auto count{std::distance(first, last)};
-				resize(old + count);
-				std::copy(first, last, begin() + old);
+				reserve(size() + count);
+				std::uninitialized_copy_n(first, count, data() + size());
+				rep.set_size(size() + count);
 				std::rotate(begin() + index, end() - count, end());
 			}
 			return begin() + index;
 		}
-		//TODO: also string
-		//TODO: insert(pos, const T &) -> iterator
-		//TODO: insert(pos, T &&) -> iterator
 
-		//TODO: emplace(pos, Args &&...) -> iterator
+		auto insert(const_iterator pos, const Type & value) -> iterator { return emplace(pos, value); } 
+		auto insert(const_iterator pos, Type && value) -> iterator { return emplace(pos, std::move(value)); }
 
-
-		template<typename InputIterator, typename = std::enable_if_t<std::is_base_of_v<std::input_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>>> //TODO: [C++20] replace with concepts/requires-clause
-		auto replace(const_iterator first, const_iterator last, InputIterator first2, InputIterator last2) -> vector & { //TODO: [C++??] precondition(begin() <= first && first <= last && last <= end());
-			if constexpr(std::is_same_v<typename std::iterator_traits<InputIterator>::iterator_category, std::input_iterator_tag>) {
-				const vector tmp(first2, last2);
-				replace(first, last, tmp);
-			} else { //TODO: implement
-				const auto count{std::distance(first, last)};
-				const auto count2{std::distance(first2, last2)};
-				if(count == count2) std::copy(first2, last2, iterator{first});
-				else if(count2 < count) erase(std::copy(first2, last2, iterator{first}), iterator{last});
-				else {
-					const auto index{first - data()};
-					reserve(size() + (count2 - count));
-					insert(std::copy_n(first2, count, data() + index), first2 + count, last2);
-				}
-			}
-			return *this;
+		template<typename... Args>
+		auto emplace(const_iterator pos, Args &&... args) -> iterator {
+			const auto index{pos - data()};
+			emplace_back(std::forward<Args>(args)...);
+			std::rotate(begin() + index, end() - 1, end());
+			return begin() + index;
 		}
 
 		auto begin() const noexcept -> const_iterator { return data(); }
@@ -383,6 +366,4 @@ namespace ptl {
 		friend
 		auto operator!=(const vector & lhs, const vector & rhs) noexcept -> bool { return !(lhs == rhs); } //TODO: [C++20] remove as implicitly generated
 	};
-
-	static_assert(sizeof(vector) == 2 * sizeof(void *) + 2 * sizeof(std::size_t)); //TODO: implement
 }

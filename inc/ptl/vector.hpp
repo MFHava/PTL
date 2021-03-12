@@ -25,6 +25,7 @@ namespace ptl {
 			rep_t() noexcept =default;
 
 			rep_t(std::size_t capacity) {
+				if(capacity == 0) return;
 				dealloc = +[](Type * ptr) noexcept { std::free(ptr); };
 				ptr = static_cast<Type *>(std::calloc(capacity, sizeof(Type)));
 				cap = capacity;
@@ -74,10 +75,6 @@ namespace ptl {
 			}
 
 			void clear() noexcept { for(; siz; --siz) (ptr + (siz - 1))->~Type(); }
-
-			void shrink_to_fit() noexcept {
-				//TODO: implement
-			}
 
 			void swap(rep_t & other) noexcept { //TODO: [C++??] precondition(this != std::addressof(other));
 				std::swap(ptr, other.ptr);
@@ -206,6 +203,12 @@ namespace ptl {
 		auto operator=(vector &&) noexcept -> vector & =default;
 		~vector() noexcept =default;
 
+		vector(std::initializer_list<Type> ilist) {
+			rep = ilist.size();
+			std::uninitialized_copy_n(ilist.begin(), ilist.size(), data());
+			rep.set_size(ilist.size());
+		}
+
 		template<typename InputIterator, typename = std::enable_if_t<std::is_base_of_v<std::input_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>>> //TODO: [C++20] replace with concepts/requires-clause
 		vector(InputIterator first, InputIterator last) {
 			if constexpr(std::is_same_v<typename std::iterator_traits<InputIterator>::iterator_category, std::input_iterator_tag>) {
@@ -242,7 +245,7 @@ namespace ptl {
 
 		template<typename... Args>
 		void emplace_back(Args &&... args) { //TODO: should return reference to created object (ditto push_back) [ditto string]
-			if(size() == capacity()) reserve(size() + size() / 2);
+			if(size() == capacity()) reserve(empty() ? 8 : size() + size() / 2);
 			rep.emplace_back(std::forward<Args>(args)...);
 		}
 
@@ -272,7 +275,14 @@ namespace ptl {
 			}
 		}
 
-		void shrink_to_fit() noexcept { rep.shrink_to_fit(); }
+		void shrink_to_fit() noexcept {
+			if(size() * 2 >= capacity()) return; //TODO: better criteria for "excess memory usage"
+
+			rep_t tmp{size()};
+			std::uninitialized_move_n(data(), size(), tmp.data());
+			tmp.set_size(size());
+			rep = std::move(tmp);
+		}
 
 		void clear() noexcept { rep.clear(); }
 
@@ -282,7 +292,7 @@ namespace ptl {
 				const vector tmp(first, last);
 				assign(tmp.begin(), tmp.end());
 			} else {
-				const auto count{std::distance(first, last)};
+				const auto count{static_cast<size_type>(std::distance(first, last))};
 				rep_t tmp{count};
 				std::uninitialized_copy_n(first, count, tmp.data());
 				tmp.set_size(count);
@@ -357,4 +367,7 @@ namespace ptl {
 		friend
 		auto operator!=(const vector & lhs, const vector & rhs) noexcept -> bool { return !(lhs == rhs); } //TODO: [C++20] remove as implicitly generated
 	};
+
+	template<typename InputIterator>
+	vector(InputIterator, InputIterator) -> vector<typename std::iterator_traits<InputIterator>::value_type>;
 }

@@ -4,265 +4,142 @@
 //    (See accompanying file ../LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <cstring>
-#include <sstream>
 #include <catch2/catch.hpp>
 #include "ptl/vector.hpp"
 #include "utils.hpp"
-/*
-using namespace std::string_literals;
-using namespace ptl::literals;
 
-TEST_CASE("string ctor", "[string]") {
+TEST_CASE("vector ctor", "[vector]") {
 	using ptl::test::input_iterator;
 
-	const ptl::string s0;
-	REQUIRE(s0.empty());
-	REQUIRE(std::strlen(s0.c_str()) == 0);
+	const ptl::vector<int> v0;
+	REQUIRE(v0.empty());
 
-	const ptl::string s1{"Hello World"};
-	REQUIRE(s1 == "Hello World");
+	const ptl::vector v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+	REQUIRE(v1.size() == 10);
+	for(auto i{0}; i < 10; ++i) REQUIRE(i == v1[i]);
 
-	const ptl::string s2{input_iterator{s1.begin()}, input_iterator{s1.end()}};
-	REQUIRE(s2 == s1);
+	//TODO: not working in GCC
+	//TODO: const ptl::vector v2(input_iterator{v1.begin()}, input_iterator{v1.end()});
+	//TODO: REQUIRE(v2 == v1);
 
-	const ptl::string s3{s1.begin(), s1.end()};
-	REQUIRE(s3 == s1);
+	const ptl::vector v3(v1.begin(), v1.end());
+	REQUIRE(v3 == v1);
 }
 
-TEST_CASE("string copy", "[string]") {
-	//SSO
-	const ptl::string s0{"Hello World"};
-	REQUIRE(s0.size() == 11);
-	REQUIRE(std::strlen(s0.c_str()) == s0.size());
+TEST_CASE("vector copy", "[vector]") {
+	const ptl::vector v0{9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
+	REQUIRE(v0.size() == 10);
 
-	auto s1{s0};
-	REQUIRE(s0 == s1);
+	auto v1{v0};
+	REQUIRE(v0 == v1);
 
-	decltype(s1) s2; s2 = s1;
-	REQUIRE(s2 == s1);
-
-	//no-SSO
-	const ptl::string s3{"xxxxxxxxxxxxxxxxxxxxxxxx"};
-	REQUIRE(std::strlen(s3.c_str()) == s3.size());
-	REQUIRE(s3.size() == 24);
-
-	auto s4{s3};
-	REQUIRE(s4.size() == 24);
-	REQUIRE(s4 == s3);
-
-	decltype(s4) s5; s5 = s4;
-	REQUIRE(s5.size() == 24);
-	REQUIRE(s5 == s3);
+	decltype(v1) v2; v2 = v1;
+	REQUIRE(v2 == v1);
 }
 
-TEST_CASE("string move", "[string]") {
-	//SSO => move should not take place
-	ptl::string s0{"Hello World"};
-	REQUIRE(s0.size() == 11);
-	REQUIRE(std::strlen(s0.c_str()) == s0.size());
+TEST_CASE("vector move", "[vector]") {
+	ptl::vector v0{9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
+	REQUIRE(v0.size() == 10);
 
-	auto s1{std::move(s0)};
-	REQUIRE(s0 == s1);
+	auto v1{std::move(v0)};
+	REQUIRE(v0.empty());
+	REQUIRE(v1.size() == 10);
+	REQUIRE(v1 != v0);
 
-	decltype(s1) s2; s2 = std::move(s1);
-	REQUIRE(s2 == s1);
-
-	//no SSO => move should take place
-	ptl::string s3{"xxxxxxxxxxxxxxxxxxxxxxxx"};
-	REQUIRE(std::strlen(s3.c_str()) == s3.size());
-	REQUIRE(s3.size() == 24);
-
-	auto s4{std::move(s3)};
-	REQUIRE(s3.empty());
-	REQUIRE(s4.size() == 24);
-	REQUIRE(s4 != s3);
-
-	decltype(s4) s5; s5 = std::move(s4);
-	REQUIRE(s4.empty());
-	REQUIRE(s5.size() == 24);
-	REQUIRE(s5 != s3);
+	decltype(v1) v2; v2 = std::move(v1);
+	REQUIRE(v1.empty());
+	REQUIRE(v2.size() == 10);
+	REQUIRE(v2 != v1);
 }
 
-TEST_CASE("string swapping", "[string]") {
-	//SSO swap SSO
-	ptl::string s0{"Hello"}, s1{"World"};
-	s0.swap(s1);
-	REQUIRE(s0 == "World");
-	REQUIRE(s1 == "Hello");
-
-	//SSO swap noSSO
-	ptl::string s2{"Test"}, s3{"xxxxxxxxxxxxxxxxxxxxxxxx"};
-	s2.swap(s3);
-	REQUIRE(s2 == "xxxxxxxxxxxxxxxxxxxxxxxx");
-	REQUIRE(s3 == "Test");
-
-	//noSSO swap SSO
-	ptl::string s4{"xxxxxxxxxxxxxxxxxxxxxxxx"}, s5{"Test"};
-	s4.swap(s5);
-	REQUIRE(s4 == "Test");
-	REQUIRE(s5 == "xxxxxxxxxxxxxxxxxxxxxxxx");
-
-	//noSSO swap noSSO
-	ptl::string s6{"xxxxxxxxxxxxxxxxxxxxxxxx"}, s7{"XXXXXXXXXXXXXXXXXXXXXXXX"};
-	s6.swap(s7);
-	REQUIRE(s6 == "XXXXXXXXXXXXXXXXXXXXXXXX");
-	REQUIRE(s7 == "xxxxxxxxxxxxxxxxxxxxxxxx");
+TEST_CASE("vector swapping", "[vector]") {
+	ptl::vector v0{0, 1, 2, 3, 4}, v1{5, 6, 7, 8, 9};
+	v0.swap(v1);
+	for(auto i{0}; i < 5; ++i) {
+		REQUIRE(v0[i] == i + 5);
+		REQUIRE(v1[i] == i);
+	}
 }
 
-TEST_CASE("string shrinking", "[string]") {
-	ptl::string s0;
+TEST_CASE("vector shrinking", "[vector]") {
+	ptl::vector<std::size_t> v0;
+	v0.reserve(100);
 
-	const auto capacity{s0.capacity()};
-	for(std::size_t i{0}; i < capacity; ++i) {
-		s0.push_back('x');
-		REQUIRE(s0.capacity() == capacity);
+	const auto capacity{v0.capacity()};
+	for(std::size_t i{0}; i < v0.capacity(); ++i) {
+		v0.push_back(i);
+		REQUIRE(v0.capacity() == capacity);
 	}
 
-	s0.shrink_to_fit();
-	REQUIRE(s0.capacity() == capacity);
+	v0.shrink_to_fit();
+	REQUIRE(v0.capacity() == capacity);
 
-	s0.push_back('x');
-	REQUIRE(s0.capacity() > capacity);
+	v0.push_back(100);
+	REQUIRE(v0.capacity() > capacity);
 
-	s0.pop_back();
-	REQUIRE(s0.capacity() > capacity);
+	const auto capacity2{v0.capacity()};
+	while(v0.size() * 2 > v0.capacity()) { //TODO: this is quite bad as it relies heavily on implementation details instead of the actual interface
+		v0.pop_back();
+		v0.shrink_to_fit();
+		REQUIRE(v0.capacity() == capacity2);
+	}
 
-	s0.shrink_to_fit();
-	REQUIRE(s0.capacity() == capacity);
-	REQUIRE(s0.capacity() == s0.size());
+	REQUIRE(v0.capacity() == capacity2);
+	v0.pop_back();
+	v0.shrink_to_fit();
+	REQUIRE(v0.capacity() == v0.size());
 }
 
-TEST_CASE("string io", "[string]") {
-	const ptl::string s0{"Hello world"};
 
-	std::stringstream ss;
-	ss << s0;
-	std::string s1;
-	std::getline(ss, s1);
-	REQUIRE(s0 == s1);
+TEST_CASE("vector clear", "[vector]") {
+	ptl::vector<int> v;
+	REQUIRE(v.empty());
+
+	v.clear();
+	REQUIRE(v.empty());
+
+	v.push_back(0);
+	REQUIRE(!v.empty());
+
+	v.clear();
+	REQUIRE(v.empty());
 }
 
-TEST_CASE("string clear", "[string]") {
-	ptl::string s;
-	REQUIRE(s.empty());
-
-	s.clear();
-	REQUIRE(s.empty());
-
-	s = "Hello World";
-	REQUIRE(!s.empty());
-
-	s.clear();
-	REQUIRE(s.empty());
+TEST_CASE("vector erase", "[vector]") {
+	ptl::vector v{0, 0, 0, 10, 11, 12, 13, 14, 0, 0, 0, 99, 20, 21, 22, 23, 24, 0, 0, 0};
+	const auto it0{v.erase(std::begin(v), std::begin(v) + 3)};
+	REQUIRE(it0 == std::begin(v));
+	REQUIRE(v == ptl::vector{10, 11, 12, 13, 14, 0, 0, 0, 99, 20, 21, 22, 23, 24, 0, 0, 0});
+	const auto it1{v.erase(std::begin(v) + 5, std::begin(v) + 8)};
+	REQUIRE(*it1 == 99);
+	REQUIRE(v == ptl::vector{10, 11, 12, 13, 14, 99, 20, 21, 22, 23, 24, 0, 0, 0});
+	const auto it2{v.erase(std::end(v) - 3, std::end(v))};
+	REQUIRE(it2 == std::end(v));
+	REQUIRE(v == ptl::vector{10, 11, 12, 13, 14, 99, 20, 21, 22, 23, 24});
 }
 
-TEST_CASE("string erase", "[string]") {
-	ptl::string s{"XXXHelloXXX WorldXXX"};
-
-	const auto it0{s.erase(std::begin(s), std::begin(s) + 3)};
-	REQUIRE(it0 == std::begin(s));
-	REQUIRE(s == "HelloXXX WorldXXX");
-	const auto it1{s.erase(std::begin(s) + 5, std::begin(s) + 8)};
-	REQUIRE(*it1 == ' ');
-	REQUIRE(s == "Hello WorldXXX");
-	const auto it2{s.erase(std::end(s) - 3, std::end(s))};
-	REQUIRE(it2 == std::end(s));
-	REQUIRE(s == "Hello World");
-}
-
-TEST_CASE("string insert", "[string]") {
+TEST_CASE("vector insert", "[vector]") {
 	using ptl::test::input_iterator;
-	const std::string x{"XXX"};
+	const std::vector x{99, 98, 97};
 
-	ptl::string s{"HelloWorld"};
+	ptl::vector v{10, 11, 12, 13, 14, 20, 21, 22, 23, 24};
 
-	const auto it0{s.insert(std::begin(s), input_iterator{std::begin(x)}, input_iterator{std::end(x)})};
-	REQUIRE(it0 == std::begin(s));
-	REQUIRE(s == "XXXHelloWorld");
-	const auto it1{s.insert(std::begin(s) + 8, input_iterator{std::begin(x)}, input_iterator{std::end(x)})};
-	REQUIRE(it1 == std::begin(s) + 8);
-	REQUIRE(s == "XXXHelloXXXWorld");
-	const auto it2{s.insert(std::end(s), input_iterator{std::begin(x)}, input_iterator{std::end(x)})};
-	REQUIRE(it2 == std::end(s) - 3);
-	REQUIRE(s == "XXXHelloXXXWorldXXX");
+	const auto it0{v.insert(std::begin(v), input_iterator{std::begin(x)}, input_iterator{std::end(x)})};
+	REQUIRE(it0 == std::begin(v));
+	REQUIRE(v == ptl::vector{99, 98, 97, 10, 11, 12, 13, 14, 20, 21, 22, 23, 24});
+	const auto it1{v.insert(std::begin(v) + 8, input_iterator{std::begin(x)}, input_iterator{std::end(x)})};
+	REQUIRE(it1 == std::begin(v) + 8);
+	REQUIRE(v == ptl::vector{99, 98, 97, 10, 11, 12, 13, 14, 99, 98, 97, 20, 21, 22, 23, 24});
+	const auto it2{v.insert(std::end(v), input_iterator{std::begin(x)}, input_iterator{std::end(x)})};
+	REQUIRE(it2 == std::end(v) - 3);
+	REQUIRE(v == ptl::vector{99, 98, 97, 10, 11, 12, 13, 14, 99, 98, 97, 20, 21, 22, 23, 24, 99, 98, 97});
 }
 
-TEST_CASE("string append", "[string]") {
+TEST_CASE("vector assign", "[vector]") {
 	using ptl::test::input_iterator;
-	const std::string hello{"Hello"}, cruel{"cruel"}, world{"World"};
+	const std::vector x{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-	ptl::string s0;
-	s0.append(input_iterator{std::begin(hello)}, input_iterator{std::end(hello)});
-	REQUIRE(s0 == "Hello");
-	s0.append(input_iterator{std::begin(cruel)}, input_iterator{std::end(cruel)});
-	REQUIRE(s0 == "Hellocruel");
-	s0.append(input_iterator{std::begin(world)}, input_iterator{std::end(world)});
-	REQUIRE(s0 == "HellocruelWorld");
-
-	ptl::string s1;
-	s1 += hello;
-	REQUIRE(s1 == "Hello");
-	s1 += cruel;
-	REQUIRE(s1 == "Hellocruel");
-	s1 += world;
-	REQUIRE(s1 == "HellocruelWorld");
-
-	ptl::string s2;
-	s2 = s2 + hello;
-	REQUIRE(s2 == "Hello");
-	s2 = s2 + cruel;
-	REQUIRE(s2 == "Hellocruel");
-	s2 = s2 + world;
-	REQUIRE(s2 == "HellocruelWorld");
-
-	ptl::string s3;
-	s3 = world + s3;
-	REQUIRE(s3 == "World");
-	s3 = cruel + s3;
-	REQUIRE(s3 == "cruelWorld");
-	s3 = hello + s3;
-	REQUIRE(s3 == "HellocruelWorld");
+	ptl::vector<int> v;
+	v.assign(input_iterator{std::begin(x)}, input_iterator{std::end(x)});
+	REQUIRE(v == ptl::vector{0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
 }
-
-TEST_CASE("string assign", "[string]") {
-	using ptl::test::input_iterator;
-	const std::string hello_world{"Hello World"};
-
-	ptl::string s;
-	s.assign(input_iterator{std::begin(hello_world)}, input_iterator{std::end(hello_world)});
-	REQUIRE(s == "Hello World");
-}
-
-TEST_CASE("string replace", "[string]") {
-	using ptl::test::input_iterator;
-	const std::string hello{"Hello"}, cruel{"cruel"}, world{"World"};
-
-	ptl::string s0{"XXX XXX XXX"};
-
-	s0.replace(std::begin(s0), std::begin(s0) + 3, input_iterator{std::begin(hello)}, input_iterator{std::end(hello)});
-	REQUIRE(s0 == "Hello XXX XXX");
-	s0.replace(std::begin(s0) + 6, std::begin(s0) + 9, input_iterator{std::begin(cruel)}, input_iterator{std::end(cruel)});
-	REQUIRE(s0 == "Hello cruel XXX");
-	s0.replace(std::end(s0) - 3, std::end(s0), input_iterator{std::begin(world)}, input_iterator{std::end(world)});
-	REQUIRE(s0 == "Hello cruel World");
-
-	ptl::string s1{"XXXXX XXXXX XXXXX"};
-
-	s1.replace(std::begin(s1), std::begin(s1) + 5, input_iterator{std::begin(hello)}, input_iterator{std::end(hello)});
-	REQUIRE(s1 == "Hello XXXXX XXXXX");
-	s1.replace(std::begin(s1) + 6, std::begin(s1) + 11, input_iterator{std::begin(cruel)}, input_iterator{std::end(cruel)});
-	REQUIRE(s1 == "Hello cruel XXXXX");
-	s1.replace(std::end(s1) - 5, std::end(s1), input_iterator{std::begin(world)}, input_iterator{std::end(world)});
-	REQUIRE(s1 == "Hello cruel World");
-
-	ptl::string s2{"XXXXXXX XXXXXXX XXXXXXX"};
-
-	s2.replace(std::begin(s2), std::begin(s2) + 7, input_iterator{std::begin(hello)}, input_iterator{std::end(hello)});
-	REQUIRE(s2 == "Hello XXXXXXX XXXXXXX");
-	s2.replace(std::begin(s2) + 6, std::begin(s2) + 13, input_iterator{std::begin(cruel)}, input_iterator{std::end(cruel)});
-	REQUIRE(s2 == "Hello cruel XXXXXXX");
-	s2.replace(std::end(s2) - 7, std::end(s2), input_iterator{std::begin(world)}, input_iterator{std::end(world)});
-	REQUIRE(s2 == "Hello cruel World");
-}
-*/

@@ -241,7 +241,7 @@ namespace ptl {
 		void push_back(Type && val) { emplace_back(std::move(val)); }
 
 		template<typename... Args>
-		void emplace_back(Args &&... args) {
+		void emplace_back(Args &&... args) { //TODO: should return reference to created object (ditto push_back) [ditto string]
 			if(size() == capacity()) reserve(size() + size() / 2);
 			rep.emplace_back(std::forward<Args>(args)...);
 		}
@@ -251,7 +251,7 @@ namespace ptl {
 		void reserve(size_type new_capacity) {
 			if(new_capacity <= capacity()) return;
 			rep_t tmp{new_capacity};
-			if(!empty()) std::uninitialized_move_n(data(), size(), rep.data());
+			if(!empty()) std::uninitialized_move_n(data(), size(), tmp.data());
 			tmp.set_size(size());
 			rep = std::move(tmp);
 		}
@@ -263,28 +263,18 @@ namespace ptl {
 			else {
 				const auto old{size()};
 				reserve(count);
-				std::fill(data() + old, data() + size(), value); //TODO: if this throws we have no information on size
-				rep.set_size(count);
+				try {
+					while(size() != count) rep.emplace_back(value);
+				} catch(...) {
+					while(size() != old) rep.pop_back();
+					throw;
+				}
 			}
 		}
 
 		void shrink_to_fit() noexcept { rep.shrink_to_fit(); }
 
 		void clear() noexcept { rep.clear(); }
-
-		//TODO: only string, not vector
-		//template<typename InputIterator, typename = std::enable_if_t<std::is_base_of_v<std::input_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>>> //TODO: [C++20] replace with concepts/requires-clause
-		//void append(InputIterator first, InputIterator last) {
-		//	if constexpr(std::is_same_v<typename std::iterator_traits<InputIterator>::iterator_category, std::input_iterator_tag>) {
-		//		const vector tmp(first, last);
-		//		append(tmp.begin(), tmp.end());
-		//	} else {
-		//		const auto count{std::distance(first, last)};
-		//		reserve(size() + count);
-		//		std::uninitialized_copy_n(first, count, data() + size());
-		//		rep.set_size(size() + count);
-		//	}
-		//}
 
 		template<typename InputIterator, typename = std::enable_if_t<std::is_base_of_v<std::input_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>>> //TODO: [C++20] replace with concepts/requires-clause
 		void assign(InputIterator first, InputIterator last) {
@@ -293,9 +283,10 @@ namespace ptl {
 				assign(tmp.begin(), tmp.end());
 			} else {
 				const auto count{std::distance(first, last)};
-				reserve(count);
-				std::uninitialized_copy_n(first, count, data());
-				rep.set_size(count);
+				rep_t tmp{count};
+				std::uninitialized_copy_n(first, count, tmp.data());
+				tmp.set_size(count);
+				rep = std::move(tmp);
 			}
 		}
 

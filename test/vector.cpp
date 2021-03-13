@@ -67,14 +67,14 @@ TEST_CASE("vector shrinking", "[vector]") {
 
 	const auto capacity{v0.capacity()};
 	for(std::size_t i{0}; i < v0.capacity(); ++i) {
-		v0.push_back(i);
+		REQUIRE(v0.push_back(i) == i);
 		REQUIRE(v0.capacity() == capacity);
 	}
 
 	v0.shrink_to_fit();
 	REQUIRE(v0.capacity() == capacity);
 
-	v0.push_back(100);
+	REQUIRE(v0.push_back(100) == 100);
 	REQUIRE(v0.capacity() > capacity);
 
 	const auto capacity2{v0.capacity()};
@@ -98,7 +98,7 @@ TEST_CASE("vector clear", "[vector]") {
 	v.clear();
 	REQUIRE(v.empty());
 
-	v.push_back(0);
+	REQUIRE(v.push_back(0) == 0);
 	REQUIRE(!v.empty());
 
 	v.clear();

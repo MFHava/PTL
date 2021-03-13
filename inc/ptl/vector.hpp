@@ -64,9 +64,9 @@ namespace ptl {
 			void set_size(std::size_t val) noexcept { siz = val; } //TODO: [C++??] precondition(val <= capacity());
 
 			template<typename... Args>
-			void emplace_back(Args &&... args) { //TODO: [C++??] precondition(size() != capacity());
+			auto emplace_back(Args &&... args) -> Type & { //TODO: [C++??] precondition(size() != capacity());
 				new(ptr + siz) Type{std::forward<Args>(args)...};
-				++siz;
+				return *(ptr + siz++);
 			}
 
 			void pop_back() { //TODO: [C++??] precondition(!empty());
@@ -240,13 +240,13 @@ namespace ptl {
 		auto max_size() noexcept-> size_type { return std::numeric_limits<size_type>::max() / sizeof(Type); }
 		auto capacity() const noexcept -> size_type { return rep.capacity(); }
 
-		void push_back(const Type & val) { emplace_back(val); }
-		void push_back(Type && val) { emplace_back(std::move(val)); }
+		auto push_back(const Type & val) -> reference { return emplace_back(val); }
+		auto push_back(Type && val) -> reference { return emplace_back(std::move(val)); }
 
 		template<typename... Args>
-		void emplace_back(Args &&... args) { //TODO: should return reference to created object (ditto push_back) [ditto string]
+		auto emplace_back(Args &&... args) -> reference {
 			if(size() == capacity()) reserve(empty() ? 8 : size() + size() / 2);
-			rep.emplace_back(std::forward<Args>(args)...);
+			return rep.emplace_back(std::forward<Args>(args)...);
 		}
 
 		void pop_back() noexcept { rep.pop_back(); } //TODO: [C++??] precondition(!empty());

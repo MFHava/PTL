@@ -115,14 +115,14 @@ TEST_CASE("string shrinking", "[string]") {
 
 	const auto capacity{s0.capacity()};
 	for(std::size_t i{0}; i < capacity; ++i) {
-		s0.push_back('x');
+		REQUIRE(s0.push_back(static_cast<char>('a' + i)) == 'a' + i);
 		REQUIRE(s0.capacity() == capacity);
 	}
 
 	s0.shrink_to_fit();
 	REQUIRE(s0.capacity() == capacity);
 
-	s0.push_back('x');
+	REQUIRE(s0.push_back('X') == 'X');
 	REQUIRE(s0.capacity() > capacity);
 
 	s0.pop_back();

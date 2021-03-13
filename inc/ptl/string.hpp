@@ -296,9 +296,10 @@ namespace ptl {
 		auto max_size() noexcept-> size_type { return std::numeric_limits<size_type>::max() / sizeof(char); }
 		auto capacity() const noexcept -> size_type { return rep.capacity(); }
 
-		void push_back(char ch) {
+		auto push_back(char ch) -> reference {
 			if(size() == capacity()) reserve(size() + size() / 2);
 			resize(size() + 1, ch);
+			return back();
 		}
 		void pop_back() noexcept { rep.set_size(size() - 1); }//TODO: [C++??] precondition(!empty());
 

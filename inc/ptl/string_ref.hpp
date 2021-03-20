@@ -157,6 +157,13 @@ namespace ptl {
 		constexpr
 		void remove_suffix(size_type count) noexcept { ptrs[1] -= count; } //TODO: [C++??] precondition(count <= size());
 
+		//TODO: [C++20] starts_with(string_view)
+		//TODO: [C++20] starts_with(char)
+		//TODO: [C++20] end_with(string_view)
+		//TODO: [C++20] end_with(char)
+		//TODO: [C++23] contains(string_view)
+		//TODO: [C++23] contains(char)
+
 		constexpr
 		auto substr(size_type offset) const noexcept -> string_ref { return {data() + offset, size() - offset}; } //TODO: [C++??] precondition(offset <= size());
 		constexpr

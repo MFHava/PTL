@@ -179,6 +179,7 @@ namespace ptl {
 
 		constexpr
 		auto data() const noexcept -> pointer { return ptrs[0]; }
+		[[nodiscard]]
 		constexpr
 		auto empty() const noexcept -> bool { return size() == 0; }
 		constexpr

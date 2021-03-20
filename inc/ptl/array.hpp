@@ -179,6 +179,7 @@ namespace ptl {
 		static
 		constexpr
 		auto size() noexcept -> size_type { return Size; }
+		[[nodiscard]]
 		static
 		constexpr
 		auto empty() noexcept -> bool { return size() == 0; }

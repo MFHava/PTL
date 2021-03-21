@@ -144,7 +144,7 @@ namespace ptl {
 		auto size() const noexcept -> size_type { return ptrs[1] - ptrs[0]; }
 		static
 		constexpr
-		auto max_size() noexcept-> size_type { return std::numeric_limits<size_type>::max() / sizeof(char); }
+		auto max_size() noexcept-> size_type { return static_cast<size_type>(std::numeric_limits<difference_type>::max()); }
 
 		constexpr
 		auto front() const noexcept -> const_reference { return (*this)[0]; } //TODO: [C++??] precondition(!empty());

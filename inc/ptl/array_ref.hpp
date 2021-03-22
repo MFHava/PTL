@@ -7,8 +7,16 @@
 #pragma once
 #include <utility>
 #include <iterator>
+#include <type_traits>
 
 namespace ptl {
+	namespace internal_array_ref {
+		struct invalid;
+
+		constexpr
+		auto data(...) noexcept -> invalid;
+	}
+
 	//! @brief non-owning reference to array
 	//! @tparam Type type of the referenced array
 	template<typename Type>
@@ -18,11 +26,7 @@ namespace ptl {
 		template<typename ContiguousRange>
 		class is_compatible_range final {
 			struct valid;
-			struct invalid;
-
-			static
-			constexpr
-			auto data(...) noexcept -> invalid;
+			using invalid = internal_array_ref::invalid;
 
 			static
 			constexpr
@@ -35,6 +39,7 @@ namespace ptl {
 			constexpr
 			auto test() noexcept -> bool {
 				using std::data;
+				using internal_array_ref::data;
 				using Pointer = decltype(data(std::declval<ContiguousRange>()));
 				if constexpr(std::is_same_v<Pointer, invalid>) return false;
 				else {
@@ -53,39 +58,32 @@ namespace ptl {
 		static
 		constexpr
 		bool is_compatible_range_v{is_compatible_range<ContiguousRange>::value};
-	public:
-		using element_type     = Type;
-		using value_type       = std::remove_cv_t<element_type>;
-		using size_type        = std::size_t;
-		using difference_type  = std::ptrdiff_t;
-		using reference        =       element_type &;
-		using const_reference  = const element_type &;
-		using pointer          =       element_type *;
-		using const_pointer    = const element_type *;
-		struct iterator final {
+
+		template<bool IsConst>
+		struct contiguous_iterator final {
 			//TODO: [C++20] using iterator_concept = std::contiguous_iterator_tag;
 			using iterator_category = std::random_access_iterator_tag;
-			using value_type        = array_ref::value_type;
-			using difference_type   = array_ref::difference_type;
-			using pointer           = array_ref::pointer;
-			using reference         = array_ref::reference;
+			using value_type        = std::remove_cv_t<Type>;
+			using difference_type   = std::ptrdiff_t;
+			using pointer           = std::conditional_t<IsConst, const Type, Type> *;
+			using reference         = std::conditional_t<IsConst, const Type, Type> &;
 
 			constexpr
-			iterator() noexcept =default;
+			contiguous_iterator() noexcept =default;
 
 			constexpr
-			auto operator++() noexcept -> iterator & { ++ptr; return *this; }
+			auto operator++() noexcept -> contiguous_iterator & { ++ptr; return *this; }
 			constexpr
-			auto operator++(int) noexcept -> iterator {
+			auto operator++(int) noexcept -> contiguous_iterator {
 				auto tmp{*this};
 				++*this;
 				return tmp;
 			}
 
 			constexpr
-			auto operator--() noexcept -> iterator & { --ptr; return *this; }
+			auto operator--() noexcept -> contiguous_iterator & { --ptr; return *this; }
 			constexpr
-			auto operator--(int) noexcept -> iterator {
+			auto operator--(int) noexcept -> contiguous_iterator {
 				auto tmp{*this};
 				--*this;
 				return tmp;
@@ -100,58 +98,73 @@ namespace ptl {
 			auto operator[](difference_type index) const noexcept -> reference { return *(*this + index); }
 
 			constexpr
-			auto operator+=(difference_type count) noexcept -> iterator & { ptr += count; return *this; }
+			auto operator+=(difference_type count) noexcept -> contiguous_iterator & { ptr += count; return *this; }
 			friend
 			constexpr
-			auto operator+(iterator lhs, difference_type rhs) noexcept -> iterator {
+			auto operator+(contiguous_iterator lhs, difference_type rhs) noexcept -> contiguous_iterator {
 				lhs += rhs;
 				return lhs;
 			}
 			friend
 			constexpr
-			auto operator+(difference_type lhs, iterator rhs) noexcept -> iterator { return rhs + lhs; }
+			auto operator+(difference_type lhs, contiguous_iterator rhs) noexcept -> contiguous_iterator { return rhs + lhs; }
 
 			constexpr
-			auto operator-=(difference_type count) noexcept -> iterator & { ptr -= count; return *this; }
+			auto operator-=(difference_type count) noexcept -> contiguous_iterator & { ptr -= count; return *this; }
 			friend
 			constexpr
-			auto operator-(iterator lhs, difference_type rhs) noexcept -> iterator {
+			auto operator-(contiguous_iterator lhs, difference_type rhs) noexcept -> contiguous_iterator {
 				lhs -= rhs;
 				return lhs;
 			}
 
 			friend
 			constexpr
-			auto operator-(const iterator & lhs, const iterator & rhs) noexcept -> difference_type { return lhs.ptr - rhs.ptr; }
+			auto operator-(const contiguous_iterator & lhs, const contiguous_iterator & rhs) noexcept -> difference_type { return lhs.ptr - rhs.ptr; }
+
+			constexpr
+			operator contiguous_iterator<true>() const noexcept { return contiguous_iterator<true>{ptr}; }
 
 			friend
 			constexpr
-			auto operator==(const iterator & lhs, const iterator & rhs) noexcept -> bool { return lhs.ptr == rhs.ptr; }
+			auto operator==(const contiguous_iterator & lhs, const contiguous_iterator & rhs) noexcept -> bool { return lhs.ptr == rhs.ptr; }
 			friend
 			constexpr
-			auto operator!=(const iterator & lhs, const iterator & rhs) noexcept -> bool { return !(lhs == rhs); } //TODO: [C++20] remove as implicitly generated
+			auto operator!=(const contiguous_iterator & lhs, const contiguous_iterator & rhs) noexcept -> bool { return !(lhs == rhs); } //TODO: [C++20] remove as implicitly generated
 			//TODO: [C++20] replace the ordering operators by <=>
 			friend
 			constexpr
-			auto operator< (const iterator & lhs, const iterator & rhs) noexcept -> bool { return lhs.ptr < rhs.ptr; }
+			auto operator< (const contiguous_iterator & lhs, const contiguous_iterator & rhs) noexcept -> bool { return lhs.ptr < rhs.ptr; }
 			friend
 			constexpr
-			auto operator> (const iterator & lhs, const iterator & rhs) noexcept -> bool { return rhs < lhs; }
+			auto operator> (const contiguous_iterator & lhs, const contiguous_iterator & rhs) noexcept -> bool { return rhs < lhs; }
 			friend
 			constexpr
-			auto operator<=(const iterator & lhs, const iterator & rhs) noexcept -> bool { return !(lhs > rhs); }
+			auto operator<=(const contiguous_iterator & lhs, const contiguous_iterator & rhs) noexcept -> bool { return !(lhs > rhs); }
 			friend
 			constexpr
-			auto operator>=(const iterator & lhs, const iterator & rhs) noexcept -> bool { return !(lhs < rhs); }
+			auto operator>=(const contiguous_iterator & lhs, const contiguous_iterator & rhs) noexcept -> bool { return !(lhs < rhs); }
 		private:
 			friend array_ref;
 
 			constexpr
-			iterator(pointer ptr) noexcept : ptr{ptr} {}
+			contiguous_iterator(pointer ptr) noexcept : ptr{ptr} {}
 
 			pointer ptr{nullptr};
 		};
-		using reverse_iterator = std::reverse_iterator<iterator>;
+	public:
+		using element_type           = Type;
+		using value_type             = std::remove_cv_t<element_type>;
+		using size_type              = std::size_t;
+		using difference_type        = std::ptrdiff_t;
+		using reference              =       element_type &;
+		using const_reference        = const element_type &;
+		using pointer                =       element_type *;
+		using const_pointer          = const element_type *;
+		using iterator               = contiguous_iterator<false>;
+		using const_iterator         = contiguous_iterator<true>;
+		using reverse_iterator       = std::reverse_iterator<      iterator>;
+		using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
 		constexpr
 		array_ref() noexcept =default;
@@ -202,13 +215,29 @@ namespace ptl {
 		auto subrange(size_type offset, size_type count) const noexcept -> array_ref { return {data() + offset, count}; } //TODO: [C++??] precondition(offset + count <= size());
 
 		constexpr
-		auto begin() const noexcept -> iterator { return data(); }
+		auto begin() const noexcept -> const_iterator { return data(); }
 		constexpr
-		auto end() const noexcept -> iterator { return begin() + size(); }
+		auto begin()       noexcept ->       iterator { return data(); }
 		constexpr
-		auto rbegin() const noexcept -> reverse_iterator { return reverse_iterator{end()}; }
+		auto cbegin() const noexcept -> const_iterator { return begin(); }
 		constexpr
-		auto rend() const noexcept -> reverse_iterator { return reverse_iterator{begin()}; }
+		auto end()   const noexcept -> const_iterator { return begin() + size(); }
+		constexpr
+		auto end()         noexcept ->       iterator { return begin() + size(); }
+		constexpr
+		auto cend()   const noexcept -> const_iterator { return end(); }
+		constexpr
+		auto rbegin()  const noexcept -> const_reverse_iterator { return const_reverse_iterator{end()}; }
+		constexpr
+		auto rbegin()        noexcept ->       reverse_iterator { return reverse_iterator{end()}; }
+		constexpr
+		auto crbegin() const noexcept -> const_reverse_iterator { return const_reverse_iterator{cend()}; }
+		constexpr
+		auto rend()    const noexcept -> const_reverse_iterator { return const_reverse_iterator{begin()}; }
+		constexpr
+		auto rend()          noexcept ->       reverse_iterator { return reverse_iterator{begin()}; }
+		constexpr
+		auto crend()   const noexcept -> const_reverse_iterator { return const_reverse_iterator{cbegin()}; }
 
 		constexpr
 		void swap(array_ref & other) noexcept { for(auto i{0}; i < 2; ++i) std::swap(ptrs[i], other.ptrs[i]); }

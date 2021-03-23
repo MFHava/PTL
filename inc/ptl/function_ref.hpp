@@ -9,16 +9,11 @@
 #include <type_traits>
 
 namespace ptl {
-	static_assert(sizeof(void *) == sizeof(void(*)()));
-	static_assert(sizeof(void *) == sizeof(void(*)() noexcept));
+	namespace internal_function_ref { 
+		static_assert(sizeof(void *) == sizeof(void(*)()));
+		static_assert(sizeof(void *) == sizeof(void(*)() noexcept));
 
-	//! @brief non-owning reference to a functor (either a plain function or a lambda)
-	//! @tparam Signature function signature of the referenced functor (including potential noexcept-qualifier)
-	template<typename Signature>
-	class function_ref;
-
-	namespace internal { //TODO: [C++??] if noexcept-ness were deducible, this extra class would not be necessary and the code overall would be simpler
-		template<bool Noexcept, typename Result, typename... Args>
+		template<bool Noexcept, typename Result, typename... Args> //TODO: [C++??] if noexcept-ness were deducible, this extra class would not be necessary and the code overall would be simpler
 		class function_ref {
 			void * functor;
 			Result (*dispatch)(void *, Args...) noexcept(Noexcept);
@@ -44,29 +39,7 @@ namespace ptl {
 
 			auto operator()(Args... args) const noexcept(Noexcept) -> Result { return dispatch(functor, std::forward<Args>(args)...); }
 		};
-	}
 
-	template<typename Result, typename... Args>
-	struct function_ref<Result(Args...)> final : internal::function_ref<false, Result, Args...> { //TODO: static_assert(sizeof(function_ref<T>) == 2 * sizeof(void *));
-		template<typename Functor, typename = std::enable_if_t<std::is_invocable_r_v<Result, Functor &, Args...>>>
-		constexpr
-		function_ref(Functor && func) noexcept : internal::function_ref<false, Result, Args...>{std::forward<Functor>(func)} {}
-	};
-
-	template<typename Result, typename... Args>
-	struct function_ref<Result(Args...) noexcept> final : internal::function_ref<true, Result, Args...> { //TODO: static_assert(sizeof(function_ref<T>) == 2 * sizeof(void *));
-		template<typename Functor, typename = std::enable_if_t<std::is_nothrow_invocable_r_v<Result, Functor &, Args...>>>
-		constexpr
-		function_ref(Functor && func) noexcept : internal::function_ref<true, Result, Args...>{std::forward<Functor>(func)} {}
-	};
-
-	template<typename Result, typename... Args>
-	function_ref(Result(*)(Args...)) -> function_ref<Result(Args...)>;
-
-	template<typename Result, typename... Args>
-	function_ref(Result(*)(Args...) noexcept) -> function_ref<Result(Args...) noexcept>;
-
-	namespace internal {
 		template<typename Func>
 		struct deduce_lambda;
 
@@ -94,6 +67,31 @@ namespace ptl {
 		};
 	}
 
+	//! @brief non-owning reference to a functor (either a plain function or a lambda)
+	//! @tparam Signature function signature of the referenced functor (including potential noexcept-qualifier)
+	template<typename Signature>
+	class function_ref;
+
+	template<typename Result, typename... Args>
+	struct function_ref<Result(Args...)> final : internal_function_ref::function_ref<false, Result, Args...> { //TODO: static_assert(sizeof(function_ref<T>) == 2 * sizeof(void *));
+		template<typename Functor, typename = std::enable_if_t<std::is_invocable_r_v<Result, Functor &, Args...>>>
+		constexpr
+		function_ref(Functor && func) noexcept : internal_function_ref::function_ref<false, Result, Args...>{std::forward<Functor>(func)} {}
+	};
+
+	template<typename Result, typename... Args>
+	struct function_ref<Result(Args...) noexcept> final : internal_function_ref::function_ref<true, Result, Args...> { //TODO: static_assert(sizeof(function_ref<T>) == 2 * sizeof(void *));
+		template<typename Functor, typename = std::enable_if_t<std::is_nothrow_invocable_r_v<Result, Functor &, Args...>>>
+		constexpr
+		function_ref(Functor && func) noexcept : internal_function_ref::function_ref<true, Result, Args...>{std::forward<Functor>(func)} {}
+	};
+
+	template<typename Result, typename... Args>
+	function_ref(Result(*)(Args...)) -> function_ref<Result(Args...)>;
+
+	template<typename Result, typename... Args>
+	function_ref(Result(*)(Args...) noexcept) -> function_ref<Result(Args...) noexcept>;
+
 	template<typename Lambda>
-	function_ref(Lambda) -> function_ref<internal::deduce_lambda_t<decltype(&Lambda::operator())>>;
+	function_ref(Lambda) -> function_ref<internal_function_ref::deduce_lambda_t<decltype(&Lambda::operator())>>;
 }

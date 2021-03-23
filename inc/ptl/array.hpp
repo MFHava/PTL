@@ -9,10 +9,8 @@
 #include <algorithm>
 #include <stdexcept>
 #include "internal/type_checks.hpp"
-#include "internal/compiler_detection.hpp"
 
 namespace ptl {
-	PTL_PACK_BEGIN
 	//! @brief a fixed-size array
 	//! @tparam Type type of the stored array
 	//! @tparam Size size of the stored array
@@ -265,7 +263,6 @@ namespace ptl {
 		constexpr
 		auto operator>=(const array & lhs, const array & rhs) noexcept -> bool { return !(lhs < rhs); }
 	};
-	PTL_PACK_END
 
 	template<typename Type, typename... Types>
 	array(Type, Types...) -> array<Type, 1 + sizeof...(Types)>;

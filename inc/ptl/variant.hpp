@@ -87,6 +87,29 @@ namespace ptl {
 				return determine_type<Index - 1, Ts...>();
 			}
 		}
+
+		template<bool Move, typename Ptr, typename... Visitors>
+		static
+		auto visit_impl(std::size_t type, Ptr * data, Visitors &&... visitors) -> decltype(auto) {
+			if constexpr(sizeof...(Visitors) == 1) {
+				using Type = typename first_type<Types...>::type;
+				using Visitor = typename first_type<Visitors...>::type;
+				using Tmp1 = std::conditional_t<std::is_const_v<Ptr>, const Type, Type>;
+				using Tmp2 = std::conditional_t<Move, Tmp1, Tmp1 &>;
+				using Result = decltype(std::declval<Visitor>()(std::declval<Tmp2>()));
+				using Dispatch = Result(*)(Ptr *, Visitor &);
+				constexpr Dispatch dispatch[]{+[](Ptr * ptr, Visitor & visitor) -> Result {
+					using Ref = std::conditional_t<std::is_const_v<Ptr>, const Types, Types>;
+					if constexpr(Move) return visitor(std::move(*reinterpret_cast<Ref *>(ptr)));
+					else return visitor(*reinterpret_cast<Ref *>(ptr));
+				}...};
+				return dispatch[type](data, visitors...);
+			} else {
+				struct combined_visitor : Visitors... { using Visitors::operator()...; };
+				combined_visitor visitor{std::forward<Visitors>(visitors)...};
+				return visit_impl<Move>(type, data, visitor);
+			}
+		}
 	public:
 		constexpr
 		variant() : type{0} { new(data) typename first_type<Types...>::type{}; }
@@ -149,36 +172,16 @@ namespace ptl {
 
 		template<typename... Visitors, typename = std::enable_if_t<sizeof...(Visitors) != 0>> //TODO: [C++20] replace with concepts/requires-clause
 		constexpr
-		auto visit(Visitors &&... visitors) const -> decltype(auto) {
-			if constexpr(sizeof...(Visitors) == 1) {
-				using Type = typename first_type<Types...>::type;
-				using Visitor = typename first_type<Visitors...>::type;
-				using Result = decltype(std::declval<Visitor>()(std::declval<const Type &>()));
-				using Dispatch = Result(*)(const void *, Visitor &);
-				constexpr Dispatch dispatch[]{+[](const void * ptr, Visitor & visitor) -> Result { return visitor(*reinterpret_cast<const Types *>(ptr)); }...};
-				return dispatch[type](data, visitors...);
-			} else {
-				struct combined_visitor : Visitors... { using Visitors::operator()...; };
-				combined_visitor visitor{std::forward<Visitors>(visitors)...};
-				return visit(visitor);
-			}
-		}
+		auto visit(Visitors &&... visitors) const & -> decltype(auto) { return visit_impl<false>(type, data, std::forward<Visitors>(visitors)...); }
 		template<typename... Visitors, typename = std::enable_if_t<sizeof...(Visitors) != 0>> //TODO: [C++20] replace with concepts/requires-clause
 		constexpr
-		auto visit(Visitors &&... visitors)       -> decltype(auto) {
-			if constexpr(sizeof...(Visitors) == 1) {
-				using Type = typename first_type<Types...>::type;
-				using Visitor = typename first_type<Visitors...>::type;
-				using Result = decltype(std::declval<Visitor>()(std::declval<Type &>()));
-				using Dispatch = Result(*)(void *, Visitor &);
-				constexpr Dispatch dispatch[]{+[](void * ptr, Visitor & visitor) -> Result { return visitor(*reinterpret_cast<Types *>(ptr)); }...};
-				return dispatch[type](data, visitors...);
-			} else {
-				struct combined_visitor : Visitors... { using Visitors::operator()...; };
-				combined_visitor visitor{std::forward<Visitors>(visitors)...};
-				return visit(visitor);
-			}
-		}
+		auto visit(Visitors &&... visitors)       & -> decltype(auto) { return visit_impl<false>(type, data, std::forward<Visitors>(visitors)...); }
+		template<typename... Visitors, typename = std::enable_if_t<sizeof...(Visitors) != 0>> //TODO: [C++20] replace with concepts/requires-clause
+		constexpr
+		auto visit(Visitors &&... visitors) const && -> decltype(auto) { return visit_impl<true>(type, data, std::forward<Visitors>(visitors)...); }
+		template<typename... Visitors, typename = std::enable_if_t<sizeof...(Visitors) != 0>> //TODO: [C++20] replace with concepts/requires-clause
+		constexpr
+		auto visit(Visitors &&... visitors)       && -> decltype(auto) { return visit_impl<true>(type, data, std::forward<Visitors>(visitors)...); }
 
 		template<typename T, typename = std::enable_if_t<can_store<T>>> //TODO: [C++20] replace with concepts/requires-clause
 		constexpr

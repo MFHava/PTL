@@ -63,21 +63,129 @@ TEST_CASE("variant move", "[variant]") {
 TEST_CASE("variant visit", "[variant]") {
 	ptl::variant<int, double> var;
 	var.visit(
-		[](int) { REQUIRE(true); },
-		[](double) { REQUIRE(false); }
+		[](int &) { REQUIRE(true); },
+		[](double &) { REQUIRE(false); },
+		[](const int &) { REQUIRE(false); },
+		[](const double &) { REQUIRE(false); },
+		[](int &&) { REQUIRE(false); },
+		[](double &&) { REQUIRE(false); },
+		[](const int &&) { REQUIRE(false); },
+		[](const double &&) { REQUIRE(false); }
+	);
+	std::as_const(var).visit(
+		[](int &) { REQUIRE(false); },
+		[](double &) { REQUIRE(false); },
+		[](const int &) { REQUIRE(true); },
+		[](const double &) { REQUIRE(false); },
+		[](int &&) { REQUIRE(false); },
+		[](double &&) { REQUIRE(false); },
+		[](const int &&) { REQUIRE(false); },
+		[](const double &&) { REQUIRE(false); }
+	);
+	std::move(var).visit(
+		[](int &) { REQUIRE(false); },
+		[](double &) { REQUIRE(false); },
+		[](const int &) { REQUIRE(false); },
+		[](const double &) { REQUIRE(false); },
+		[](int &&) { REQUIRE(true); },
+		[](double &&) { REQUIRE(false); },
+		[](const int &&) { REQUIRE(false); },
+		[](const double &&) { REQUIRE(false); }
+	);
+	std::move(std::as_const(var)).visit(
+		[](int &) { REQUIRE(false); },
+		[](double &) { REQUIRE(false); },
+		[](const int &) { REQUIRE(false); },
+		[](const double &) { REQUIRE(false); },
+		[](int &&) { REQUIRE(false); },
+		[](double &&) { REQUIRE(false); },
+		[](const int &&) { REQUIRE(true); },
+		[](const double &&) { REQUIRE(false); }
 	);
 
 	var = 1.5;
 	var.visit(
-		[](int) { REQUIRE(false); },
-		[](double) { REQUIRE(true); }
+		[](int &) { REQUIRE(false); },
+		[](double &) { REQUIRE(true); },
+		[](const int &) { REQUIRE(false); },
+		[](const double &) { REQUIRE(false); },
+		[](int &&) { REQUIRE(false); },
+		[](double &&) { REQUIRE(false); },
+		[](const int &&) { REQUIRE(false); },
+		[](const double &&) { REQUIRE(false); }
+	);
+	std::as_const(var).visit(
+		[](int &) { REQUIRE(false); },
+		[](double &) { REQUIRE(false); },
+		[](const int &) { REQUIRE(false); },
+		[](const double &) { REQUIRE(true); },
+		[](int &&) { REQUIRE(false); },
+		[](double &&) { REQUIRE(false); },
+		[](const int &&) { REQUIRE(false); },
+		[](const double &&) { REQUIRE(false); }
+	);
+	std::move(var).visit(
+		[](int &) { REQUIRE(false); },
+		[](double &) { REQUIRE(false); },
+		[](const int &) { REQUIRE(false); },
+		[](const double &) { REQUIRE(false); },
+		[](int &&) { REQUIRE(false); },
+		[](double &&) { REQUIRE(true); },
+		[](const int &&) { REQUIRE(false); },
+		[](const double &&) { REQUIRE(false); }
+	);
+	std::move(std::as_const(var)).visit(
+		[](int &) { REQUIRE(false); },
+		[](double &) { REQUIRE(false); },
+		[](const int &) { REQUIRE(false); },
+		[](const double &) { REQUIRE(false); },
+		[](int &&) { REQUIRE(false); },
+		[](double &&) { REQUIRE(false); },
+		[](const int &&) { REQUIRE(false); },
+		[](const double &&) { REQUIRE(true); }
 	);
 	REQUIRE(var.visit([](const auto & value) -> double { return value; }) == 1.5);
 
 	var = 1;
 	var.visit(
-		[](int) { REQUIRE(true); },
-		[](double) { REQUIRE(false); }
+		[](int &) { REQUIRE(true); },
+		[](double &) { REQUIRE(false); },
+		[](const int &) { REQUIRE(false); },
+		[](const double &) { REQUIRE(false); },
+		[](int &&) { REQUIRE(false); },
+		[](double &&) { REQUIRE(false); },
+		[](const int &&) { REQUIRE(false); },
+		[](const double &&) { REQUIRE(false); }
+	);
+	std::as_const(var).visit(
+		[](int &) { REQUIRE(false); },
+		[](double &) { REQUIRE(false); },
+		[](const int &) { REQUIRE(true); },
+		[](const double &) { REQUIRE(false); },
+		[](int &&) { REQUIRE(false); },
+		[](double &&) { REQUIRE(false); },
+		[](const int &&) { REQUIRE(false); },
+		[](const double &&) { REQUIRE(false); }
+	);
+	std::move(var).visit(
+		[](int &) { REQUIRE(false); },
+		[](double &) { REQUIRE(false); },
+		[](const int &) { REQUIRE(false); },
+		[](const double &) { REQUIRE(false); },
+		[](int &&) { REQUIRE(true); },
+		[](double &&) { REQUIRE(false); },
+		[](const int &&) { REQUIRE(false); },
+		[](const double &&) { REQUIRE(false); }
+	);
+	std::move(std::as_const(var)).visit(
+		[](int &) { REQUIRE(false); },
+		[](double &) { REQUIRE(false); },
+		[](const int &) { REQUIRE(false); },
+		[](const double &) { REQUIRE(false); },
+		[](int &&) { REQUIRE(false); },
+		[](double &&) { REQUIRE(false); },
+		[](const int &&) { REQUIRE(true); },
+		[](const double &&) { REQUIRE(false); }
 	);
 	REQUIRE(var.visit([](const auto & value) -> double { return value; }) == 1.0);
 }

@@ -93,7 +93,26 @@ namespace ptl {
 		explicit
 		operator bool() const noexcept { return initialized; }
 		constexpr
-		auto operator!() const noexcept { return !initialized; }
+		auto operator!() const noexcept -> bool { return !initialized; }
+
+		constexpr
+		auto has_value() const noexcept -> bool { return initialized; }
+
+		constexpr
+		auto value() const & -> const Type & { return *this ? **this : throw std::bad_optional_access{}; }
+		constexpr
+		auto value()       & ->       Type & { return *this ? **this : throw std::bad_optional_access{}; }
+		constexpr
+		auto value() const && -> const Type && { return *this ? std::move(**this) : throw std::bad_optional_access{}; }
+		constexpr
+		auto value()       && ->       Type && { return *this ? std::move(**this) : throw std::bad_optional_access{}; }
+
+		template<typename Default, typename = std::enable_if_t<std::is_convertible_v<Default &&, Type>>>
+		constexpr
+		auto value_or(Default && default_value) const & -> Type { return *this ? **this : static_cast<Type>(std::forward<Default>(default_value)); }
+		template<typename Default, typename = std::enable_if_t<std::is_convertible_v<Default &&, Type>>>
+		constexpr
+		auto value_or(Default && default_value)       && -> Type { return *this ? std::move(**this) : static_cast<Type>(std::forward<Default>(default_value)); }
 
 		void reset() noexcept {
 			if(initialized) {

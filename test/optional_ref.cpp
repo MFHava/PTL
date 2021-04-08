@@ -41,6 +41,24 @@ TEST_CASE("optional_ref ctor", "[optional_ref]") {
 	REQUIRE(*cref1 == *cop);
 }
 
+TEST_CASE("optional_ref value", "[optional_ref]") {
+	ptl::optional_ref<int> ref;
+	REQUIRE(!ref.has_value());
+	REQUIRE(ref.value_or(10) == 10);
+	REQUIRE_THROWS(ref.value());
+
+	auto value{20};
+	ref = value;
+	REQUIRE(ref.has_value());
+	REQUIRE(ref.value_or(10) == 20);
+	REQUIRE_NOTHROW(ref.value());
+
+	ref = std::nullopt;
+	REQUIRE(!ref.has_value());
+	REQUIRE(ref.value_or(10) == 10);
+	REQUIRE_THROWS(ref.value());
+}
+
 TEST_CASE("optional_ref swapping", "[optional_ref]") {
 	int v1{5}, v2{10};
 	ptl::optional_ref<int> op1{v1}, op2{v2};

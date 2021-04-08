@@ -94,6 +94,16 @@ namespace ptl {
 		auto operator!() const noexcept -> bool { return !ptr; }
 
 		constexpr
+		auto has_value() const noexcept -> bool { return ptr; }
+
+		constexpr
+		auto value() const -> Type & { return *this ? **this : throw std::bad_optional_access{}; }
+
+		template<typename Default, typename = std::enable_if_t<std::is_convertible_v<Default &&, Type>>>
+		constexpr
+		auto value_or(Default && default_value) const -> Type { return *this ? **this : static_cast<Type>(std::forward<Default>(default_value)); }
+
+		constexpr
 		void swap(optional_ref & other) noexcept { std::swap(ptr, other.ptr); }
 		friend
 		constexpr

@@ -6,6 +6,7 @@
 
 #include <catch2/catch.hpp>
 #include "ptl/optional.hpp"
+#include "ptl/string.hpp"
 #include "utils.hpp"
 
 TEST_CASE("optional ctor", "[optional]") {
@@ -47,6 +48,39 @@ TEST_CASE("optional move", "[optional]") {
 	var1 = std::move(var2);
 	REQUIRE(!var1->moved);
 	REQUIRE( var2->moved);
+}
+
+TEST_CASE("optional value", "[optional") {
+	ptl::optional<int> op1;
+	REQUIRE(!op1.has_value());
+	REQUIRE(op1.value_or(10) == 10);
+	REQUIRE_THROWS(op1.value());
+
+	op1 = 20;
+	REQUIRE(op1.has_value());
+	REQUIRE(op1.value_or(10) == 20);
+	REQUIRE_NOTHROW(op1.value());
+
+	op1 = std::nullopt;
+	REQUIRE(!op1.has_value());
+	REQUIRE(op1.value_or(10) == 10);
+	REQUIRE_THROWS(op1.value());
+
+	using namespace ptl::literals;
+	ptl::optional<ptl::string> op2;
+	REQUIRE(!op2.has_value());
+	REQUIRE(std::move(op2).value_or("Test"_s) == "Test");
+	REQUIRE_THROWS(std::move(op2).value());
+
+	op2 = "Hello World"_s;
+	REQUIRE(op2.has_value());
+	REQUIRE(std::move(op2).value_or("Test"_s) == "Hello World");
+	REQUIRE_NOTHROW(std::move(op2).value());
+
+	op2 = std::nullopt;
+	REQUIRE(!op2.has_value());
+	REQUIRE(std::move(op2).value_or("Test"_s) == "Test");
+	REQUIRE_THROWS(std::move(op2).value());
 }
 
 TEST_CASE("optional swapping", "[optional]") {

@@ -47,7 +47,7 @@ TEST_CASE("string_ref swapping", "[string_ref]") {
 	REQUIRE(ptl::string_ref{s1} == r1);
 	REQUIRE(r0 != r1);
 
-	r0.swap(r1);
+	swap(r0, r1);
 	REQUIRE(ptl::string_ref{s0} == r1);
 	REQUIRE(ptl::string_ref{s1} == r0);
 	REQUIRE(r0 != r1);

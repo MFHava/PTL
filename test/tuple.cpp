@@ -43,7 +43,7 @@ TEST_CASE("tuple swapping", "[tuple]") {
 	auto tup0{ref0}, tup1{ref1};
 	REQUIRE((tup0 == ref0));
 	REQUIRE((tup1 == ref1));
-	tup0.swap(tup1);
+	swap(tup0, tup1);
 	REQUIRE((tup0 == ref1));
 	REQUIRE((tup1 == ref0));
 }

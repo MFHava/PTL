@@ -72,7 +72,7 @@ TEST_CASE("array_ref swapping", "[array_ref]") {
 	REQUIRE(std::equal(std::begin(s1), std::end(s1), std::begin(r1), std::end(r1)));
 	REQUIRE(!std::equal(std::begin(r0), std::end(r0), std::begin(r1), std::end(r1)));
 
-	r0.swap(r1);
+	swap(r0, r1);
 	REQUIRE(std::equal(std::begin(s0), std::end(s0), std::begin(r1), std::end(r1)));
 	REQUIRE(std::equal(std::begin(s1), std::end(s1), std::begin(r0), std::end(r0)));
 	REQUIRE(!std::equal(std::begin(r0), std::end(r0), std::begin(r1), std::end(r1)));

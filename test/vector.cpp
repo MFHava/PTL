@@ -62,7 +62,7 @@ TEST_CASE("vector move", "[vector]") {
 
 TEST_CASE("vector swapping", "[vector]") {
 	ptl::vector v0{0, 1, 2, 3, 4}, v1{5, 6, 7, 8, 9};
-	v0.swap(v1);
+	swap(v0, v1);
 	for(auto i{0}; i < 5; ++i) {
 		REQUIRE(v0[i] == i + 5);
 		REQUIRE(v1[i] == i);

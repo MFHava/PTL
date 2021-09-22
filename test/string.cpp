@@ -94,25 +94,25 @@ TEST_CASE("string move", "[string]") {
 TEST_CASE("string swapping", "[string]") {
 	//SSO swap SSO
 	ptl::string s0{"Hello"}, s1{"World"};
-	s0.swap(s1);
+	swap(s0, s1);
 	REQUIRE(s0 == "World");
 	REQUIRE(s1 == "Hello");
 
 	//SSO swap noSSO
 	ptl::string s2{"Test"}, s3{"xxxxxxxxxxxxxxxxxxxxxxxx"};
-	s2.swap(s3);
+	swap(s2, s3);
 	REQUIRE(s2 == "xxxxxxxxxxxxxxxxxxxxxxxx");
 	REQUIRE(s3 == "Test");
 
 	//noSSO swap SSO
 	ptl::string s4{"xxxxxxxxxxxxxxxxxxxxxxxx"}, s5{"Test"};
-	s4.swap(s5);
+	swap(s4, s5);
 	REQUIRE(s4 == "Test");
 	REQUIRE(s5 == "xxxxxxxxxxxxxxxxxxxxxxxx");
 
 	//noSSO swap noSSO
 	ptl::string s6{"xxxxxxxxxxxxxxxxxxxxxxxx"}, s7{"XXXXXXXXXXXXXXXXXXXXXXXX"};
-	s6.swap(s7);
+	swap(s6, s7);
 	REQUIRE(s6 == "XXXXXXXXXXXXXXXXXXXXXXXX");
 	REQUIRE(s7 == "xxxxxxxxxxxxxxxxxxxxxxxx");
 }

@@ -54,7 +54,7 @@ TEST_CASE("array swapping", "[array]") {
 	REQUIRE(a0 != a1);
 
 
-	a0.swap(a1);
+	swap(a0, a1);
 	REQUIRE(a0 == tmp1);
 	REQUIRE(a1 == tmp0);
 	REQUIRE(a0 != a1);

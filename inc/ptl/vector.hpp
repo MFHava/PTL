@@ -35,28 +35,26 @@ namespace ptl {
 				siz = 0;
 			}
 
-			rep_t(rep_t && other) noexcept {
-				dealloc = std::exchange(other.dealloc, nullptr);
-				ptr = std::exchange(other.ptr, nullptr);
-				cap = std::exchange(other.cap, 0);
-				siz = std::exchange(other.siz, 0);
-			}
+			rep_t(rep_t && other) noexcept : dealloc{std::exchange(other.dealloc, nullptr)}, ptr{std::exchange(other.ptr, nullptr)}, cap{std::exchange(other.cap, 0)}, siz{std::exchange(other.siz, 0)} {}
 
 			auto operator=(rep_t && other) noexcept -> rep_t & {
-				if(dealloc) {
-					std::destroy_n(ptr, siz);
-					dealloc(ptr);
+				if(this != std::addressof(other)) {
+					if(dealloc) {
+						std::destroy_n(ptr, siz);
+						dealloc(ptr);
+					}
+					dealloc = std::exchange(other.dealloc, nullptr);
+					ptr = std::exchange(other.ptr, nullptr);
+					cap = std::exchange(other.cap, 0);
+					siz = std::exchange(other.siz, 0);
 				}
-				dealloc = std::exchange(other.dealloc, nullptr);
-				ptr = std::exchange(other.ptr, nullptr);
-				cap = std::exchange(other.cap, 0);
-				siz = std::exchange(other.siz, 0);
 				return *this;
 			}
 
 			~rep_t() noexcept {
+				if(!dealloc) return;
 				std::destroy_n(ptr, siz);
-				if(dealloc) dealloc(ptr);
+				dealloc(ptr);
 			}
 
 			auto data() const noexcept -> const Type * { return ptr; }

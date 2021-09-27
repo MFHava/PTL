@@ -7,6 +7,7 @@
 #pragma once
 #include <limits>
 #include <memory>
+#include <cstring>
 #include <iterator>
 #include <algorithm>
 #include <stdexcept>
@@ -37,6 +38,16 @@ namespace ptl {
 				sso.siz = 0;
 				sso.buf[0] = 0;
 			}
+
+			void copy_sso(const rep_t & other) noexcept {
+				sso.siz = other.sso.siz;
+				std::memcpy(sso.buf, other.sso.buf, sso.siz + 1);
+			}
+
+			void move_heap(rep_t & other) noexcept {
+				heap = other.heap;
+				other.clear_to_sso();
+			}
 		public:
 			rep_t() noexcept { clear_to_sso(); }
 
@@ -51,18 +62,16 @@ namespace ptl {
 			}
 
 			rep_t(rep_t && other) noexcept : dealloc{other.dealloc} {
-				if(dealloc) {
-					heap = other.heap;
-					other.clear_to_sso();
-				} else sso = other.sso;
+				if(dealloc) move_heap(other);
+				else copy_sso(other);
 			}
 			auto operator=(rep_t && other) noexcept -> rep_t & {
-				if(dealloc) dealloc(heap.ptr);
-				dealloc = other.dealloc;
-				if(dealloc) {
-					heap = other.heap;
-					other.clear_to_sso();
-				} else sso = other.sso;
+				if(this != std::addressof(other)) {
+					if(dealloc) dealloc(heap.ptr);
+					dealloc = other.dealloc;
+					if(dealloc) move_heap(other);
+					else copy_sso(other);
+				}
 				return *this;
 			}
 

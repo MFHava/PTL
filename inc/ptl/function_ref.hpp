@@ -9,96 +9,89 @@
 #include <type_traits>
 
 namespace ptl {
-	//! @brief non-owning reference to a function (either a plain function or a functor)
-	//! @tparam Signature function signature of the referenced functor (including potential noexcept-qualifier)
-	template<typename Signature>
-	struct function_ref;
+	static_assert(sizeof(void *) == sizeof(void(*)()));
+	static_assert(sizeof(void *) == sizeof(void(*)() noexcept));
 
-	namespace internal_function_ref { 
-		static_assert(sizeof(void *) == sizeof(void(*)()));
-		static_assert(sizeof(void *) == sizeof(void(*)() noexcept));
-
+	namespace internal_function_ref {
 		template<typename>
-		struct is_function_ref_specialization : std::false_type {};
+		struct traits;
 
-		template<typename Signature>
-		struct is_function_ref_specialization<function_ref<Signature>> : std::true_type {};
-
-		template<typename T>
-		inline
-		constexpr
-		bool is_function_ref_specialization_v{is_function_ref_specialization<T>::value};
-
-		template<bool Noexcept, typename Result, typename... Args> //TODO: [C++??] if noexcept-ness were deducible, this extra class would not be necessary and the code overall would be simpler
-		class function_ref {
-			void * functor;
-			Result (*dispatch)(void *, Args...) noexcept(Noexcept);
-
-			template<typename Functor>
-			static
-			constexpr //TODO: [C++20] consteval
-			auto is_compatible_functor() noexcept -> bool {
-				if constexpr(is_function_ref_specialization_v<std::decay_t<Functor>>) return false;
-				if constexpr(Noexcept) return std::is_nothrow_invocable_r_v<Result, Functor &, Args...>;
-				else return std::is_invocable_r_v<Result, Functor &, Args...>;
-			}
-		public:
-			template<typename Functor, typename = std::enable_if_t<is_compatible_functor<Functor>()>> //TODO: [C++20] replace with concepts/requires-clause
-			constexpr
-			function_ref(Functor && func) noexcept {
-				if constexpr(std::is_pointer_v<Functor>) { //TODO: [C++??] precondition(func);
-					functor = reinterpret_cast<void *>(func);
-					dispatch = +[](void * ctx, Args... args) noexcept(Noexcept) { return reinterpret_cast<Functor>(ctx)(std::forward<Args>(args)...); };
-				} else {
-					functor = reinterpret_cast<void *>(std::addressof(func));
-					dispatch = +[](void * ctx, Args... args) noexcept(Noexcept) { return (*reinterpret_cast<std::remove_reference_t<Functor> *>(ctx))(std::forward<Args>(args)...); };
-				}
-			}
-
-			constexpr
-			void swap(function_ref & other) noexcept {
-				std::swap(functor,  other.functor);
-				std::swap(dispatch, other.dispatch);
-			}
-			friend
-			constexpr
-			void swap(function_ref & lhs, function_ref & rhs) noexcept { lhs.swap(rhs); }
-
-			auto operator()(Args... args) const noexcept(Noexcept) -> Result { return dispatch(functor, std::forward<Args>(args)...); }
+		template<typename Result, typename... Args>
+		struct traits<Result(Args...)> final {
+			using function = Result(Args...);
+			using const_ = std::false_type;
+			using noexcept_ = std::false_type;
 		};
 
-		template<typename Func>
-		struct deduce_functor;
+		template<typename Result, typename... Args>
+		struct traits<Result(Args...) const> final {
+			using function = Result(Args...);
+			using const_ = std::true_type;
+			using noexcept_ = std::false_type;
+		};
 
-		#define PTL_INTERNAL_FUNCTION_REF_DEFINE_DEDUCTION(Const, Noexcept)\
-			template<typename Result, typename Class, typename... Args>\
-			struct deduce_functor<Result(Class::*)(Args...) Const Noexcept> final {\
-				using type = Result(Args...) Noexcept;\
-			}
-		PTL_INTERNAL_FUNCTION_REF_DEFINE_DEDUCTION(     ,         );
-		PTL_INTERNAL_FUNCTION_REF_DEFINE_DEDUCTION(const,         );
-		PTL_INTERNAL_FUNCTION_REF_DEFINE_DEDUCTION(     , noexcept);
-		PTL_INTERNAL_FUNCTION_REF_DEFINE_DEDUCTION(const, noexcept);
-		#undef PTL_INTERNAL_FUNCTION_REF_DEFINE_DEDUCTION
+		template<typename Result, typename... Args>
+		struct traits<Result(Args...) noexcept> final {
+			using function = Result(Args...);
+			using const_ = std::false_type;
+			using noexcept_ = std::true_type;
+		};
 
-		//TODO: static_assert(sizeof(function_ref<T>) == 2 * sizeof(void *));
+		template<typename Result, typename... Args>
+		struct traits<Result(Args...) const noexcept> final {
+			using function = Result(Args...);
+			using const_ = std::true_type;
+			using noexcept_ = std::true_type;
+		};
+
+
+		template<typename T>
+		using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>; //TODO: [C++20] replace with std::remove_cvref_t
 	}
 
-	#define PTL_FUNCTION_REF_DEFINE_SPECIALIZATION(Noexcept, FNoexcept)\
-		template<typename Result, typename... Args>\
-		struct function_ref<Result(Args...) Noexcept> final : internal_function_ref::function_ref<FNoexcept, Result, Args...> {\
-			using internal_function_ref::function_ref<FNoexcept, Result, Args...>::function_ref;\
-		}
-	PTL_FUNCTION_REF_DEFINE_SPECIALIZATION(        , 0);
-	PTL_FUNCTION_REF_DEFINE_SPECIALIZATION(noexcept, 1);
-	#undef PTL_FUNCTION_REF_DEFINE_SPECIALIZATION
+	//! @brief non-owning reference to a function (either a plain function or a functor)
+	//! @tparam Signature function signature of the referenced functor (including potential const and noexcept qualifiers)
+	template<typename Signature, typename = typename internal_function_ref::traits<Signature>::function>
+	struct function_ref;
 
-	template<typename Result, typename... Args>
-	function_ref(Result(*)(Args...)) -> function_ref<Result(Args...)>;
+	template<typename Signature, typename Result, typename... Args>
+	class function_ref<Signature, Result(Args...)> final {
+		using traits = internal_function_ref::traits<Signature>;
 
-	template<typename Result, typename... Args>
-	function_ref(Result(*)(Args...) noexcept) -> function_ref<Result(Args...) noexcept>;
+		static
+		constexpr //TODO: [C++20] consteval
+		bool noexcept_{typename traits::noexcept_{}};
 
-	template<typename Lambda>
-	function_ref(Lambda) -> function_ref<typename internal_function_ref::deduce_functor<decltype(&Lambda::operator())>::type>;
+		template<typename T>
+		using const_ = std::conditional_t<typename traits::const_{}, const T, T>;
+
+		void * functor;
+		Result (*dispatch)(void *, Args...) noexcept(noexcept_);
+
+		template<typename T>
+		static
+		constexpr //TODO: [C++20] consteval
+		bool is_invocable_using{noexcept_ ? std::is_nothrow_invocable_r_v<Result, T, Args...> : std::is_invocable_r_v<Result, T, Args...>};
+	public:
+		template<typename F, typename = std::enable_if_t<std::is_function_v<F> && is_invocable_using<F>>> //TODO: [C++20] replace with concepts/requires-clause
+		function_ref(F * func) noexcept : functor{reinterpret_cast<void *>(func)}, dispatch{+[](void * ctx, Args... args) noexcept(noexcept_) { return reinterpret_cast<F *>(ctx)(std::forward<Args>(args)...); }} {}
+
+		template<typename F, typename T = std::remove_reference_t<F>, typename = std::enable_if_t<!std::is_same_v<function_ref, internal_function_ref::remove_cvref_t<F>> && !std::is_member_pointer_v<T> && is_invocable_using<const_<T> &>>>//TODO: [C++20] replace with concepts/requires-clause
+		function_ref(F && func) noexcept : functor{reinterpret_cast<void *>(std::addressof(func))}, dispatch{+[](void * ctx, Args... args) noexcept(noexcept_) { return (*reinterpret_cast<const_<T> *>(ctx))(std::forward<Args>(args)...); }} {}
+
+		constexpr
+		function_ref(const function_ref &) noexcept =default;
+		constexpr
+		auto operator=(const function_ref &) noexcept -> function_ref & =default;
+
+		template<typename T, typename = std::enable_if_t<!std::is_same_v<function_ref, T> && !std::is_pointer_v<T>>> //TODO: [C++20] replace with concepts/requires-clause
+		auto operator=(T) -> function_ref & =delete;
+
+		auto operator()(Args... args) const noexcept(noexcept_) -> Result { return dispatch(functor, std::forward<Args>(args)...); }
+	};
+
+	template<typename F>
+	function_ref(F *) -> function_ref<F>;
+
+	//TODO: static_assert(sizeof(function_ref<T>) == 2 * sizeof(void *));
 }

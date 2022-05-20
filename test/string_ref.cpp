@@ -5,8 +5,8 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <sstream>
-#include <catch2/catch.hpp>
-#include "ptl/string_ref.hpp"
+#include <catch.hpp>
+#include <ptl/string_ref.hpp>
 
 using namespace std::string_literals;
 using namespace ptl::literals;
@@ -57,7 +57,7 @@ TEST_CASE("string_ref substr", "[string_ref]") {
 	const std::string_view str{"Hello World"};
 	const ptl::string_ref ref{str};
 
-	REQUIRE(std::string_view{ref} == str);
+	REQUIRE((std::string_view{ref} == str));
 
 	auto strFirst{str};
 	auto refFirst{ref};

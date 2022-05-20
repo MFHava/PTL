@@ -4,8 +4,8 @@
 //    (See accompanying file ../LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <catch2/catch.hpp>
-#include "ptl/variant_ref.hpp"
+#include <catch.hpp>
+#include <ptl/variant_ref.hpp>
 
 TEST_CASE("variant_ref ctor", "[variant_ref]") {
 	const double val1{10.0};

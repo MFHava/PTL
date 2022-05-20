@@ -48,7 +48,7 @@ if(PTL_BUILD_TESTS)
 		file(GLOB_RECURSE PTL_TEST "test/*")
 			source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/test FILES ${PTL_TEST})
 		target_sources(test-ptl PRIVATE ${PTL} ${PTL_TEST}) #including PTL sources here to have them included in IDEs
-		target_link_libraries(test-ptl PRIVATE ptl Catch2::Catch2)
+		target_link_libraries(test-ptl PRIVATE ptl Catch2::Catch2 Catch2::Catch2WithMain)
 		set_target_properties(test-ptl PROPERTIES FOLDER "Portable Template Library")
 endif()
 

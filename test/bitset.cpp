@@ -7,8 +7,8 @@
 #include <bitset>
 #include <numeric>
 #include <sstream>
-#include <catch2/catch.hpp>
-#include "ptl/bitset.hpp"
+#include <catch.hpp>
+#include <ptl/bitset.hpp>
 
 namespace {
 	template<std::size_t Size, typename Tag>

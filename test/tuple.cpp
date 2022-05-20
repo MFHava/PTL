@@ -4,8 +4,8 @@
 //    (See accompanying file ../LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <catch2/catch.hpp>
-#include "ptl/tuple.hpp"
+#include <catch.hpp>
+#include <ptl/tuple.hpp>
 
 static_assert(sizeof(ptl::tuple<>) == sizeof(char));
 static_assert(sizeof(ptl::tuple<char, int>) == sizeof(char) + sizeof(int));

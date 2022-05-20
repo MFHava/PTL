@@ -6,8 +6,8 @@
 
 #include <cstring>
 #include <sstream>
-#include <catch2/catch.hpp>
-#include "ptl/string.hpp"
+#include <catch.hpp>
+#include <ptl/string.hpp>
 #include "utils.hpp"
 
 using namespace std::string_literals;

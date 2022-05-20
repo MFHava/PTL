@@ -4,8 +4,8 @@
 //    (See accompanying file ../LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <catch2/catch.hpp>
-#include "ptl/optional_ref.hpp"
+#include <catch.hpp>
+#include <ptl/optional_ref.hpp>
 
 TEST_CASE("optional_ref ctor", "[optional_ref]") {
 	ptl::optional_ref<int> op;

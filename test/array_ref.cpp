@@ -6,8 +6,8 @@
 
 #include <array>
 #include <vector>
-#include <catch2/catch.hpp>
-#include "ptl/array_ref.hpp"
+#include <catch.hpp>
+#include <ptl/array_ref.hpp>
 
 TEST_CASE("array_ref ctor", "[array_ref]") {
 	int a0[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};

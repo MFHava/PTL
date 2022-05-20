@@ -5,7 +5,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <catch.hpp>
-#include "ptl/array.hpp"
+#include <ptl/array.hpp>
 
 static_assert(sizeof(ptl::array<int, 10>) == 10 * sizeof(int));
 static_assert(sizeof(ptl::array<int,  0>) == sizeof(void *));

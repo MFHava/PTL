@@ -334,10 +334,6 @@ namespace ptl {
 		constexpr
 		operator bool() const noexcept { return any(); }
 
-		template<typename T = Tag, typename = std::enable_if_t<enable_bitset_operator_bool<T>>> //TODO: [C++20] replace with requires-clause
-		constexpr
-		auto operator!() const noexcept -> bool { return none(); }
-
 		friend
 		auto operator<<(std::ostream & os, const bitset & self) -> std::ostream & {
 			for(size_type i{Size}; i != 0; --i) os << (self.test(i - 1) ? '1' : '0');

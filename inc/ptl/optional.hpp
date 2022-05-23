@@ -92,8 +92,6 @@ namespace ptl {
 		constexpr
 		explicit
 		operator bool() const noexcept { return initialized; }
-		constexpr
-		auto operator!() const noexcept -> bool { return !initialized; }
 
 		constexpr
 		auto has_value() const noexcept -> bool { return initialized; }

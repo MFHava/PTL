@@ -9,6 +9,7 @@
 
 static_assert(sizeof(ptl::tuple<>) == sizeof(char));
 static_assert(sizeof(ptl::tuple<char, int>) == sizeof(char) + sizeof(int));
+static_assert(sizeof(ptl::tuple<long, char, int>) == sizeof(long) + sizeof(char) + sizeof(int));
 
 static_assert(std::is_same_v<decltype(std::declval<      ptl::tuple<int, float> & >().get<0>()),       int & >);
 static_assert(std::is_same_v<decltype(std::declval<const ptl::tuple<int, float> & >().get<0>()), const int & >);

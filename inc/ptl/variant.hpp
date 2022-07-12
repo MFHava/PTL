@@ -10,12 +10,11 @@
 #include <variant>
 #include <type_traits>
 #include "internal/type_checks.hpp"
-#include "internal/compiler_detection.hpp"
 
 namespace ptl {
-	PTL_PACK_BEGIN
 	//! @brief a type-safe union, storing one of multiple types
 	//! @tparam Types all types that may be stored in the variant
+	#pragma pack(push, 1)
 	template<typename... Types>
 	class variant final {
 		static_assert(sizeof...(Types) > 0);
@@ -265,5 +264,5 @@ namespace ptl {
 			return lhs.visit([&](const auto & value) { return value >= *reinterpret_cast<const std::decay_t<decltype(value)> *>(rhs.data); });
 		}
 	};
-	PTL_PACK_END
+	#pragma pack(pop)
 }

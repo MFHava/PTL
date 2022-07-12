@@ -9,6 +9,12 @@
 #include <ptl/string.hpp>
 #include "utils.hpp"
 
+static_assert(sizeof(ptl::optional<char>) == sizeof(char) + sizeof(char));
+static_assert(sizeof(ptl::optional<short>) == sizeof(short) + sizeof(char));
+static_assert(sizeof(ptl::optional<int>) == sizeof(int) + sizeof(char));
+static_assert(sizeof(ptl::optional<long>) == sizeof(long) + sizeof(char));
+static_assert(sizeof(ptl::optional<long long>) == sizeof(long long) + sizeof(char));
+
 TEST_CASE("optional ctor", "[optional]") {
 	ptl::optional<int> op1;
 	REQUIRE(!static_cast<bool>(op1));

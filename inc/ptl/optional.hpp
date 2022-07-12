@@ -8,10 +8,9 @@
 #include <ostream>
 #include <optional>
 #include "internal/type_checks.hpp"
-#include "internal/compiler_detection.hpp"
 
 namespace ptl {
-	PTL_PACK_BEGIN
+	#pragma pack(push, 1)
 	//! @brief an optional value
 	//! @tparam Type type of the potentially contained object
 	template<typename Type>
@@ -267,5 +266,5 @@ namespace ptl {
 		constexpr
 		auto operator>=(const Type & value, const optional & opt) noexcept -> bool { return opt ? value >= *opt : true; }
 	};
-	PTL_PACK_END
+	#pragma pack(pop)
 }

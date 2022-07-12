@@ -6,12 +6,11 @@
 
 #pragma once
 #include "internal/type_checks.hpp"
-#include "internal/compiler_detection.hpp"
 
 namespace ptl {
-	PTL_PACK_BEGIN
 	//! @brief a fixed-size collection of heterogeneous value
 	//! @tparam Types types to store inside the tuple
+	#pragma pack(push, 1)
 	template<typename... Types>
 	class tuple final {
 		static_assert((internal::is_abi_compatible_v<Types> && ...));
@@ -123,7 +122,7 @@ namespace ptl {
 		constexpr
 		auto operator>=(const tuple & lhs, const tuple & rhs) noexcept -> bool { return !(lhs < rhs); }
 	};
-	PTL_PACK_END
+	#pragma pack(pop)
 
 	template<typename... Types>
 	tuple(Types...) -> tuple<Types...>;

@@ -21,17 +21,25 @@ add_library(ptl INTERFACE)
 	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 		target_compile_options(ptl INTERFACE -Wall -Wextra -Wpedantic -Wconversion)
 	elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-		target_compile_definitions(ptl INTERFACE _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS _CRT_SECURE_NO_WARNINGS _SCL_SECURE_NO_WARNINGS _SILENCE_FPOS_SEEKPOS_DEPRECATION_WARNING)
 		target_compile_options(ptl INTERFACE
-			/W4 /JMC /MP /permissive- /bigobj
+			# warning flags
+			/W4 # enable all sensible warnings
 			/wd4003 # ignore not enough parameters for function macro
+			/wd4099 # ignore mixing struct and class keyword for same type
 			/wd4456 # ignore local shadowing
 			/wd4457 # ignore function parameter shadowing
 			/wd4458 # ignore class member shadowing
 			/wd4459 # ignore global shadowing
-		)
-		target_link_options(ptl INTERFACE
-			/ignore:4099 # ignore mixing struct and class keyword for same type
+			/wd4848 # ignore no_unique_address is a vendor extension in C++17
+			/we4700 # treat use of uninitialized variables as compile error
+			# conformance flags
+			/permissive- # enable conformance mode (TODO: [C++20] this is the default!)
+			/Zc:__cplusplus # update __cplusplus according to standard (stays at C++98 otherwise)
+			/Zc:preprocessor # enable standard conformant preprocessor
+			# miscellaneous flags
+			/MP # parallel compilation
+			/JMC # improve debugging support by only stepping into own code
+			/bigobj # use "big object files" to circumvent class of errors that are related to heavy template or machine generated code
 		)
 	endif()
 

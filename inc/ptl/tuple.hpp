@@ -5,84 +5,92 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include "internal/type_checks.hpp"
+#include <type_traits>
 
 namespace ptl {
-	//! @brief a fixed-size collection of heterogeneous value
-	//! @tparam Types types to store inside the tuple
-	#pragma pack(push, 1)
-	template<typename... Types>
-	class tuple final {
-		static_assert((internal::is_abi_compatible_v<Types> && ...));
+	namespace internal_tuple {
+		template<typename Type>
+		inline
+		constexpr
+		auto is_abi_compatible_v{  //TODO: determine essential subset
+			std::is_standard_layout_v<std::remove_cv_t<Type>> &&
+			std::is_default_constructible_v<std::remove_cv_t<Type>> &&
+			std::is_copy_constructible_v<std::remove_cv_t<Type>> &&
+			std::is_nothrow_move_constructible_v<std::remove_cv_t<Type>> &&
+			std::is_copy_assignable_v<std::remove_cv_t<Type>> &&
+			std::is_nothrow_move_assignable_v<std::remove_cv_t<Type>> &&
+			std::is_nothrow_destructible_v<std::remove_cv_t<Type>> &&
+			std::is_nothrow_swappable_v<std::remove_cv_t<Type>>
+		};
 
-		template<typename T>
-		struct type_identity final { using type = T; }; //TODO: [C++20] replace with std::type_identity
+		template<typename...>
+		struct storage_t;
 
-		template<typename Type, typename Base>
-		struct base : Base {
+		template<>
+		struct storage_t<> {
+			static
+			constexpr
+			void swap(storage_t &) noexcept {}
+
+			static
+			constexpr
+			auto equal(const storage_t &) noexcept { return true; }
+			static
+			constexpr
+			auto less(const storage_t &) noexcept { return false; }
+		};
+
+		#pragma pack(push, 1)
+		template<typename Head, typename... Tail>
+		struct storage_t<Head, Tail...> : storage_t<Tail...> {
 			template<typename Arg, typename... Args>
-			base(Arg && arg, Args &&... args) : Base{std::forward<Args>(args)...}, value{std::forward<Arg>(arg)} {}
+			storage_t(Arg && arg, Args &&... args) : storage_t<Tail...>{std::forward<Args>(args)...}, value{std::forward<Arg>(arg)} {}
 
 			template<std::size_t Index>
 			constexpr
 			auto get() const noexcept -> decltype(auto) {
 				if constexpr(Index == 0) return (value);
-				else return Base::template get<Index - 1>();
+				else return storage_t<Tail...>::template get<Index - 1>();
 			}
 			template<std::size_t Index>
 			constexpr
 			auto get()       noexcept -> decltype(auto) {
 				if constexpr(Index == 0) return (value);
-				else return Base::template get<Index - 1>();
+				else return storage_t<Tail...>::template get<Index - 1>();
 			}
 
 			constexpr
-			void swap(base & other) noexcept {
+			void swap(storage_t & other) noexcept {
 				using std::swap;
 				swap(value, other.value);
-				Base::swap(other);
+				storage_t<Tail...>::swap(other);
 			}
 
 			constexpr
-			auto equal(const base & other) const noexcept { return (value == other.value) ? Base::equal(other) : false; }
+			auto equal(const storage_t & other) const noexcept { return (value == other.value) ? storage_t<Tail...>::equal(other) : false; }
 			constexpr
-			auto less(const base & other) const noexcept { return (value < other.value) || (!(other.value < value) && Base::less(other)); }
+			auto less(const storage_t & other) const noexcept { return (value < other.value) || (!(other.value < value) && storage_t<Tail...>::less(other)); }
 		private:
-			Type value;
+			Head value;
 		};
+		#pragma pack(pop)
+	}
 
-		template<typename... Ts>
-		static
-		constexpr //TODO: [C++20] replace with consteval
-		auto determine_storage() noexcept {
-			if constexpr(sizeof...(Ts) == 0) {
-				struct empty_base {
-					static
-					constexpr
-					void swap(empty_base &) noexcept {}
+	//! @brief a fixed-size collection of heterogeneous value
+	//! @tparam Types types to store inside the tuple
+	template<typename... Types>
+	class [[deprecated("The PTL is mainly aimed at ABI-stable interfaces, the main use case of a generic tuple type is in a generic context. tuple was therefore deemed to be out of scope.")]] tuple final {
+		static_assert((internal_tuple::is_abi_compatible_v<Types> && ...));
 
-					static
-					constexpr
-					auto equal(const empty_base &) noexcept { return true; }
-					static
-					constexpr
-					auto less(const empty_base &) noexcept { return false; }
-				};
-				return type_identity<empty_base>{};
-			} else return determine_storage_impl<Ts...>();
-		}
+		//TODO: fixing default construction: missing in recursive member type?!
 
-		template<typename T, typename... Ts>
-		static
-		constexpr //TODO: [C++20] replace with consteval
-		auto determine_storage_impl() noexcept { return type_identity<base<T, typename decltype(determine_storage<Ts...>())::type>>{}; }
-
-		typename decltype(determine_storage<Types...>())::type storage;
+		internal_tuple::storage_t<Types...> storage;
 	public:
 		template<typename... Args, typename = std::enable_if_t<sizeof...(Args) == sizeof...(Types) || sizeof...(Args) == 0>> //TODO: [C++20] replace with concepts/requires-clause
 		constexpr
 		tuple(Args &&... args) : storage{std::forward<Args>(args)...} {}
 
+		//TODO: [C++23] these overloads can be merged by using deducing this
 		template<std::size_t Index>
 		constexpr
 		auto get() const &  noexcept -> decltype(auto) { return storage.template get<Index>(); }
@@ -122,7 +130,6 @@ namespace ptl {
 		constexpr
 		auto operator>=(const tuple & lhs, const tuple & rhs) noexcept -> bool { return !(lhs < rhs); }
 	};
-	#pragma pack(pop)
 
 	template<typename... Types>
 	tuple(Types...) -> tuple<Types...>;

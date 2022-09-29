@@ -7,6 +7,7 @@
 #pragma once
 #include <utility>
 #include <iterator>
+#include <stdexcept>
 #include <type_traits>
 
 namespace ptl {
@@ -21,7 +22,7 @@ namespace ptl {
 	//! @tparam Type type of the referenced array
 	template<typename Type>
 	class array_ref final { //TODO: static_assert(sizeof(array_ref<T>) == 2 * sizeof(T *));
-		Type * ptrs[2]{nullptr, nullptr};
+		Type * first_{nullptr}, * last_{nullptr};
 
 		template<typename ContiguousRange>
 		class is_compatible_range final {
@@ -174,7 +175,7 @@ namespace ptl {
 		//! @param[in] last end of the referenced array
 		//! @attention [first, last) must be valid!
 		constexpr
-		array_ref(pointer first, pointer last) noexcept : ptrs{first, last} {} //TODO: [C++20] use contiguous_iterators //TODO: [C++??] precondition(first <= last);
+		array_ref(pointer first, pointer last) noexcept : first_{first}, last_{last} {} //TODO: [C++20] use contiguous_iterators //TODO: [C++??] precondition(first <= last);
 
 		//! @brief construct from pointer and size
 		//! @param[in] ptr start of the referenced array
@@ -191,12 +192,12 @@ namespace ptl {
 		array_ref(ContiguousRange && range) noexcept : array_ref{std::data(range), std::size(range)} {}
 
 		constexpr
-		auto data() const noexcept -> pointer { return ptrs[0]; }
+		auto data() const noexcept -> pointer { return first_; }
 		[[nodiscard]]
 		constexpr
 		auto empty() const noexcept -> bool { return size() == 0; }
 		constexpr
-		auto size() const noexcept -> size_type { return ptrs[1] - ptrs[0]; } 
+		auto size() const noexcept -> size_type { return last_ - first_; } 
 
 		constexpr
 		auto front() const noexcept -> reference { return (*this)[0]; } //TODO: [C++??] precondition(!empty());
@@ -204,6 +205,11 @@ namespace ptl {
 		auto back() const noexcept -> reference { return (*this)[size() - 1]; } //TODO: [C++??] precondition(!empty());
 		constexpr
 		auto operator[](size_type index) const noexcept -> reference { return *(data() + index); } //TODO: [C++??] precondition(index < size());
+		constexpr
+		auto at(size_type index) const -> reference {
+			if(index >= size()) throw std::out_of_range{"ptl::array::at - index out of range"};
+			return (*this)[index];
+		}
 
 		constexpr
 		auto first(size_type count) const noexcept -> array_ref { return {data(), count}; } //TODO: [C++??] precondition(count <= size());
@@ -238,19 +244,13 @@ namespace ptl {
 		auto rend()          noexcept ->       reverse_iterator { return reverse_iterator{begin()}; }
 		constexpr
 		auto crend()   const noexcept -> const_reverse_iterator { return const_reverse_iterator{cbegin()}; }
-
-		constexpr
-		void swap(array_ref & other) noexcept { for(auto i{0}; i < 2; ++i) std::swap(ptrs[i], other.ptrs[i]); }
-		friend
-		constexpr
-		void swap(array_ref & lhs, array_ref & rhs) noexcept { lhs.swap(rhs); }
 	};
 
 	template<typename Type, std::size_t Size>
-	array_ref(Type (&)[Size]) -> array_ref<Type>;
+	array_ref(Type(&)[Size]) -> array_ref<Type>;
 
 	template<typename ContiguousRange>
-	array_ref(const ContiguousRange &) -> array_ref<const typename ContiguousRange::value_type>;
+	array_ref(const ContiguousRange &) -> array_ref<const typename ContiguousRange::value_type>; //TODO: [C++20] this deduction guide should be mergeable with the next one using ranges-traits...
 
 	template<typename ContiguousRange>
 	array_ref(      ContiguousRange &) -> array_ref<      typename ContiguousRange::value_type>;

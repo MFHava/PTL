@@ -64,20 +64,6 @@ TEST_CASE("array_ref subviews", "[array_ref]") {
 	REQUIRE(sub1[2] == 7);
 }
 
-TEST_CASE("array_ref swapping", "[array_ref]") {
-	const std::array<int, 3> s0{0, 1, 2};
-	const std::array<int, 5> s1{9, 8, 7, 6, 5};
-	ptl::array_ref<const int> r0{s0}, r1{s1};
-	REQUIRE(std::equal(std::begin(s0), std::end(s0), std::begin(r0), std::end(r0)));
-	REQUIRE(std::equal(std::begin(s1), std::end(s1), std::begin(r1), std::end(r1)));
-	REQUIRE(!std::equal(std::begin(r0), std::end(r0), std::begin(r1), std::end(r1)));
-
-	swap(r0, r1);
-	REQUIRE(std::equal(std::begin(s0), std::end(s0), std::begin(r1), std::end(r1)));
-	REQUIRE(std::equal(std::begin(s1), std::end(s1), std::begin(r0), std::end(r0)));
-	REQUIRE(!std::equal(std::begin(r0), std::end(r0), std::begin(r1), std::end(r1)));
-}
-
 TEST_CASE("array_ref ctad", "[array_ref]") {
 	int arr[]{0};
 	const int carr[]{0};

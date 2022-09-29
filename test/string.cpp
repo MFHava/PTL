@@ -10,6 +10,8 @@
 #include <ptl/string.hpp>
 #include "utils.hpp"
 
+//TODO: improve testing of string by introducing an internal template string<SSOSize> and hooks to check on internal status
+
 using namespace std::string_literals;
 using namespace ptl::literals;
 
@@ -203,6 +205,14 @@ TEST_CASE("string insert", "[string]") {
 	const auto it7{s.insert(s.cend(), 2, 'Y')};
 	REQUIRE(it7 == s.end() - 2);
 	REQUIRE(s == "YYXXXHelloYYXXXWorldXXXYY");
+
+	const auto it8{s.insert(s.cbegin() + 11, "abc")};
+	REQUIRE(it8 == s.begin() + 11);
+	REQUIRE(s == "YYXXXHelloYabcYXXXWorldXXXYY");
+
+	const auto it9{s.insert(s.cend() - 1, "abcdefghijklmnopqrstuvwxyz")};
+	REQUIRE(it9 == s.end() - 27);
+	REQUIRE(s == "YYXXXHelloYabcYXXXWorldXXXYabcdefghijklmnopqrstuvwxyzY");
 }
 
 TEST_CASE("string append", "[string]") {
@@ -220,6 +230,7 @@ TEST_CASE("string append", "[string]") {
 	s0.append(3, 'X');
 	REQUIRE(s0 == "HellocruelWorldXXX");
 
+
 	ptl::string s1;
 	s1 += hello;
 	REQUIRE(s1 == "Hello");
@@ -229,6 +240,8 @@ TEST_CASE("string append", "[string]") {
 	REQUIRE(s1 == "HellocruelWorld");
 	s1 += '!';
 	REQUIRE(s1 == "HellocruelWorld!");
+	s1 += s0;
+	REQUIRE(s1 == "HellocruelWorld!HellocruelWorldXXX");
 
 	ptl::string s2;
 	s2 = s2 + hello;
@@ -261,6 +274,9 @@ TEST_CASE("string assign", "[string]") {
 
 	s.assign(3, 'X');
 	REQUIRE(s == "XXX");
+
+	s.assign("Hello World");
+	REQUIRE(s == "Hello World");
 }
 
 TEST_CASE("string replace", "[string]") {
@@ -294,27 +310,68 @@ TEST_CASE("string replace", "[string]") {
 	REQUIRE(s2 == "Hello cruel World");
 
 
-	ptl::string s3{"A A A"};
-	s3.replace(s3.cbegin(), s3.cbegin() + 1, 3, 'X');
-	REQUIRE(s3 == "XXX A A");
-	s3.replace(s3.cbegin() + 4, s3.cbegin() + 5, 3, 'X');
-	REQUIRE(s3 == "XXX XXX A");
-	s3.replace(s3.cbegin() + 8, s3.cend(), 3, 'X');
-	REQUIRE(s3 == "XXX XXX XXX");
+	ptl::string s3{"XXX XXX XXX"};
+	s3.replace(s3.cbegin(), s3.cbegin() + 3, hello.cbegin(), hello.cend());
+	REQUIRE(s3 == "Hello XXX XXX");
+	s3.replace(s3.cbegin() + 6, s3.cbegin() + 9, cruel.cbegin(), cruel.cend());
+	REQUIRE(s3 == "Hello cruel XXX");
+	s3.replace(s3.cend() - 3, s3.cend(), world.cbegin(), world.cend());
+	REQUIRE(s3 == "Hello cruel World");
 
-	ptl::string s4{"AAA AAA AAA"};
-	s4.replace(s4.cbegin(), s4.cbegin() + 3, 3, 'X');
-	REQUIRE(s4 == "XXX AAA AAA");
-	s4.replace(s4.cbegin() + 4, s4.cbegin() + 7, 3, 'X');
-	REQUIRE(s4 == "XXX XXX AAA");
-	s4.replace(s4.cbegin() + 8, s4.cend(), 3, 'X');
-	REQUIRE(s4 == "XXX XXX XXX");
+	ptl::string s4{"XXXXX XXXXX XXXXX"};
 
-	ptl::string s5{"AAA AAA AAA"};
-	s5.replace(s5.cbegin(), s5.cbegin() + 3, 1, 'X');
-	REQUIRE(s5 == "X AAA AAA");
-	s5.replace(s5.cbegin() + 2, s5.cbegin() + 5, 1, 'X');
-	REQUIRE(s5 == "X X AAA");
-	s5.replace(s5.cbegin() + 4, s5.cend(), 1, 'X');
-	REQUIRE(s5 == "X X X");
+	s4.replace(s4.cbegin(), s4.cbegin() + 5, hello.cbegin(), hello.cend());
+	REQUIRE(s4 == "Hello XXXXX XXXXX");
+	s4.replace(s4.cbegin() + 6, s4.cbegin() + 11, cruel.cbegin(), cruel.cend());
+	REQUIRE(s4 == "Hello cruel XXXXX");
+	s4.replace(s4.cend() - 5, s4.cend(), world.cbegin(), world.cend());
+	REQUIRE(s4 == "Hello cruel World");
+
+	ptl::string s5{"XXXXXXX XXXXXXX XXXXXXX"};
+
+	s5.replace(s5.cbegin(), s5.cbegin() + 7, hello.cbegin(), hello.cend());
+	REQUIRE(s5 == "Hello XXXXXXX XXXXXXX");
+	s5.replace(s5.cbegin() + 6, s5.cbegin() + 13, cruel.cbegin(), cruel.cend());
+	REQUIRE(s5 == "Hello cruel XXXXXXX");
+	s5.replace(s5.cend() - 7, s5.cend(), world.cbegin(), world.cend());
+	REQUIRE(s5 == "Hello cruel World");
+
+
+	ptl::string s6{"A A A"};
+	s6.replace(s6.cbegin(), s6.cbegin() + 1, 3, 'X');
+	REQUIRE(s6 == "XXX A A");
+	s6.replace(s6.cbegin() + 4, s6.cbegin() + 5, 3, 'X');
+	REQUIRE(s6 == "XXX XXX A");
+	s6.replace(s6.cbegin() + 8, s6.cend(), 3, 'X');
+	REQUIRE(s6 == "XXX XXX XXX");
+
+	ptl::string s7{"AAA AAA AAA"};
+	s7.replace(s7.cbegin(), s7.cbegin() + 3, 3, 'X');
+	REQUIRE(s7 == "XXX AAA AAA");
+	s7.replace(s7.cbegin() + 4, s7.cbegin() + 7, 3, 'X');
+	REQUIRE(s7 == "XXX XXX AAA");
+	s7.replace(s7.cbegin() + 8, s7.cend(), 3, 'X');
+	REQUIRE(s7 == "XXX XXX XXX");
+
+	ptl::string s8{"AAA AAA AAA"};
+	s8.replace(s8.cbegin(), s8.cbegin() + 3, 1, 'X');
+	REQUIRE(s8 == "X AAA AAA");
+	s8.replace(s8.cbegin() + 2, s8.cbegin() + 5, 1, 'X');
+	REQUIRE(s8 == "X X AAA");
+	s8.replace(s8.cbegin() + 4, s8.cend(), 1, 'X');
+	REQUIRE(s8 == "X X X");
+}
+
+TEST_CASE("string substr", "[string]") {
+	const ptl::string str{"Hello World"};
+
+	REQUIRE(str.substr(4) == "o World");
+	REQUIRE("Hello World"_s.substr(4) == "o World");
+	REQUIRE(str.substr(6) == "World");
+	REQUIRE("Hello World"_s.substr(6) == "World");
+
+	REQUIRE(str.substr(5, 3) == " Wo");
+	REQUIRE("Hello World"_s.substr(5, 3) == " Wo");
+	REQUIRE(str.substr(4, 2) == "o ");
+	REQUIRE("Hello World"_s.substr(4, 2) == "o ");
 }

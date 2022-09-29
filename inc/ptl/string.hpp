@@ -15,11 +15,11 @@
 
 namespace ptl {
 	//! @brief a dynamically growing string
-	class string final {
-		class rep_t final {
+	class string final { //TODO: [C++20] constexpr
+		class storage_t final {
 			static
 			constexpr
-			std::size_t sso_size{((sizeof(void * ) * 3)) - 2};
+			std::size_t sso_size{((sizeof(void *) * 3)) - 2};
 
 			void(*dealloc)(char *) noexcept;
 			union {
@@ -27,6 +27,7 @@ namespace ptl {
 					char siz;
 					char buf[sso_size + 1];
 				} sso;
+				static_assert(sizeof(sso) == sizeof(void *) * 3);
 				struct {
 					char * ptr;
 					std::size_t cap, siz; //without \0
@@ -39,34 +40,35 @@ namespace ptl {
 				sso.buf[0] = 0;
 			}
 
-			void copy_sso(const rep_t & other) noexcept {
+			void copy_sso(const storage_t & other) noexcept {
 				sso.siz = other.sso.siz;
 				std::memcpy(sso.buf, other.sso.buf, sso.siz + 1);
 			}
 
-			void move_heap(rep_t & other) noexcept {
+			void move_heap(storage_t & other) noexcept {
 				heap = other.heap;
 				other.clear_to_sso();
 			}
 		public:
-			rep_t() noexcept { clear_to_sso(); }
+			storage_t() noexcept { clear_to_sso(); }
 
-			rep_t(std::size_t capacity) {
-				if(capacity > sso_size) {
+			storage_t(std::size_t required) {
+				if(required > sso_size) {
 					dealloc = +[](char * ptr) noexcept { delete[] ptr; }; 
-					heap.ptr = new char[capacity + 1];
-					heap.ptr[0] = 0;
-					heap.cap = capacity;
 					heap.siz = 0;
+					//minimum heap allocation: 2xSSO to prevent multiple allocations on push_back/etc. after initially exceeding SSO
+					heap.cap = std::max(std::size_t{2}, (required + sizeof(sso) - 1) / sizeof(sso)) * sizeof(sso);
+					heap.ptr = new char[heap.cap + 1];
+					heap.ptr[0] = 0;
 				} else clear_to_sso();
 			}
 
-			rep_t(rep_t && other) noexcept : dealloc{other.dealloc} {
+			storage_t(storage_t && other) noexcept : dealloc{other.dealloc} {
 				if(dealloc) move_heap(other);
 				else copy_sso(other);
 			}
-			auto operator=(rep_t && other) noexcept -> rep_t & {
-				if(this != std::addressof(other)) {
+			auto operator=(storage_t && other) noexcept -> storage_t & {
+				if(this != std::addressof(other)) { //TODO: [C++20] use [[likely]]
 					if(dealloc) dealloc(heap.ptr);
 					dealloc = other.dealloc;
 					if(dealloc) move_heap(other);
@@ -75,7 +77,7 @@ namespace ptl {
 				return *this;
 			}
 
-			~rep_t() noexcept { if(dealloc) dealloc(heap.ptr); }
+			~storage_t() noexcept { if(dealloc) dealloc(heap.ptr); }
 
 			auto data() const noexcept -> const char * { return dealloc ? heap.ptr : sso.buf; }
 			auto data()       noexcept ->       char * { return dealloc ? heap.ptr : sso.buf; }
@@ -106,14 +108,19 @@ namespace ptl {
 				dealloc = nullptr;
 			}
 
-			void swap(rep_t & other) noexcept { //TODO: [C++??] precondition(this != std::addressof(other));
-				if(dealloc && other.dealloc) {
+			void swap(storage_t & other) noexcept {
+				if(this == std::addressof(other)) return; //TODO: [C++20] use [[unlikely]] on condition
+				else if(dealloc && other.dealloc) {
 					std::swap(heap.ptr, other.heap.ptr);
 					std::swap(heap.cap, other.heap.cap);
 					std::swap(heap.siz, other.heap.siz);
+					std::swap(dealloc, other.dealloc);
 				} else if(!dealloc && !other.dealloc) {
+					char tmp[sso_size + 1];
+					std::copy_n(sso.buf, sso.siz + 1, tmp);
+					std::copy_n(other.sso.buf, other.sso.siz + 1, sso.buf);
+					std::copy_n(tmp, sso.siz + 1, other.sso.buf);
 					std::swap(sso.siz, other.sso.siz);
-					std::swap_ranges(sso.buf, sso.buf + std::max(sso.siz, other.sso.siz) + 1, other.sso.buf);
 				} else {
 					auto & on_heap{dealloc ? *this : other};
 					auto & on_sso{dealloc ? other : *this};
@@ -124,10 +131,11 @@ namespace ptl {
 					std::copy_n(on_sso.sso.buf, on_sso.sso.siz + 1, on_heap.sso.buf);
 
 					on_sso.heap = tmp;
+
+					std::swap(dealloc, other.dealloc);
 				}
-				std::swap(dealloc, other.dealloc);
 			}
-		} rep;
+		} storage;
 
 		template<bool IsConst>
 		struct contiguous_iterator final {
@@ -230,10 +238,47 @@ namespace ptl {
 		auto concat(std::string_view lhs, std::string_view rhs) -> string {
 			const auto count{lhs.size() + rhs.size()};
 			string tmp;
-			tmp.rep = count;
-			tmp.rep.set_size(count);
+			tmp.storage = count;
+			tmp.storage.set_size(count);
 			std::copy_n(rhs.data(), rhs.size(), std::copy_n(lhs.data(), lhs.size(), tmp.data()));
 			return tmp;
+		}
+
+		template<typename Func>
+		void append_no_aliasing(std::size_t additional_size, Func fill) {
+			const auto old{size()};
+			resize(old + additional_size);
+			fill(old);
+		}
+
+		template<typename Func>
+		void assign_no_aliasing(std::size_t required_size, Func fill) {
+			resize(required_size);
+			fill();
+		}
+
+		template<typename Func>
+		auto insert_no_aliasing(contiguous_iterator<true> pos, std::size_t additional_size, Func fill) {
+			const auto old{size()};
+			const auto offset{pos.ptr - data()};
+			resize(old + additional_size);
+			std::copy_backward(data() + offset, data() + old, data() + size());
+			fill();
+			return begin() + offset;
+		}
+
+		template<typename Func>
+		void replace_no_aliasing(contiguous_iterator<true> first, contiguous_iterator<true> last, std::size_t required_size, Func fill) {
+			const auto offset{first.ptr - data()};
+			if(const auto count{static_cast<std::size_t>(last - first)}; count < required_size) { //not enough space in target location
+				const auto old{size()};
+				resize(size() + (required_size - count));
+				std::copy_backward(data() + offset + count, data() + old, data() + size());
+				fill(offset);
+			} else { //directly overwrite and shrink afterwards
+				fill(offset);
+				erase(first + required_size, first + count);
+			}
 		}
 	public:
 		using traits_type            = std::char_traits<char>;
@@ -254,28 +299,26 @@ namespace ptl {
 		string(const string & other) : string{static_cast<std::string_view>(other)} {}
 		string(string &&) noexcept =default;
 		auto operator=(const string & other) -> string & {
-			*this = static_cast<std::string_view>(other);
+			if(this != std::addressof(other)) *this = static_cast<std::string_view>(other); //TODO: [C++20] use [[likely]] on condition
 			return *this;
 		}
 		auto operator=(string &&) noexcept -> string & =default;
 		~string() noexcept =default;
 
-		template<typename InputIterator, typename = std::enable_if_t<std::is_base_of_v<std::input_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>>> //TODO: [C++20] replace with concepts/requires-clause
-		string(InputIterator first, InputIterator last) {
-			if constexpr(std::is_same_v<typename std::iterator_traits<InputIterator>::iterator_category, std::input_iterator_tag>) {
-				std::copy(first, last, std::back_inserter(*this));
-			} else {
-				const auto size{std::distance(first, last)};
-				rep = size;
-				rep.set_size(size);
-				std::copy_n(first, size, data());
-			}
+		template<typename InputIterator, std::enable_if_t<std::is_same_v<std::input_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>, int> = 0> //TODO: [C++20] replace with concepts/requires-clause
+		string(InputIterator first, InputIterator last) { std::copy(first, last, std::back_inserter(*this)); }
+		template<typename ForwardIterator, std::enable_if_t<std::is_base_of_v<std::forward_iterator_tag, typename std::iterator_traits<ForwardIterator>::iterator_category>, int> = 0> //TODO: [C++20] replace with concepts/requires-clause
+		string(ForwardIterator first, ForwardIterator last) {
+			const auto size{std::distance(first, last)};
+			storage = size;
+			storage.set_size(size);
+			std::copy_n(first, size, data());
 		}
 		explicit
 		string(std::string_view str) : string(str.begin(), str.end()) {}
 		string(size_type count, char ch) {
-			rep = count;
-			rep.set_size(count);
+			storage = count;
+			storage.set_size(count);
 			std::fill_n(data(), count, ch);
 		}
 		string(std::initializer_list<char> ilist) : string{ilist.begin(), ilist.end()} {}
@@ -333,46 +376,168 @@ namespace ptl {
 		auto back() const noexcept -> const_reference { return (*this)[size() - 1]; } //TODO: [C++??] precondition(!empty());
 		auto back()       noexcept ->       reference { return (*this)[size() - 1]; } //TODO: [C++??] precondition(!empty());
 
-		auto data() const noexcept -> const_pointer { return rep.data(); }
-		auto data()       noexcept ->       pointer { return rep.data(); }
+		auto data() const noexcept -> const_pointer { return storage.data(); }
+		auto data()       noexcept ->       pointer { return storage.data(); }
 		auto c_str() const noexcept -> const_pointer { return data(); }
 
 		[[nodiscard]]
 		auto empty() const noexcept -> bool { return size() == 0; }
-		auto size() const noexcept -> size_type { return rep.size(); }
+		auto size() const noexcept -> size_type { return storage.size(); }
 		static
 		auto max_size() noexcept-> size_type { return static_cast<size_type>(std::numeric_limits<difference_type>::max()) - 1; }
-		auto capacity() const noexcept -> size_type { return rep.capacity(); }
+		auto capacity() const noexcept -> size_type { return storage.capacity(); }
 
 		auto push_back(char ch) -> reference {
-			if(size() == capacity()) reserve(size() + size() / 2);
+			if(size() == capacity()) reserve(size() + 1);
 			resize(size() + 1, ch);
 			return back();
 		}
-		void pop_back() noexcept { rep.set_size(size() - 1); } //TODO: [C++??] precondition(!empty());
+		void pop_back() noexcept { storage.set_size(size() - 1); } //TODO: [C++??] precondition(!empty());
 
 		void reserve(size_type new_capacity) {
 			if(new_capacity <= capacity()) return;
 			if(new_capacity > max_size()) throw std::length_error{"ptl::string::reserve - exceeding max_size"};
-			rep_t tmp{new_capacity};
+			storage_t tmp{new_capacity};
 			tmp.set_size(size());
 			if(!empty()) std::copy_n(data(), size() + 1, tmp.data());
-			rep = std::move(tmp);
+			storage = std::move(tmp);
 		}
 
 		void resize(size_type count) { resize(count, 0); }
 		void resize(size_type count, char ch) {
 			const auto old{size()};
 			reserve(count);
-			rep.set_size(count);
+			storage.set_size(count);
 			if(old < size()) std::fill(data() + old, data() + size(), ch);
 		}
 
-		void shrink_to_fit() noexcept { rep.shrink_to_fit(); }
+		void shrink_to_fit() noexcept { storage.shrink_to_fit(); }
 
 		void clear() noexcept {
 			if(empty()) return;
-			rep.set_size(0);
+			storage.set_size(0);
+		}
+
+		template<typename InputIterator, std::enable_if_t<std::is_same_v<std::input_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>, int> = 0> //TODO: [C++20] replace with concepts/requires-clause
+		void append(InputIterator first, InputIterator last) {
+			const string tmp(first, last);
+			append_no_aliasing(tmp.size(), [&](auto offset) { std::copy_n(tmp.data(), tmp.size(), data() + offset); });
+		}
+		template<typename ForwardIterator, std::enable_if_t<std::is_base_of_v<std::forward_iterator_tag, typename std::iterator_traits<ForwardIterator>::iterator_category>, int> = 0> //TODO: [C++20] replace with concepts/requires-clause
+		void append(ForwardIterator first, ForwardIterator last) {
+			const auto distance{static_cast<std::size_t>(std::distance(first, last))};
+			if(distance + size() <= capacity()) { //no need for allocation nor double buffering
+				std::copy(first, last, data() + size());
+				storage.set_size(size() + distance);
+			} else { //do single allocation
+				storage_t tmp{size() + distance};
+				std::copy(first, last, tmp.data() + size());
+				std::move(data(), data() + size(), tmp.data());
+				tmp.set_size(size() + distance);
+				storage = std::move(tmp);
+			}
+		}
+		void append(std::string_view str) { append(str.begin(), str.end()); }
+		void append(std::initializer_list<char> ilist) { append_no_aliasing(ilist.size(), [&](auto offset) { std::copy(ilist.begin(), ilist.end(), data() + offset); }); }
+		void append(size_type count, char ch) { append_no_aliasing(count, [&](auto offset) { std::fill_n(data() + offset, count, ch); }); }
+
+		template<typename InputIterator, std::enable_if_t<std::is_same_v<std::input_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>, int> = 0> //TODO: [C++20] replace with concepts/requires-clause
+		void assign(InputIterator first, InputIterator last) { *this = string(first, last); }
+		template<typename ForwardIterator, std::enable_if_t<std::is_base_of_v<std::forward_iterator_tag, typename std::iterator_traits<ForwardIterator>::iterator_category>, int> = 0> //TODO: [C++20] replace with concepts/requires-clause
+		void assign(ForwardIterator first, ForwardIterator last) {
+			if(const auto distance{static_cast<std::size_t>(std::distance(first, last))}; distance + size() <= capacity()) { //no need for allocation nor double buffering
+				std::copy(first, last, data() + size());
+				std::rotate(data(), data() + size(), data() + size() + distance);
+				storage.set_size(distance);
+			} else {
+				*this = string(first, last); //TODO: this is probably sub-optimal as it falls back to InputIterator-logic
+			}
+		}
+		void assign(std::string_view str) { assign(str.begin(), str.end()); }
+		void assign(std::initializer_list<char> ilist) { assign_no_aliasing(ilist.size(), [&] { std::copy(ilist.begin(), ilist.end(), data()); }); }
+		void assign(size_type count, char ch) { assign_no_aliasing(count, [&] { std::fill_n(data(), count, ch); }); }
+
+		auto erase(const_iterator pos) noexcept -> iterator { return erase(pos, pos + 1); } //TODO: [C++??] precondition(pos != end());
+		auto erase(const_iterator first, const_iterator last) noexcept -> iterator { //TODO: [C++??] precondition(begin() <= first && first <= last && last <= end());
+			std::copy(const_cast<char *>(last.ptr), data() + size(), const_cast<char *>(first.ptr));
+			storage.set_size(size() - (last - first));
+			return first;
+		}
+
+		template<typename InputIterator, std::enable_if_t<std::is_same_v<std::input_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>, int> = 0> //TODO: [C++20] replace with concepts/requires-clause
+		auto insert(const_iterator pos, InputIterator first, InputIterator last) -> iterator { //TODO: [C++??] precondition(begin() <= pos && pos <= end());
+			const string tmp(first, last);
+			return insert_no_aliasing(pos, tmp.size(), [&, offset{pos.ptr - data()}] { std::copy_n(tmp.data(), tmp.size(), data() + offset); });
+		}
+		template<typename ForwardIterator, std::enable_if_t<std::is_base_of_v<std::forward_iterator_tag, typename std::iterator_traits<ForwardIterator>::iterator_category>, int> = 0> //TODO: [C++20] replace with concepts/requires-clause
+		auto insert(const_iterator pos, ForwardIterator first, ForwardIterator last) -> iterator { //TODO: [C++??] precondition(begin() <= pos && pos <= end());
+			const auto distance{static_cast<std::size_t>(std::distance(first, last))};
+			const auto offset{pos.ptr - data()};
+			if(distance + size() <= capacity()) { //no need for allocation nor double buffering
+				std::copy(first, last, data() + size());
+				std::rotate(const_cast<char *>(pos.ptr), data() + size(), data() + size() + distance);
+				storage.set_size(size() + distance);
+			} else { //do single allocation
+				storage_t tmp{size() + distance};
+				std::copy(first, last, tmp.data() + offset);
+				std::move(data(), data() + offset, tmp.data());
+				std::move(data() + offset, data() + size(), tmp.data() + offset + distance);
+				tmp.set_size(size() + distance);
+				storage = std::move(tmp);
+			}
+			return begin() + offset;
+		}
+		auto insert(const_iterator pos, std::string_view str) -> iterator { return insert(pos, str.begin(), str.end()); } //TODO: [C++??] precondition(begin() <= pos && pos <= end());
+		auto insert(const_iterator pos, std::initializer_list<char> ilist) -> iterator { return insert_no_aliasing(pos, ilist.size(), [&, offset{pos.ptr - data()}] { std::copy(ilist.begin(), ilist.end(), data() + offset); }); } //TODO: [C++??] precondition(begin() <= pos && pos <= end());
+		auto insert(const_iterator pos, char ch) -> iterator { return insert(pos, 1, ch); } //TODO: [C++??] precondition(begin() <= pos && pos <= end());
+		auto insert(const_iterator pos, size_type count, char ch) -> iterator { return insert_no_aliasing(pos, count, [&, offset{pos.ptr - data()}] { std::fill_n(data() + offset, count, ch); }); } //TODO: [C++??] precondition(begin() <= pos && pos <= end());
+
+		template<typename InputIterator, std::enable_if_t<std::is_same_v<std::input_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>, int> = 0> //TODO: [C++20] replace with concepts/requires-clause
+		auto replace(const_iterator first, const_iterator last, InputIterator first2, InputIterator last2) -> string & { //TODO: [C++??] precondition(begin() <= first && first <= last && last <= end());
+			const string tmp(first2, last2);
+			replace_no_aliasing(first, last, tmp.size(), [&](auto offset) { std::copy_n(tmp.data(), tmp.size(), data() + offset); });
+			return *this;
+		}
+		template<typename ForwardIterator, std::enable_if_t<std::is_base_of_v<std::forward_iterator_tag, typename std::iterator_traits<ForwardIterator>::iterator_category>, int> = 0> //TODO: [C++20] replace with concepts/requires-clause
+		auto replace(const_iterator first, const_iterator last, ForwardIterator first2, ForwardIterator last2) -> string & { //TODO: [C++??] precondition(begin() <= first && first <= last && last <= end());
+			const auto distance{static_cast<std::size_t>(std::distance(first2, last2))};
+			if(distance + size() <= capacity()) { //no need for allocation nor double buffering
+				std::copy(first2, last2, data() + size());
+				const auto offset_first{first.ptr - data()};
+				const auto offset_mid{size() - (last - first)};
+				storage.set_size(size() + distance);
+				erase(first, last);
+				std::rotate(data() + offset_first, data() + offset_mid, data() + size());
+			} else { //do single allocation
+				storage_t tmp{size() - (last - first) + distance};
+				std::copy(first2, last2, tmp.data() + (first.ptr - data()));
+				std::move(data(), const_cast<char *>(first.ptr), tmp.data());
+				std::move(const_cast<char *>(last.ptr), data() + size(), tmp.data() + (first.ptr - data()) + distance);
+				tmp.set_size(size() - (last - first) + distance);
+				storage = std::move(tmp);
+			}
+			return *this;
+		}
+		auto replace(const_iterator first, const_iterator last, std::string_view str) -> string & { return replace(first, last, str.begin(), str.end()); } //TODO: [C++??] precondition(begin() <= first && first <= last && last <= end());
+		auto replace(const_iterator first, const_iterator last, std::initializer_list<char> ilist) -> string & { //TODO: [C++??] precondition(begin() <= first && first <= last && last <= end());
+			replace_no_aliasing(first, last, ilist.size(), [&](auto offset) { std::copy(ilist.begin(), ilist.end(), data() + offset); });
+			return *this;
+		}
+		auto replace(const_iterator first, const_iterator last, size_type count, char ch) -> string & { //TODO: [C++??] precondition(begin() <= first && first <= last && last <= end());
+			replace_no_aliasing(first, last, count, [&](auto offset) { std::fill_n(data() + offset, count, ch); });
+			return *this;
+		}
+
+		auto substr(size_type offset) const & -> string { return {data() + offset, data() + size()}; } //TODO: [C++??] precondition(offset <= size());
+		auto substr(size_type offset) && noexcept -> string { //TODO: [C++??] precondition(offset <= size());
+			erase(data(), data() + offset);
+			return std::move(*this);
+		}
+		auto substr(size_type offset, size_type count) const & -> string { return {data() + offset, data() + offset + count}; } //TODO: [C++??] precondition(offset + count <= size());
+		auto substr(size_type offset, size_type count) && noexcept -> string { //TODO: [C++??] precondition(offset + count <= size());
+			erase(data() + offset + count, data() + size());
+			erase(data(), data() + offset);
+			return std::move(*this);
 		}
 
 		//TODO: [C++20] starts_with(string_view)
@@ -381,97 +546,6 @@ namespace ptl {
 		//TODO: [C++20] end_with(char)
 		//TODO: [C++23] contains(string_view)
 		//TODO: [C++23] contains(char)
-
-		template<typename InputIterator, typename = std::enable_if_t<std::is_base_of_v<std::input_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>>> //TODO: [C++20] replace with concepts/requires-clause
-		void append(InputIterator first, InputIterator last) { insert(end(), first, last); }
-		void append(std::string_view str) { append(str.begin(), str.end()); }
-		void append(std::initializer_list<char> ilist) { append(ilist.begin(), ilist.end()); }
-		void append(size_type count, char ch) { insert(end(), count, ch); }
-
-		template<typename InputIterator, typename = std::enable_if_t<std::is_base_of_v<std::input_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>>> //TODO: [C++20] replace with concepts/requires-clause
-		void assign(InputIterator first, InputIterator last) {
-			if constexpr(std::is_same_v<typename std::iterator_traits<InputIterator>::iterator_category, std::input_iterator_tag>) {
-				const string tmp(first, last);
-				assign(tmp.begin(), tmp.end());
-			} else {
-				const auto count{std::distance(first, last)};
-				resize(count);
-				std::copy(first, last, data());
-			}
-		}
-		void assign(std::string_view str) { assign(str.begin(), str.end()); }
-		void assign(std::initializer_list<char> ilist) { assign(ilist.begin(), ilist.end()); }
-		void assign(size_type count, char ch) {
-			resize(count);
-			std::fill_n(data(), count, ch);
-		}
-
-		auto erase(const_iterator pos) noexcept -> iterator { return erase(pos, pos + 1); } //TODO: [C++??] precondition(pos != end());
-		auto erase(const_iterator first, const_iterator last) noexcept -> iterator { //TODO: [C++??] precondition(begin() <= first && first <= last && last <= end());
-			std::copy(last, cend(), iterator{first});
-			rep.set_size(size() - std::distance(first, last));
-			return first;
-		}
-
-		template<typename InputIterator, typename = std::enable_if_t<std::is_base_of_v<std::input_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>>> //TODO: [C++20] replace with concepts/requires-clause
-		auto insert(const_iterator pos, InputIterator first, InputIterator last) -> iterator { //TODO: [C++??] precondition(begin() <= pos && pos <= end());
-			const auto index{pos - data()};
-			if constexpr(std::is_same_v<typename std::iterator_traits<InputIterator>::iterator_category, std::input_iterator_tag>) {
-				const string tmp(first, last);
-				insert(pos, tmp.begin(), tmp.end());
-			} else {
-				const auto old{size()};
-				const auto count{std::distance(first, last)};
-				resize(old + count);
-				std::copy_backward(data() + index, data() + old, data() + size());
-				std::copy(first, last, data() + index);
-			}
-			return begin() + index;
-		}
-		auto insert(const_iterator pos, std::string_view str) -> iterator { return insert(pos, str.begin(), str.end()); } //TODO: [C++??] precondition(begin() <= pos && pos <= end());
-		auto insert(const_iterator pos, char ch) -> iterator { return insert(pos, std::string_view{&ch, 1}); } //TODO: [C++??] precondition(begin() <= pos && pos <= end());
-		auto insert(const_iterator pos, std::initializer_list<char> ilist) -> iterator { return insert(pos, ilist.begin(), ilist.end()); } //TODO: [C++??] precondition(begin() <= pos && pos <= end());
-		auto insert(const_iterator pos, size_type count, char ch) -> iterator { //TODO: [C++??] precondition(begin() <= pos && pos <= end());
-			const auto index{pos - data()};
-			const auto old{size()};
-			resize(old + count);
-			std::copy_backward(data() + index, data() + old, data() + size());
-			std::fill_n(data() + index, count, ch);
-			return begin() + index;
-		}
-
-		template<typename InputIterator, typename = std::enable_if_t<std::is_base_of_v<std::input_iterator_tag, typename std::iterator_traits<InputIterator>::iterator_category>>> //TODO: [C++20] replace with concepts/requires-clause
-		auto replace(const_iterator first, const_iterator last, InputIterator first2, InputIterator last2) -> string & { //TODO: [C++??] precondition(begin() <= first && first <= last && last <= end());
-			if constexpr(std::is_same_v<typename std::iterator_traits<InputIterator>::iterator_category, std::input_iterator_tag>) {
-				const string tmp(first2, last2);
-				replace(first, last, tmp);
-			} else {
-				const auto dist{std::distance(first, last)};
-				const auto count{std::distance(first2, last2)};
-				if(dist == count) std::copy(first2, last2, iterator{first});
-				else if(count < dist) erase(std::copy(first2, last2, iterator{first}), iterator{last});
-				else {
-					const auto index{first - data()};
-					reserve(size() + (count - dist));
-					insert(std::copy_n(first2, dist, data() + index), first2 + dist, last2);
-				}
-			}
-			return *this;
-		}
-		auto replace(const_iterator first, const_iterator last, std::string_view str) -> string & { return replace(first, last, str.begin(), str.end()); } //TODO: [C++??] precondition(begin() <= first && first <= last && last <= end());
-		auto replace(const_iterator first, const_iterator last, std::initializer_list<char> ilist) -> string & { return replace(first, last, ilist.begin(), ilist.end()); } //TODO: [C++??] precondition(begin() <= first && first <= last && last <= end());
-		auto replace(const_iterator first, const_iterator last, size_type count, char ch) -> string & { //TODO: [C++??] precondition(begin() <= first && first <= last && last <= end());
-			const auto dist{static_cast<size_type>(std::distance(first, last))};
-			if(dist >= count) {
-				std::fill_n(iterator{first}, count, ch);
-				erase(first + count, last);
-			} else {
-				reserve(size() + (count - dist));
-				std::fill_n(iterator{first}, dist, ch);
-				insert(first + dist, count - dist, ch);
-			}
-			return *this;
-		}
 
 		operator std::string_view() const noexcept {
 			if(empty()) return {};
@@ -491,7 +565,7 @@ namespace ptl {
 		auto rend()          noexcept ->       reverse_iterator { return reverse_iterator{begin()}; }
 		auto crend()   const noexcept -> const_reverse_iterator { return const_reverse_iterator{cbegin()}; }
 
-		void swap(string & other) noexcept { rep.swap(other.rep); }
+		void swap(string & other) noexcept { storage.swap(other.storage); }
 		friend
 		void swap(string & lhs, string & rhs) noexcept { lhs.swap(rhs); }
 
@@ -540,6 +614,9 @@ namespace ptl {
 	};
 
 	static_assert(sizeof(string) == 4 * sizeof(void *));
+
+	//TODO: [C++20] erase
+	//TODO: [C++20] erase_if
 
 	namespace literals {
 		inline

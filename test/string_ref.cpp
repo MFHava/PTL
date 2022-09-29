@@ -40,19 +40,6 @@ TEST_CASE("string_ref size", "[string_ref]") {
 	REQUIRE(s1.size() == 4);
 }
 
-TEST_CASE("string_ref swapping", "[string_ref]") {
-	const std::string s0{"Hello"}, s1{"World"};
-	ptl::string_ref r0{s0}, r1{s1};
-	REQUIRE(ptl::string_ref{s0} == r0);
-	REQUIRE(ptl::string_ref{s1} == r1);
-	REQUIRE(r0 != r1);
-
-	swap(r0, r1);
-	REQUIRE(ptl::string_ref{s0} == r1);
-	REQUIRE(ptl::string_ref{s1} == r0);
-	REQUIRE(r0 != r1);
-}
-
 TEST_CASE("string_ref substr", "[string_ref]") {
 	const std::string_view str{"Hello World"};
 	const ptl::string_ref ref{str};

@@ -6,13 +6,14 @@
 
 #pragma once
 #include <limits>
+#include <stdexcept>
 #include <string_view>
 
 namespace ptl {
 	//! @brief a read-only, non-owning reference to a string
 	//! @attention the referenced string is not guaranteed to be null-terminated!
 	class string_ref final {
-		const char * ptrs[2]{nullptr, nullptr};
+		const char * first{nullptr}, * last{nullptr};
 	public:
 		using traits_type            = std::char_traits<char>;
 		using value_type             = char;
@@ -121,27 +122,31 @@ namespace ptl {
 		//! @brief construct from c-string
 		//! @param[in] str null-terminated string
 		constexpr
-		string_ref(const_pointer str) noexcept : ptrs{str, str + traits_type::length(str)} {} //TODO: [C++??] precondition(str);
+		string_ref(const_pointer str) noexcept : first{str}, last{str + traits_type::length(str)} {} //TODO: [C++??] precondition(str);
 
 		//! @brief construct from c-string + length
 		//! @param[in] str string to reference
 		//! @param[in] size size of string to reference
 		//! @attention [str, size) must be a valid range!
 		constexpr
-		string_ref(const_pointer str, size_type size) noexcept : ptrs{str, str + size} {} //TODO: [C++??] precondition(str || (!str && !size));
+		string_ref(const_pointer str, size_type size) noexcept : first{str}, last{str + size} {} //TODO: [C++??] precondition(str || (!str && !size));
 
 		//! @brief construct from std::string_view
 		//! @param[in] str string to reference
 		constexpr
 		string_ref(const std::string_view & str) noexcept : string_ref{str.data(), str.size()} {}
 
+		//TODO: [C++20] constexpr basic_string_view( It first, End last );
+		//TODO: [C++23] explicit constexpr basic_string_view( R&& r );
+		//TODO: [C++23] constexpr basic_string_view( std::nullptr_t ) = delete;
+
 		constexpr
-		auto data() const noexcept -> const_pointer { return ptrs[0]; }
+		auto data() const noexcept -> const_pointer { return first; }
 		[[nodiscard]]
 		constexpr
 		auto empty() const noexcept -> bool { return size() == 0; }
 		constexpr
-		auto size() const noexcept -> size_type { return ptrs[1] - ptrs[0]; }
+		auto size() const noexcept -> size_type { return last - first; }
 		static
 		constexpr
 		auto max_size() noexcept-> size_type { return static_cast<size_type>(std::numeric_limits<difference_type>::max()); }
@@ -152,18 +157,16 @@ namespace ptl {
 		auto back() const noexcept -> const_reference { return (*this)[size() - 1]; } //TODO: [C++??] precondition(!empty());
 		constexpr
 		auto operator[](size_type index) const noexcept -> const_reference { return *(data() + index); } //TODO: [C++??] precondition(index < size());
+		constexpr
+		auto at(size_type index) const -> const_reference {
+			if(index >= size()) throw std::out_of_range{"ptl::string_ref::at - index out of range"};
+			return (*this)[index];
+		}
 
 		constexpr
-		void remove_prefix(size_type count) noexcept { ptrs[0] += count; } //TODO: [C++??] precondition(count <= size());
+		void remove_prefix(size_type count) noexcept { first += count; } //TODO: [C++??] precondition(count <= size());
 		constexpr
-		void remove_suffix(size_type count) noexcept { ptrs[1] -= count; } //TODO: [C++??] precondition(count <= size());
-
-		//TODO: [C++20] starts_with(string_view)
-		//TODO: [C++20] starts_with(char)
-		//TODO: [C++20] end_with(string_view)
-		//TODO: [C++20] end_with(char)
-		//TODO: [C++23] contains(string_view)
-		//TODO: [C++23] contains(char)
+		void remove_suffix(size_type count) noexcept { last -= count; } //TODO: [C++??] precondition(count <= size());
 
 		constexpr
 		auto substr(size_type offset) const noexcept -> string_ref { return {data() + offset, size() - offset}; } //TODO: [C++??] precondition(offset <= size());
@@ -186,12 +189,6 @@ namespace ptl {
 		auto rend() const noexcept -> reverse_iterator { return reverse_iterator{begin()}; }
 		constexpr
 		auto crend() const noexcept -> const_reverse_iterator { return rend(); }
-
-		constexpr
-		void swap(string_ref & other) noexcept { for(auto i{0}; i < 2; ++i) std::swap(ptrs[i], other.ptrs[i]); }
-		friend
-		constexpr
-		void swap(string_ref & lhs, string_ref & rhs) noexcept { lhs.swap(rhs); }
 
 		friend
 		constexpr
@@ -221,6 +218,9 @@ namespace ptl {
 		operator std::string_view() const noexcept { return {data(), size()}; }
 	};
 	static_assert(sizeof(string_ref) == 2 * sizeof(const char *));
+
+	//TODO: [C++20] basic_string_view(It, End) -> basic_string_view<std::iter_value_t<It>>;
+	//TODO: [C++23] basic_string_view(R&&) -> basic_string_view<ranges::range_value_t<R>>;
 
 	namespace literals {
 		inline

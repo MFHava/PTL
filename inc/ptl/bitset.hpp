@@ -14,8 +14,32 @@
 #include <type_traits>
 
 namespace ptl {
-	static_assert(CHAR_BIT == 8);
-	//TODO: endianess?
+	namespace internal_bitset {
+		static_assert(CHAR_BIT == 8);
+		//TODO: endianess?
+
+		template<std::size_t Size>
+		constexpr //TODO: [C++20] replace with consteval
+		auto determine_trailing_mask() noexcept -> unsigned char {
+			const unsigned char masks[]{255, 1, 3, 7, 15, 31, 63, 127};
+			return masks[Size % 8];
+		}
+
+		template<std::size_t Size>
+		inline
+		constexpr
+		unsigned char trailing_bits{determine_trailing_mask<Size>()};
+
+		template<std::size_t Size>
+		struct storage final { using type = unsigned char[(Size / 8) + (Size % 8 ? 1 : 0)]; };
+
+		template<>
+		struct storage<0> final { using type = unsigned char; };
+
+		template<std::size_t Size>
+		using storage_t = typename storage<Size>::type;
+	}
+
 
 	//! @brief by default bitset does not provide operator bool() and operator!()
 	//! @brief these operators can be enabled for selected tags by specializing this global variable
@@ -32,37 +56,10 @@ namespace ptl {
 	class bitset final { //TODO: static_assert(sizeof(bitset<Size>) == Size / 8 + (Size % 8 ? 1 : 0));
 		//TODO: [C++20] use functions from <bit>
 
-		static
-		constexpr //TODO: [C++20] replace with consteval
-		auto determine_trailing_mask() noexcept -> unsigned char {
-			const unsigned char masks[]{255, 1, 3, 7, 15, 31, 63, 127};
-			return masks[Size % 8];
-		}
-
-		static
 		constexpr
-		unsigned char trailing_bits{determine_trailing_mask()};
+		void clear_trailing_bits() noexcept { values[sizeof(values) - 1] &= internal_bitset::trailing_bits<Size>; }
 
-		constexpr
-		void clear_trailing_bits() noexcept { values[sizeof(values) - 1] &= trailing_bits; }
-
-		[[noreturn]]
-		static
-		constexpr
-		void throw_invalid_index() { throw std::out_of_range{"invalid index"}; }
-
-		template<typename T>
-		struct type_identity final { using type = T; }; //TODO: [C++20] replace with std::type_identity
-
-		static
-		constexpr //TODO: [C++20] replace with consteval
-		auto determine_storage() noexcept {
-			if constexpr(Size == 0) return type_identity<unsigned char>{};
-			else if constexpr(Size % 8 == 0) return type_identity<unsigned char[Size / 8]>{};
-			else return type_identity<unsigned char[(Size / 8) + 1]>{};
-		}
-
-		typename decltype(determine_storage())::type values{};
+		internal_bitset::storage_t<Size> values{};
 
 		friend
 		struct std::hash<bitset>;
@@ -145,12 +142,12 @@ namespace ptl {
 		auto operator[](size_type index)       noexcept ->       reference { return {*this, index}; } //TODO: [C++??] precondition(index < Size);
 		constexpr
 		auto at(size_type index) const -> const_reference {
-			if(index >= size()) throw_invalid_index();
+			if(index >= size()) throw std::out_of_range{"invalid index"};
 			return (*this)[index];
 		}
 		constexpr
 		auto at(size_type index)       ->       reference {
-			if(index >= size()) throw_invalid_index();
+			if(index >= size()) throw std::out_of_range{"invalid index"};
 			return (*this)[index];
 		}
 
@@ -162,7 +159,7 @@ namespace ptl {
 			if constexpr(Size == 0) return true;
 			else {
 				const auto it{values + sizeof(values) - 1};
-				return std::all_of(values, it, [](auto val) { return val == 255; }) && *it == trailing_bits;
+				return std::all_of(values, it, [](auto val) { return val == 255; }) && *it == internal_bitset::trailing_bits<Size>;
 			}
 		}
 		constexpr
@@ -287,9 +284,9 @@ namespace ptl {
 		}
 		constexpr
 		auto set(size_type index, bool value = true) -> bitset & {
-			if constexpr(Size == 0) throw_invalid_index();
+			if constexpr(Size == 0) throw std::out_of_range{"invalid index"};
 			else {
-				if(index >= Size) throw_invalid_index();
+				if(index >= Size) throw std::out_of_range{"invalid index"};
 				if(value) values[index / 8] = static_cast<unsigned char>(values[index / 8] | (1 << (index % 8)));
 				else reset(index);
 			}
@@ -303,9 +300,9 @@ namespace ptl {
 		}
 		constexpr
 		auto reset(size_type index) -> bitset & {
-			if constexpr(Size == 0) throw_invalid_index();
+			if constexpr(Size == 0) throw std::out_of_range{"invalid index"};
 			else {
-				if(index >= Size) throw_invalid_index();
+				if(index >= Size) throw std::out_of_range{"invalid index"};
 				values[index / 8] = static_cast<unsigned char>(values[index / 8] & (~(1 << (index % 8))));
 			}
 			return *this;
@@ -321,9 +318,9 @@ namespace ptl {
 		}
 		constexpr
 		auto flip(size_type index) -> bitset & {
-			if constexpr(Size == 0) throw_invalid_index();
+			if constexpr(Size == 0) throw std::out_of_range{"invalid index"};
 			else {
-				if(index >= Size) throw_invalid_index();
+				if(index >= Size) throw std::out_of_range{"invalid index"};
 				values[index / 8] = static_cast<unsigned char>(values[index / 8] ^ (1 << (index % 8)));
 			}
 			return *this;
@@ -418,5 +415,5 @@ namespace std {
 	struct tuple_size<ptl::bitset<Size, Tag>> : std::integral_constant<std::size_t, Size> {};
 
 	template<std::size_t Index, std::size_t Size, typename Tag>
-	struct tuple_element<Index, ptl::bitset<Size, Tag>> { using type = bool; };
+	struct tuple_element<Index, ptl::bitset<Size, Tag>> { using type = bool; }; //TODO: support for references in structured bindings?
 }

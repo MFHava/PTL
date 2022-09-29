@@ -8,28 +8,36 @@
 #include <iterator>
 #include <algorithm>
 #include <stdexcept>
-#include "internal/type_checks.hpp"
+#include <type_traits>
 
 namespace ptl {
+	namespace internal_array {
+		template<typename Type, std::size_t Size>
+		struct storage final { using type = Type[Size]; };
+
+		template<typename Type>
+		struct storage<Type, 0> { using type = Type *; };
+
+		template<typename Type, std::size_t Size>
+		using storage_t = typename storage<Type, Size>::type;
+	}
+
 	//! @brief a fixed-size array
 	//! @tparam Type type of the stored array
 	//! @tparam Size size of the stored array
 	template<typename Type, std::size_t Size>
 	class array final {
 		static_assert(!std::is_const_v<Type>);
-		static_assert(internal::is_abi_compatible_v<Type>);
+		static_assert(std::is_standard_layout_v<Type>); //TODO: this is probably too strict!
+		static_assert(std::is_default_constructible_v<Type>);
+		static_assert(std::is_copy_constructible_v<Type>);
+		static_assert(std::is_nothrow_move_constructible_v<Type>);
+		static_assert(std::is_copy_assignable_v<Type>);
+		static_assert(std::is_nothrow_move_assignable_v<Type>);
+		static_assert(std::is_nothrow_destructible_v<Type>);
+		static_assert(std::is_nothrow_swappable_v<Type>);
 
-		template<typename T>
-		struct type_identity final { using type = T; }; //TODO: [C++20] replace with std::type_identity
-
-		static
-		constexpr //TODO: [C++20] replace with consteval
-		auto determine_storage() noexcept {
-			if constexpr(Size == 0) return type_identity<Type *>{};
-			else                    return type_identity<Type[Size]>{};
-		}
-
-		typename decltype(determine_storage())::type values;
+		internal_array::storage_t<Type, Size> values;
 
 		template<std::size_t Index>
 		friend

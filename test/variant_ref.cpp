@@ -10,6 +10,7 @@
 TEST_CASE("variant_ref ctor", "[variant_ref]") {
 	const double val1{10.0};
 	ptl::variant_ref<int, const int, const double> var0{val1};
+
 	static_assert(sizeof(var0) == sizeof(void *) * 2);
 	REQUIRE(var0.holds<const double>());
 	REQUIRE(var0.get<const double>() == val1);
@@ -51,20 +52,4 @@ TEST_CASE("variant_ref visit", "[variant_ref]") {
 		[](int) { REQUIRE(true); },
 		[](double) { REQUIRE(false); }
 	);
-}
-
-TEST_CASE("variant_ref swapping", "[variant_ref]") {
-	ptl::variant_ref<const int, const double> var1{10}, var2{20.2};
-	static_assert(sizeof(var1) == sizeof(void *) * 2);
-	REQUIRE(var1.holds<const int>());
-	REQUIRE(var2.holds<const double>());
-
-	swap(var1, var2);
-	REQUIRE(var1.holds<const double>());
-	REQUIRE(var2.holds<const int>());
-
-	decltype(var1) var3{20};
-	swap(var2, var3);
-	REQUIRE(var2.holds<const int>());
-	REQUIRE(var3.holds<const int>());
 }

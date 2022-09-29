@@ -5,9 +5,9 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include <ostream>
+#include <utility>
 #include <optional>
-#include "internal/type_checks.hpp"
+#include <type_traits>
 
 namespace ptl {
 	#pragma pack(push, 1)
@@ -15,63 +15,82 @@ namespace ptl {
 	//! @tparam Type type of the potentially contained object
 	template<typename Type>
 	class optional final {
-		unsigned char data[sizeof(Type)], initialized{false};
+		static_assert(std::is_standard_layout_v<Type>); //TODO: this is probably too strict!
+		static_assert(std::is_copy_constructible_v<Type>);
+		static_assert(std::is_nothrow_move_constructible_v<Type>);
+		static_assert(std::is_copy_assignable_v<Type>);
+		static_assert(std::is_nothrow_move_assignable_v<Type>);
+		static_assert(std::is_nothrow_destructible_v<Type>);
+		static_assert(std::is_nothrow_swappable_v<Type>);
 
-		static_assert(internal::is_abi_compatible_v<Type>);
+		union {
+			Type val;
+		};
+		unsigned char initialized{false};
 	public:
 		constexpr
-		optional() noexcept =default;
+		optional() noexcept {}
 		constexpr
 		optional(std::nullopt_t) noexcept {}
 
 		constexpr
-		optional(const optional & other) : initialized{other.initialized} { if(other) new(data) Type{*other}; }
+		optional(const optional & other) : initialized{other.initialized} { if(other) new(std::addressof(val)) Type{other.val}; } //TODO: [C++20] use std::construct_at
 		constexpr
-		optional(optional && other) noexcept : initialized{other.initialized} { if(other) new(data) Type{std::move(*other)}; }
+		optional(optional && other) noexcept : initialized{other.initialized} { if(other) new(std::addressof(val)) Type{std::move(other.val)}; } //TODO: [C++20] use std::construct_at
 
 		constexpr
-		optional(const Type & value) : initialized{true} { new(data) Type{value}; }
+		optional(const Type & value) : initialized{true} { new(std::addressof(val)) Type{value}; } //TODO: [C++20] use std::construct_at
 		constexpr
-		optional(Type && value) noexcept : initialized{true} { new(data) Type{std::move(value)}; }
+		optional(Type && value) noexcept : initialized{true} { new(std::addressof(val)) Type{std::move(value)}; } //TODO: [C++20] use std::construct_at
 
 		template<typename... Args>
 		constexpr
 		explicit
-		optional(std::in_place_t, Args &&... args) : initialized{true} { new(data) Type{std::forward<Args>(args)...}; }
+		optional(std::in_place_t, Args &&... args) : initialized{true} { new(std::addressof(val)) Type{std::forward<Args>(args)...}; } //TODO: [C++20] use std::construct_at
 
+		constexpr
 		auto operator=(std::nullopt_t) noexcept -> optional & {
 			reset();
 			return *this;
 		}
 
+		constexpr
 		auto operator=(const optional & other) -> optional & {
-			if(other) *this = *other;
-			else reset();
+			if(this != &other) { //TODO: [C++20] use [[unlikely]]
+				if(other) *this = *other;
+				else reset();
+			}
 			return *this;
 		}
+		constexpr
 		auto operator=(optional && other) noexcept -> optional & {
-			if(other) *this = std::move(*other);
-			else reset();
+			if(this != &other) { //TODO: [C++20] use [[unlikely]]
+				if(other) *this = std::move(*other);
+				else reset();
+			}
 			return *this;
 		}
 
+		constexpr
 		auto operator=(const Type & value) -> optional & {
 			if(initialized) **this = value;
 			else {
-				new(data) Type{value};
+				new(std::addressof(val)) Type{value}; //TODO: [C++20] use std::construct_at
 				initialized = true;
 			}
 			return *this;
 		}
+		constexpr
 		auto operator=(Type && value) noexcept -> optional & {
 			if(initialized) **this = std::move(value);
 			else {
-				new(data) Type{std::move(value)};
+				new(std::addressof(val)) Type{std::move(value)}; //TODO: [C++20] use std::construct_at
 				initialized = true;
 			}
 			return *this;
 		}
 
+		//TODO: [C++20] constexpr
 		~optional() noexcept { reset(); }
 
 		constexpr
@@ -80,9 +99,9 @@ namespace ptl {
 		auto operator->()       noexcept ->       Type * { return std::addressof(**this); } //TODO: [C++??] precondition(*this);
 
 		constexpr
-		auto operator*() const & noexcept -> const Type & { return reinterpret_cast<const Type &>(data); } //TODO: [C++??] precondition(*this);
+		auto operator*() const & noexcept -> const Type & { return val; } //TODO: [C++??] precondition(*this);
 		constexpr
-		auto operator*()       & noexcept ->       Type & { return reinterpret_cast<      Type &>(data); } //TODO: [C++??] precondition(*this);
+		auto operator*()       & noexcept ->       Type & { return val; } //TODO: [C++??] precondition(*this);
 		constexpr
 		auto operator*() const && noexcept -> const Type && { return std::move(**this); } //TODO: [C++??] precondition(*this);
 		constexpr
@@ -123,35 +142,50 @@ namespace ptl {
 		constexpr
 		auto value_or(Default && default_value)       && -> Type { return *this ? std::move(**this) : static_cast<Type>(std::forward<Default>(default_value)); }
 
+		//TODO: [C++23] and_then
+		//TODO: [C++23] transform
+		//TODO: [C++23] or_else
+
+		constexpr
 		void reset() noexcept {
 			if(initialized) {
-				(**this).~Type();
+				std::destroy_at(std::addressof(val));
 				initialized = false;
 			}
 		}
 
 		template<typename... Args>
+		constexpr
 		auto emplace(Args &&... args) -> Type & {
-			reset();
-			new(data) Type{std::forward<Args>(args)...};
-			initialized = true;
+			if(initialized) val = Type{std::forward<Args>(args)...};
+			else {
+				new(std::addressof(val)) Type{std::forward<Args>(args)...}; //TODO: [C++20] use std::construct_at
+				initialized = true;
+			}
 			return **this;
 		}
 
-		void swap(optional & other) noexcept { //TODO: does this survive self-swap?!
+		constexpr
+		void swap(optional & other) noexcept {
+			if(this == &other) return; //TODO: [C++20] use [[unlikely]]
 			if(!*this && !other) return;
 			else if(*this && !other) {
-				other = std::move(**this);
-				reset();
+				new(std::addressof(other.val)) Type{std::move(val)}; //TODO: [C++20] use std::construct_at
+				other.initialized = true;
+				std::destroy_at(std::addressof(val));
+				initialized = false;
 			} else if(!*this && other) {
-				*this = std::move(*other);
-				other.reset();
+				new(std::addressof(val)) Type{std::move(other.val)}; //TODO: [C++20] use std::construct_at
+				initialized = true;
+				std::destroy_at(std::addressof(other.val));
+				other.initialized = false;
 			} else {
 				using std::swap;
-				swap(**this, *other);
+				swap(val, other.val);
 			}
 		}
 		friend
+		constexpr
 		void swap(optional & lhs, optional & rhs) noexcept { lhs.swap(rhs); }
 
 		friend
@@ -218,13 +252,13 @@ namespace ptl {
 		constexpr
 		auto operator>=(const optional & opt, std::nullopt_t) noexcept -> bool { return true; }
 
+		//TODO: [C++20] the following overloads are no longer needed as C++20 has symmetrical comparisons...
 		friend
 		constexpr
 		auto operator==(std::nullopt_t, const optional & opt) noexcept -> bool { return !opt; }
 		friend
 		constexpr
-		auto operator!=(std::nullopt_t, const optional & opt) noexcept -> bool { return static_cast<bool>(opt); } //TODO: [C++20] remove as implicitly generated
-		//TODO: [C++20] replace the ordering operators by <=>
+		auto operator!=(std::nullopt_t, const optional & opt) noexcept -> bool { return static_cast<bool>(opt); }
 		friend
 		constexpr
 		auto operator< (std::nullopt_t, const optional & opt) noexcept -> bool { return static_cast<bool>(opt); }
@@ -258,13 +292,13 @@ namespace ptl {
 		constexpr
 		auto operator>=(const optional & opt, const Type & value) noexcept -> bool { return opt ? *opt >= value : false; }
 
+		//TODO: [C++20] the following overloads are no longer needed as C++20 has symmetrical comparisons...
 		friend
 		constexpr
 		auto operator==(const Type & value, const optional & opt) noexcept -> bool { return opt ? value == *opt : false; }
 		friend
 		constexpr
-		auto operator!=(const Type & value, const optional & opt) noexcept -> bool { return opt ? value != *opt : true; } //TODO: [C++20] remove as implicitly generated
-		//TODO: [C++20] replace the ordering operators by <=>
+		auto operator!=(const Type & value, const optional & opt) noexcept -> bool { return opt ? value != *opt : true; }
 		friend
 		constexpr
 		auto operator< (const Type & value, const optional & opt) noexcept -> bool { return opt ? value <  *opt : false; }

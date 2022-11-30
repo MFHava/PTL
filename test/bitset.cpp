@@ -10,23 +10,14 @@
 #include <catch.hpp>
 #include <ptl/bitset.hpp>
 
-namespace {
+namespace ptl{
 	template<std::size_t Size, typename Tag>
-	auto operator==(const std::bitset<Size> & lhs, const ptl::bitset<Size, Tag> & rhs) noexcept -> bool {
+	auto operator==(const std::bitset<Size> & lhs, const bitset<Size, Tag> & rhs) noexcept -> bool {
 		for(std::size_t i{0}; i < Size; ++i)
 			if(lhs[i] != rhs[i])
 				return false;
 		return true;
 	}
-
-	struct tag;
-}
-
-namespace ptl {
-	template<>
-	inline
-	constexpr
-	bool enable_bitset_operator_bool<tag>{true};
 }
 
 TEST_CASE("bitset ctor", "[bitset]") {
@@ -218,6 +209,17 @@ TEST_CASE("bitset structured binding", "[bitset]") {
 	REQUIRE(!a);
 	REQUIRE( b);
 	REQUIRE(!c);
+}
+
+namespace {
+	struct tag;
+}
+
+namespace ptl {
+	template<>
+	inline
+	constexpr
+	bool enable_bitset_operator_bool<tag>{true};
 }
 
 TEST_CASE("bitset operator bool", "[bitset]") {

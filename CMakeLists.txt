@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 3.26)
 project(PTL)
 
 add_library(ptl INTERFACE)
-	target_compile_features(ptl INTERFACE cxx_std_17)
+	target_compile_features(ptl INTERFACE cxx_std_20)
 	target_include_directories(ptl INTERFACE "inc")
 	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 		target_compile_options(ptl INTERFACE -Wall -Wextra -Wpedantic -Wconversion)

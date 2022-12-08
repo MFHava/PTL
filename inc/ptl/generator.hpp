@@ -49,6 +49,15 @@ namespace ptl { //TODO: how to make all of this type-erased & ABI-stable for PTL
 				std::coroutine_handle<promise_type> bottom, parent; //"stack" navigation
 			} * nested{nullptr};
 
+			class deleter final {
+				void (*free)(void *);
+			public:
+				deleter() noexcept =default;
+				deleter(void(*fptr)(void *)) noexcept : free{fptr} {}
+				void operator()(void * ptr) noexcept { free(ptr); }
+			};
+			static_assert(std::is_trivially_copyable_v<deleter>);
+
 			std::add_pointer_t<yielded> ptr{nullptr};
 			std::coroutine_handle<promise_type> top{std::coroutine_handle<promise_type>::from_promise(*this)};
 		public:
@@ -90,9 +99,11 @@ namespace ptl { //TODO: how to make all of this type-erased & ABI-stable for PTL
 			template<typename R2, typename V2>
 			requires std::same_as<typename generator<R2, V2>::yielded, yielded>
 			auto yield_value(ranges::elements_of<generator<R2, V2> &&> g) noexcept {
-				struct awaitable final {
+				class awaitable final {
 					generator<R2, V2> g;
 					nested_info n;
+				public:
+					awaitable(generator<R2, V2> && g) noexcept : g{std::move(g)} {}
 
 					auto await_ready() const noexcept -> bool { return false; }
 					auto await_suspend(std::coroutine_handle<promise_type> handle) {
@@ -122,17 +133,18 @@ namespace ptl { //TODO: how to make all of this type-erased & ABI-stable for PTL
 				else throw;
 			}
 
-			//auto operator new(std::size_t size) -> void * {
-			//	auto ptr{std::malloc(size)};
-			//	if(!ptr) throw std::bad_alloc{};
-			//	//TODO: store information for type-erase inside allocated memory block
-			//	return ptr;
-			//}
-			//void operator delete(void * pointer, std::size_t size) noexcept {
-			//	(void)size;
-			//	std::free(pointer);
-			//	//TODO: extract type-erased deleter from memory block and used instead of direct call to std::free
-			//}
+			auto operator new(std::size_t size) -> void * {
+				deleter del{std::free};
+				auto ptr{std::malloc(size + sizeof(del))};
+				if(!ptr) throw std::bad_alloc{};
+				std::memcpy(static_cast<char *>(ptr) + size, &del, sizeof(del));
+				return ptr;
+			}
+			void operator delete(void * pointer, std::size_t size) noexcept {
+				deleter del;
+				std::memcpy(&del, static_cast<char *>(pointer) + size, sizeof(del));
+				del(pointer);
+			}
 		};
 	private:
 		struct iterator final {

@@ -49,14 +49,7 @@ namespace ptl { //TODO: how to make all of this type-erased & ABI-stable for PTL
 				std::coroutine_handle<promise_type> bottom, parent; //"stack" navigation
 			} * nested{nullptr};
 
-			class deleter final {
-				void (*free)(void *);
-			public:
-				deleter() noexcept =default;
-				deleter(void(*fptr)(void *)) noexcept : free{fptr} {}
-				void operator()(void * ptr) noexcept { free(ptr); }
-			};
-			static_assert(std::is_trivially_copyable_v<deleter>);
+			using deleter = void(*)(void *);
 
 			std::add_pointer_t<yielded> ptr{nullptr};
 			std::coroutine_handle<promise_type> top{std::coroutine_handle<promise_type>::from_promise(*this)};
@@ -134,16 +127,16 @@ namespace ptl { //TODO: how to make all of this type-erased & ABI-stable for PTL
 			}
 
 			auto operator new(std::size_t size) -> void * {
-				deleter del{std::free};
-				auto ptr{std::malloc(size + sizeof(del))};
+				deleter d{std::free};
+				auto ptr{std::malloc(size + sizeof(d))};
 				if(!ptr) throw std::bad_alloc{};
-				std::memcpy(static_cast<char *>(ptr) + size, &del, sizeof(del));
+				std::memcpy(static_cast<char *>(ptr) + size, &d, sizeof(d));
 				return ptr;
 			}
-			void operator delete(void * pointer, std::size_t size) noexcept {
-				deleter del;
-				std::memcpy(&del, static_cast<char *>(pointer) + size, sizeof(del));
-				del(pointer);
+			void operator delete(void * ptr, std::size_t size) noexcept {
+				deleter d;
+				std::memcpy(&d, static_cast<char *>(ptr) + size, sizeof(d));
+				d(ptr);
 			}
 		};
 	private:

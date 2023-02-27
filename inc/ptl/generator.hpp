@@ -5,7 +5,6 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include <cassert> //TODO: remove...
 #include <ranges>
 #include <concepts>
 #include <coroutine>
@@ -26,10 +25,10 @@ namespace ptl { //TODO: how to make all of this type-erased & ABI-stable for PTL
 	//! @tparam Value TODO
 	template<typename Reference, typename Value = void>
 	class generator final : public std::ranges::view_interface<generator<Reference, Value>> {
-		using value = std::conditional_t<std::is_void_v<Value>, std::remove_cvref_t<Reference>, Value>; //exposition only
+		using value = std::conditional_t<std::is_void_v<Value>, std::remove_cvref_t<Reference>, Value>;
 		static_assert(std::is_object_v<value> && std::is_same_v<std::remove_cvref_t<value>, value>);
 
-		using reference = std::conditional_t<std::is_void_v<Value>, Reference &&, Reference>; //exposition only
+		using reference = std::conditional_t<std::is_void_v<Value>, Reference &&, Reference>;
 		static_assert(std::is_reference_v<reference> || (std::is_object_v<reference> && std::is_same_v<std::remove_cv_t<reference>, reference> && std::copy_constructible<reference>));
 
 		using rref = std::conditional_t<std::is_reference_v<reference>, std::remove_reference_t<reference> &&, reference>;
@@ -103,7 +102,7 @@ namespace ptl { //TODO: how to make all of this type-erased & ABI-stable for PTL
 						g.handle.promise().nested = &n;
 						n.parent = handle;
 						auto & parent_promise{handle.promise()};
-						(n.bottom = parent_promise.nested ? parent_promise.nested->bottom : (assert(parent_promise.top == handle), parent_promise.top)).promise().top = g.handle; //TODO: remove assert...
+						(n.bottom = parent_promise.nested ? parent_promise.nested->bottom : parent_promise.top).promise().top = g.handle;
 						return g.handle;
 					}
 					void await_resume() const { if(n.eptr) std::rethrow_exception(n.eptr); }
@@ -193,6 +192,6 @@ namespace ptl { //TODO: how to make all of this type-erased & ABI-stable for PTL
 		friend promise_type;
 		generator(std::coroutine_handle<promise_type> handle) : handle{std::move(handle)} {}
 
-		std::coroutine_handle<promise_type> handle{nullptr}; //exposition only
+		std::coroutine_handle<promise_type> handle{nullptr};
 	};
 }

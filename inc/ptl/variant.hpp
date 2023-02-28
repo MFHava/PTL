@@ -196,14 +196,14 @@ namespace ptl {
 		template<typename T, typename = std::enable_if_t<can_store<T>>> //TODO: [C++20] replace with concepts/requires-clause
 		constexpr
 		auto get() const &  -> const T & {
-			const auto ptr{get_if<T>()};
-			return ptr ? *ptr : throw std::bad_variant_access{};
+			if(const auto ptr{get_if<T>()}) return *ptr;
+			throw std::bad_variant_access{};
 		}
 		template<typename T, typename = std::enable_if_t<can_store<T>>> //TODO: [C++20] replace with concepts/requires-clause
 		constexpr
 		auto get()      &  ->       T & {
-			const auto ptr{get_if<T>()};
-			return ptr ? *ptr : throw std::bad_variant_access{};
+			if(const auto ptr{get_if<T>()}) return *ptr;
+			throw std::bad_variant_access{};
 		}
 		template<typename T, typename = std::enable_if_t<can_store<T>>> //TODO: [C++20] replace with concepts/requires-clause
 		constexpr

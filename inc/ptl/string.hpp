@@ -319,8 +319,14 @@ namespace ptl {
  
 		auto operator[](size_type index) const noexcept -> const_reference { return data()[index]; } //TODO: [C++??] precondition(index < size());
 		auto operator[](size_type index)       noexcept ->       reference { return data()[index]; } //TODO: [C++??] precondition(index < size());
-		auto at(size_type index) const -> const_reference { return index < size() ? (*this)[index] : throw std::out_of_range{"ptl::string::at - index out of range"}; }
-		auto at(size_type index)       ->       reference { return index < size() ? (*this)[index] : throw std::out_of_range{"ptl::string::at - index out of range"}; }
+		auto at(size_type index) const -> const_reference {
+			if(index >= size()) throw std::out_of_range{"ptl::string::at - index out of range"};
+			return (*this)[index];
+		}
+		auto at(size_type index)       ->       reference {
+			if(index >= size()) throw std::out_of_range{"ptl::string::at - index out of range"};
+			return (*this)[index];
+		}
 
 		auto front() const noexcept -> const_reference { return (*this)[0]; } //TODO: [C++??] precondition(!empty());
 		auto front()       noexcept ->       reference { return (*this)[0]; } //TODO: [C++??] precondition(!empty());

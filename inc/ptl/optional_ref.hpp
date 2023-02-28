@@ -95,7 +95,10 @@ namespace ptl {
 		auto has_value() const noexcept -> bool { return ptr; }
 
 		constexpr
-		auto value() const -> Type & { return *this ? **this : throw std::bad_optional_access{}; }
+		auto value() const -> Type & {
+			if(*this) return **this;
+			throw std::bad_optional_access{};
+		}
 
 		template<typename Default, typename = std::enable_if_t<std::is_convertible_v<Default &&, Type>>>
 		constexpr

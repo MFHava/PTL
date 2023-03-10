@@ -104,15 +104,13 @@ namespace ptl {
 		constexpr
 		auto value_or(Default && default_value) const -> Type { return *this ? **this : static_cast<Type>(std::forward<Default>(default_value)); }
 
-		constexpr
-		void swap(optional_ref & other) noexcept { std::swap(ptr, other.ptr); }
-		friend
-		constexpr
-		void swap(optional_ref & lhs, optional_ref & rhs) noexcept { lhs.swap(rhs); }
+		//TODO: [C++23] and_then
+		//TODO: [C++23] transform
+		//TODO: [C++23] or_else
 	};
 
 	template<typename Optional>
-	optional_ref(const Optional &) -> optional_ref<const std::remove_reference_t<decltype(*std::declval<Optional>())>>;
+	optional_ref(const Optional &) -> optional_ref<const std::remove_reference_t<decltype(*std::declval<Optional>())>>; //TODO: [C++20] this deduction guide should be mergeable with the next one...
 
 	template<typename Optional>
 	optional_ref(      Optional &) -> optional_ref<      std::remove_reference_t<decltype(*std::declval<Optional>())>>;

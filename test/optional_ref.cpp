@@ -59,20 +59,6 @@ TEST_CASE("optional_ref value", "[optional_ref]") {
 	REQUIRE_THROWS(ref.value());
 }
 
-TEST_CASE("optional_ref swapping", "[optional_ref]") {
-	int v1{5}, v2{10};
-	ptl::optional_ref<int> op1{v1}, op2{v2};
-	swap(op1, op2);
-	REQUIRE(*op1 == 10);
-	REQUIRE(*op2 ==  5);
-
-	ptl::optional_ref<int> op3;
-	swap(op1, op3);
-	REQUIRE(!op1);
-	REQUIRE(static_cast<bool>(op3));
-	REQUIRE(*op3 == 10);
-}
-
 TEST_CASE("optional_ref ctad", "[optional_ref]") {
 	int v1{0};
 	ptl::optional_ref op1{v1};

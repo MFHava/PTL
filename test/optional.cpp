@@ -117,3 +117,35 @@ TEST_CASE("optional ctad", "[optional]") {
 	ptl::optional op{0};
 	static_assert(std::is_same_v<decltype(op), ptl::optional<int>>);
 }
+
+TEST_CASE("optional ref ctor", "[optional] [ref]") {
+	ptl::optional<int &> op;
+	REQUIRE(!op);
+	REQUIRE(!static_cast<bool>(op));
+
+	int val1{0};
+	ptl::optional<int &> ref1{val1};
+	REQUIRE(static_cast<bool>(ref1));
+	REQUIRE(*ref1 == val1);
+
+	ptl::optional<const int &> ref2{val1};
+	REQUIRE(static_cast<bool>(ref2));
+	REQUIRE(*ref2 == val1);
+
+	const int val2{10};
+	ptl::optional<const int &> ref3{val2};
+	REQUIRE(static_cast<bool>(ref3));
+	REQUIRE(*ref3 == val2);
+}
+
+TEST_CASE("optional ref value", "[optional] [ref]") {
+	ptl::optional<int &> ref;
+	REQUIRE(!ref.has_value());
+	REQUIRE(ref.value_or(10) == 10);
+	REQUIRE_THROWS(ref.value());
+
+	ref = std::nullopt;
+	REQUIRE(!ref.has_value());
+	REQUIRE(ref.value_or(10) == 10);
+	REQUIRE_THROWS(ref.value());
+}

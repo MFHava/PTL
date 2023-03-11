@@ -313,4 +313,54 @@ namespace ptl {
 		auto operator>=(const Type & value, const optional & opt) noexcept -> bool { return opt ? value >= *opt : true; }
 	};
 	#pragma pack(pop)
+
+	template<typename Type>
+	class optional<Type &> final {
+		Type * ptr{nullptr};
+	public:
+		constexpr
+		optional() noexcept =default;
+		constexpr
+		optional(std::nullopt_t) noexcept {}
+
+		constexpr
+		optional(Type & value) noexcept : ptr{std::addressof(value)} {}
+
+		constexpr
+		auto operator=(std::nullopt_t) noexcept -> optional & {
+			ptr = nullptr;
+			return *this;
+		}
+		constexpr
+		auto operator=(optional) noexcept -> optional & =delete; //disable assignment as this leads to discussions about rebinding vs assign through
+
+		constexpr
+		auto operator->() const noexcept -> Type * { return ptr; } //TODO: [C++??] precondition(*this);
+		constexpr
+		auto operator*() const noexcept -> Type & { return *ptr; } //TODO: [C++??] precondition(*this);
+
+		constexpr
+		explicit
+		operator bool() const noexcept { return ptr; }
+
+		constexpr
+		auto has_value() const noexcept -> bool { return ptr; }
+
+		constexpr
+		auto value() const -> Type & {
+			if(*this) return **this;
+			throw std::bad_optional_access{};
+		}
+
+		template<typename Default, typename = std::enable_if_t<std::is_convertible_v<Default &&, Type>>>
+		constexpr
+		auto value_or(Default && default_value) const -> Type { return *this ? **this : static_cast<Type>(std::forward<Default>(default_value)); }
+
+		//TODO: [C++23] and_then
+		//TODO: [C++23] transform
+		//TODO: [C++23] or_else
+	};
+
+	template<typename Type>
+	using optional_ref [[deprecated("optional_ref<T> has been transformed into optional<T&>")]] = optional<Type &>;
 }

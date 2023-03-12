@@ -89,7 +89,7 @@ namespace ptl {
 	//! @tparam Types all types that may be referenced by the variant_ref
 	//! @attention Types must be non-empty and unique!
 	template<typename... Types>
-	class variant_ref;
+	class variant_ref; //TODO: fold into variant like optional_ref became specialization of optional
 	
 	template<typename Head, typename... Tail>
 	class variant_ref<Head, Tail...> final {

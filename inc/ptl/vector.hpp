@@ -31,6 +31,7 @@ namespace ptl {
 				if(capacity == 0) return;
 				dealloc = +[](Type * ptr) noexcept { std::free(ptr); };
 				ptr = static_cast<Type *>(std::calloc(capacity, sizeof(Type)));
+				if(!ptr) throw std::bad_alloc{};
 				cap = capacity;
 				siz = 0;
 			}

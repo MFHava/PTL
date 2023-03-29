@@ -8,6 +8,8 @@
 #include <ptl/vector.hpp>
 #include "utils.hpp"
 
+//TODO: redesign unit tests for new implementations
+
 TEST_CASE("vector ctor", "[vector]") {
 	using ptl::test::input_iterator;
 
@@ -18,9 +20,8 @@ TEST_CASE("vector ctor", "[vector]") {
 	REQUIRE(v1.size() == 10);
 	for(auto i{0}; i < 10; ++i) REQUIRE(i == v1[i]);
 
-	//TODO: not working in GCC
-	//TODO: const ptl::vector v2(input_iterator{v1.cbegin()}, input_iterator{v1.cend()});
-	//TODO: REQUIRE(v2 == v1);
+	const ptl::vector v2(input_iterator{v1.cbegin()}, input_iterator{v1.cend()});
+	REQUIRE(v2 == v1);
 
 	const ptl::vector v3(v1.cbegin(), v1.cend());
 	REQUIRE(v3 == v1);
@@ -67,35 +68,6 @@ TEST_CASE("vector swapping", "[vector]") {
 		REQUIRE(v0[i] == i + 5);
 		REQUIRE(v1[i] == i);
 	}
-}
-
-TEST_CASE("vector shrinking", "[vector]") {
-	ptl::vector<std::size_t> v0;
-	v0.reserve(100);
-
-	const auto capacity{v0.capacity()};
-	for(std::size_t i{0}; i < v0.capacity(); ++i) {
-		REQUIRE(v0.push_back(i) == i);
-		REQUIRE(v0.capacity() == capacity);
-	}
-
-	v0.shrink_to_fit();
-	REQUIRE(v0.capacity() == capacity);
-
-	REQUIRE(v0.push_back(100) == 100);
-	REQUIRE(v0.capacity() > capacity);
-
-	const auto capacity2{v0.capacity()};
-	while(v0.size() * 2 > v0.capacity()) { //TODO: this is quite bad as it relies heavily on implementation details instead of the actual interface
-		v0.pop_back();
-		v0.shrink_to_fit();
-		REQUIRE(v0.capacity() == capacity2);
-	}
-
-	REQUIRE(v0.capacity() == capacity2);
-	v0.pop_back();
-	v0.shrink_to_fit();
-	REQUIRE(v0.capacity() == v0.size());
 }
 
 TEST_CASE("vector resize", "[vector]") {

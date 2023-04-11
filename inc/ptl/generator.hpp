@@ -23,6 +23,7 @@ namespace ptl { //TODO: how to make all of this type-erased & ABI-stable for PTL
 	//! @brief lazy view of elements yielded by a coroutine
 	//! @tparam Reference TODO
 	//! @tparam Value TODO
+	//! @attention throwing an exception across ABI boundaries is undefined, so consider only using noexcept coroutines
 	template<typename Reference, typename Value = void>
 	class generator final : public std::ranges::view_interface<generator<Reference, Value>> {
 		using value = std::conditional_t<std::is_void_v<Value>, std::remove_cvref_t<Reference>, Value>;

@@ -11,41 +11,42 @@
 
 namespace ptl {
 	namespace internal_generator {
-		enum class mode { done, resume, destroy, promise };
+		enum class mode { promise, done, resume, destroy, };
 
 		template<typename Promise>
 		class coroutine_handle final {
-			bool(*func)(void *, Promise **, mode) /*noexcept*/;
+			void*(*func)(void *, mode) /*noexcept*/;
 			void * ptr{nullptr};
 		public:
 			coroutine_handle() noexcept =default;
 			coroutine_handle(std::coroutine_handle<Promise> handle) {
 				if(!handle) return;
 
-				func = +[](void * ptr, Promise ** arg, mode m) /*TODO: noexcept*/ -> bool {
+				func = +[](void * ptr, mode m) /*TODO: noexcept*/ -> void * {
 					const auto handle{std::coroutine_handle<Promise>::from_address(ptr)};
 					switch (m) {
-						case mode::done: return handle.done();
+						case mode::promise: return &handle.promise();
+						case mode::done: {
+							int dummy;
+							return handle.done() ? &dummy : nullptr;
+						}
 						case mode::resume: handle.resume(); break;
 						case mode::destroy: handle.destroy(); break;
-						case mode::promise: *arg = &handle.promise(); break;
 					}
-					return false;
+					return nullptr;
 				};
 				ptr = handle.address();
 			}
 
-			auto done() const noexcept -> bool { return func(ptr, nullptr, mode::done); }
-			void resume() const /*TODO: noexcept*/ {
-				func(ptr, nullptr, mode::resume);
+			auto done() const noexcept -> bool { return func(ptr, mode::done) != nullptr; }
+			void resume() const /*TODO: noexcept*/ { func(ptr, mode::resume); }
+			auto promise() const noexcept -> Promise & { return *static_cast<Promise *>(func(ptr, mode::promise)); }
+			void destroy() const noexcept { if(ptr) func(ptr, mode::destroy); }
+
+			void swap(coroutine_handle other) noexcept {
+				std::swap(func, other.func);
+				std::swap(ptr, other.ptr);
 			}
-			auto promise() const noexcept -> Promise & {
-				Promise * result;
-				func(ptr, &result, mode::promise);
-				//TODO: assert(result);
-				return *result;
-			}
-			void destroy() const noexcept { if(ptr) func(ptr, nullptr, mode::destroy); }
 		};
 	}
 
@@ -73,7 +74,7 @@ namespace ptl {
 		class promise_type final {
 			friend iterator;
 
-			using deleter = void(*)(void *);
+			using deleter = void(*)(void *); //TODO: is this even necessary?!
 
 			std::add_pointer_t<yielded> ptr{nullptr};
 		public:
@@ -102,19 +103,6 @@ namespace ptl {
 
 			void return_void() const noexcept {}
 			void unhandled_exception() { throw; }
-
-			auto operator new(std::size_t size) -> void * {
-				deleter d{std::free};
-				auto ptr{std::malloc(size + sizeof(d))};
-				if(!ptr) throw std::bad_alloc{};
-				std::memcpy(static_cast<char *>(ptr) + size, &d, sizeof(d));
-				return ptr;
-			}
-			void operator delete(void * ptr, std::size_t size) noexcept {
-				deleter d;
-				std::memcpy(&d, static_cast<char *>(ptr) + size, sizeof(d));
-				d(ptr);
-			}
 		};
 	private:
 		internal_generator::coroutine_handle<promise_type> handle;

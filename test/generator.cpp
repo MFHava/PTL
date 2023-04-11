@@ -20,7 +20,7 @@ auto flipflop() -> ptl::generator<int> {
 }
 
 auto iota() -> ptl::generator<int> {
-	co_yield ptl::ranges::elements_of(flipflop());
+	//co_yield ptl::ranges::elements_of(flipflop());
 
 	for(int i = 0; i < 10; ++i) {
 		co_yield i;
@@ -29,7 +29,7 @@ auto iota() -> ptl::generator<int> {
 }
 
 auto fibonacci() -> ptl::generator<int> {
-	co_yield ptl::ranges::elements_of{iota()};
+	//co_yield ptl::ranges::elements_of{iota()};
 
 	auto a = 0, b = 1;
 	for (;;) {

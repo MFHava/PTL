@@ -15,14 +15,14 @@ namespace ptl {
 
 		template<typename Promise>
 		class coroutine_handle final {
-			void*(*func)(void *, mode) /*noexcept*/;
+			void*(*func)(void *, mode) noexcept;
 			void * ptr{nullptr};
 		public:
 			coroutine_handle() noexcept =default;
 			coroutine_handle(std::coroutine_handle<Promise> handle) {
 				if(!handle) return;
 
-				func = +[](void * ptr, mode m) /*TODO: noexcept*/ -> void * {
+				func = +[](void * ptr, mode m) noexcept -> void * {
 					const auto handle{std::coroutine_handle<Promise>::from_address(ptr)};
 					switch (m) {
 						case mode::promise: return &handle.promise();
@@ -39,7 +39,7 @@ namespace ptl {
 			}
 
 			auto done() const noexcept -> bool { return func(ptr, mode::done) != nullptr; }
-			void resume() const /*TODO: noexcept*/ { func(ptr, mode::resume); }
+			void resume() const noexcept { func(ptr, mode::resume); }
 			auto promise() const noexcept -> Promise & { return *static_cast<Promise *>(func(ptr, mode::promise)); }
 			void destroy() const noexcept { if(ptr) func(ptr, mode::destroy); }
 
@@ -53,7 +53,7 @@ namespace ptl {
 	//! @brief lazy view of elements yielded by a coroutine
 	//! @tparam Reference TODO
 	//! @tparam Value TODO
-	//! @attention throwing an exception across ABI boundaries is undefined, so consider only using noexcept coroutines
+	//! @attention as throwing an exception across ABI boundaries is undefined, coroutines bodies are expected to be noexcept, otherwise @c std::terminate() will be called
 	template<typename Reference, typename Value = void>
 	class generator final : public std::ranges::view_interface<generator<Reference, Value>> {
 		using value = std::conditional_t<std::is_void_v<Value>, std::remove_cvref_t<Reference>, Value>;
@@ -73,8 +73,6 @@ namespace ptl {
 
 		class promise_type final {
 			friend iterator;
-
-			using deleter = void(*)(void *); //TODO: is this even necessary?!
 
 			std::add_pointer_t<yielded> ptr{nullptr};
 		public:
@@ -102,7 +100,8 @@ namespace ptl {
 			void await_transform() =delete;
 
 			void return_void() const noexcept {}
-			void unhandled_exception() { throw; }
+			[[noreturn]]
+			void unhandled_exception() noexcept { std::terminate(); }
 		};
 	private:
 		internal_generator::coroutine_handle<promise_type> handle;

@@ -438,7 +438,10 @@ namespace ptl {
 				return *this;
 			}
 			auto operator=(std::nullptr_t) noexcept -> function & {
-				if(*this) function{}.swap(*this);
+				if(*this) {
+					vptr->dtor(&storage);
+					vptr = vtable_t::init_empty();
+				}
 				return *this;
 			}
 

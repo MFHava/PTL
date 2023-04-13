@@ -11,15 +11,16 @@
 
 namespace ptl {
 	namespace internal_generator {
-		enum class mode { promise, done, resume, destroy, };
-
-		template<typename Promise>
 		class coroutine_handle final {
+			enum class mode { promise, done, resume, destroy, };
+
 			void*(*func)(void *, mode) noexcept;
 			void * ptr{nullptr};
 		public:
 			coroutine_handle() noexcept =default;
-			coroutine_handle(std::coroutine_handle<Promise> handle) {
+
+			template<typename Promise>
+			coroutine_handle(std::coroutine_handle<Promise> handle) noexcept {
 				if(!handle) return;
 
 				func = +[](void * ptr, mode m) noexcept -> void * {
@@ -40,7 +41,7 @@ namespace ptl {
 
 			auto done() const noexcept -> bool { return func(ptr, mode::done) != nullptr; }
 			void resume() const noexcept { func(ptr, mode::resume); }
-			auto promise() const noexcept -> Promise & { return *static_cast<Promise *>(func(ptr, mode::promise)); }
+			auto promise() const noexcept -> void * { return func(ptr, mode::promise); }
 			void destroy() const noexcept { if(ptr) func(ptr, mode::destroy); }
 
 			void swap(coroutine_handle other) noexcept {
@@ -104,7 +105,7 @@ namespace ptl {
 			void unhandled_exception() noexcept { std::terminate(); }
 		};
 	private:
-		internal_generator::coroutine_handle<promise_type> handle;
+		internal_generator::coroutine_handle handle;
 
 		struct iterator final {
 			using value_type = value;
@@ -118,7 +119,7 @@ namespace ptl {
 
 			auto operator*() const noexcept(std::is_nothrow_copy_constructible_v<reference>) -> reference {
 				//TODO: [C++??] precondition(!handle.done());
-				return static_cast<reference>(*handle.promise().ptr);
+				return static_cast<reference>(*static_cast<promise_type *>(handle.promise())->ptr);
 			}
 
 			auto operator++() -> iterator & {
@@ -134,9 +135,9 @@ namespace ptl {
 			}
 		private:
 			friend generator;
-			iterator(internal_generator::coroutine_handle<promise_type> handle) noexcept : handle{handle} {}
+			iterator(internal_generator::coroutine_handle handle) noexcept : handle{handle} {}
 
-			internal_generator::coroutine_handle<promise_type> handle;
+			internal_generator::coroutine_handle handle;
 		};
 	public:
 		generator(const generator &) =delete;

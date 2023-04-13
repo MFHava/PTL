@@ -14,7 +14,7 @@ namespace ptl {
 		class coroutine_handle final {
 			enum class mode { promise, done, resume, destroy, };
 
-			void*(*func)(void *, mode) noexcept;
+			void*(*func)(void *, mode) /*noexcept*/;
 			void * ptr{nullptr};
 		public:
 			coroutine_handle() noexcept =default;
@@ -23,7 +23,7 @@ namespace ptl {
 			coroutine_handle(std::coroutine_handle<Promise> handle) noexcept {
 				if(!handle) return;
 
-				func = +[](void * ptr, mode m) noexcept -> void * {
+				func = +[](void * ptr, mode m) /*noexcept*/ -> void * {
 					const auto handle{std::coroutine_handle<Promise>::from_address(ptr)};
 					switch (m) {
 						case mode::promise: return &handle.promise();
@@ -39,9 +39,10 @@ namespace ptl {
 				ptr = handle.address();
 			}
 
-			auto done() const noexcept -> bool { return func(ptr, mode::done) != nullptr; }
-			void resume() const noexcept { func(ptr, mode::resume); }
 			auto promise() const noexcept -> void * { return func(ptr, mode::promise); }
+
+			auto done() const noexcept -> bool { return func(ptr, mode::done) != nullptr; }
+			void resume() const /*noexcept*/ { func(ptr, mode::resume); }
 			void destroy() const noexcept { if(ptr) func(ptr, mode::destroy); }
 
 			void swap(coroutine_handle other) noexcept {
@@ -52,57 +53,57 @@ namespace ptl {
 	}
 
 	//! @brief lazy view of elements yielded by a coroutine
-	//! @tparam Reference TODO
-	//! @tparam Value TODO
-	//! @attention as throwing an exception across ABI boundaries is undefined, coroutines bodies are expected to be noexcept, otherwise @c std::terminate() will be called
-	template<typename Reference, typename Value = void>
-	class generator final : public std::ranges::view_interface<generator<Reference, Value>> {
-		using value = std::conditional_t<std::is_void_v<Value>, std::remove_cvref_t<Reference>, Value>;
-		static_assert(std::is_object_v<value> && std::is_same_v<std::remove_cvref_t<value>, value>);
+	//! @tparam Type element type yielded when iterating over the view
+	//! @attention throwing an exception across ABI boundaries is undefined
+	template<typename Type>
+	class generator final : public std::ranges::view_interface<generator<Type>> {
+		using reference = Type &&;
+		using value = std::remove_cvref_t<Type>;
+		static_assert(std::is_object_v<value>);
 
-		using reference = std::conditional_t<std::is_void_v<Value>, Reference &&, Reference>;
-		static_assert(std::is_reference_v<reference> || (std::is_object_v<reference> && std::is_same_v<std::remove_cv_t<reference>, reference> && std::copy_constructible<reference>));
-
-		using rref = std::conditional_t<std::is_reference_v<reference>, std::remove_reference_t<reference> &&, reference>;
+		using rref = std::remove_reference_t<reference> &&;
 		static_assert(std::common_reference_with<reference &&, value &>);
 		static_assert(std::common_reference_with<reference &&, rref &&>);
 		static_assert(std::common_reference_with<rref &&, const value &>);
 
 		struct iterator;
 	public:
-		using yielded = std::conditional_t<std::is_reference_v<reference>, reference, const reference &>;
-
 		class promise_type final {
 			friend iterator;
 
-			std::add_pointer_t<yielded> ptr{nullptr};
+			std::add_pointer_t<reference> ptr{nullptr};
 		public:
 			auto get_return_object() noexcept -> generator { return std::coroutine_handle<promise_type>::from_promise(*this); }
 
-			auto initial_suspend() const noexcept -> std::suspend_always { return {}; }
+			static
+			auto initial_suspend() noexcept -> std::suspend_always { return {}; }
+			static
 			auto final_suspend() noexcept -> std::suspend_always { return {}; }
 
-			auto yield_value(yielded val) noexcept -> std::suspend_always {
+			auto yield_value(reference val) noexcept -> std::suspend_always {
 				ptr = std::addressof(val);
 				return {};
 			}
 
-			auto yield_value(const std::remove_reference_t<yielded> & lval) requires std::is_rvalue_reference_v<yielded> && std::constructible_from<std::remove_cvref_t<yielded>, const std::remove_reference_t<yielded> &> {
+			auto yield_value(const std::remove_reference_t<reference> & lval) requires std::is_rvalue_reference_v<reference> && std::constructible_from<std::remove_cvref_t<reference>, const std::remove_reference_t<reference> &> {
 				struct awaitable final {
-					std::remove_cvref_t<yielded> val;
+					std::remove_cvref_t<reference> val;
 
-					auto await_ready() const noexcept -> bool { return false; }
+					static
+					auto await_ready() noexcept -> bool { return false; }
 					void await_suspend(std::coroutine_handle<promise_type> handle) noexcept { handle.promise().ptr = std::addressof(val); }
-					void await_resume() const noexcept {}
+					static
+					void await_resume() noexcept {}
 				};
 				return awaitable{lval};
 			}
 
 			void await_transform() =delete;
 
-			void return_void() const noexcept {}
-			[[noreturn]]
-			void unhandled_exception() noexcept { std::terminate(); }
+			static
+			void return_void() noexcept {}
+			static
+			void unhandled_exception() { throw; }
 		};
 	private:
 		internal_generator::coroutine_handle handle;

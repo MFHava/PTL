@@ -37,17 +37,17 @@ namespace ptl {
 		bool sbo{sizeof(T) <= sizeof(storage_t::sbo) && std::is_nothrow_move_constructible_v<T>};
 
 
-		template<typename Traits>
+		template<typename Dispatch>
 		struct vtable final {
 			void (*manage)(storage_t *, storage_t *, mode);
-			typename Traits::dispatch_type dispatch;
+			Dispatch dispatch;
 			bool noexcept_copyable;
 
 			void dtor(storage_t * self) const noexcept { manage(self, nullptr, mode::dtor); }
 			void destructive_move(storage_t * from, storage_t * to) const noexcept { manage(from, to, mode::destructive_move); }
 			void copy(const storage_t * from, storage_t * to) const { manage(const_cast<storage_t *>(from), to, mode::copy); }
 
-			template<policy Policy, typename T, typename... A>
+			template<policy Policy, typename Traits, typename T, typename... A>
 			static
 			auto init_functor(storage_t & storage, A &&... args) -> const vtable * {
 				static_assert(Policy == policy::move_only || std::is_copy_constructible_v<T>);
@@ -118,7 +118,7 @@ namespace ptl {
 			static
 			auto get(const_<storage_t> * ctx) noexcept -> move_<const_<T>> { return move(*reinterpret_cast<const_<T> *>(SBO ? ctx->sbo : ctx->ptr)); }
 		public:
-			using dispatch_type = std::conditional_t<Noexcept, Result(*)(const_<storage_t> *, Args...) noexcept, Result(*)(const_<storage_t> *, Args...)>;
+			using dispatch_type = Result(*)(const_<storage_t> *, Args...); //no conditional noexcept-qualifier to support efficient rebinding of vtables from noexcept to throwing...
 
 			template<typename T, bool SBO>
 			static
@@ -354,12 +354,86 @@ namespace ptl {
 		bool is_in_place_type_t_specialization_v{is_in_place_type_t_specialization<T>::value};
 
 
+		template<typename Signature>
+		struct add_noexcept { using type = Signature; };
+
+		template<typename Result, typename... Args>
+		struct add_noexcept<Result(Args...)> { using type = Result(Args...) noexcept; };
+
+		template<typename Result, typename... Args>
+		struct add_noexcept<Result(Args...) const> { using type = Result(Args...) const noexcept; };
+
+		template<typename Result, typename... Args>
+		struct add_noexcept<Result(Args...) &> { using type = Result(Args...) & noexcept; };
+
+		template<typename Result, typename... Args>
+		struct add_noexcept<Result(Args...) const &> { using type = Result(Args...) const & noexcept; };
+
+		template<typename Result, typename... Args>
+		struct add_noexcept<Result(Args...) &&> { using type = Result(Args...) && noexcept; };
+
+		template<typename Result, typename... Args>
+		struct add_noexcept<Result(Args...) const &&> { using type = Result(Args...) const && noexcept; };
+
+
+		template<typename Signature>
+		using add_noexcept_t = typename add_noexcept<Signature>::type;
+
+
+		template<typename Signature>
+		struct remove_noexcept { using type = Signature; };
+
+		template<typename Result, typename... Args>
+		struct remove_noexcept<Result(Args...) noexcept> { using type = Result(Args...); };
+
+		template<typename Result, typename... Args>
+		struct remove_noexcept<Result(Args...) const noexcept> { using type = Result(Args...) const; };
+
+		template<typename Result, typename... Args>
+		struct remove_noexcept<Result(Args...) & noexcept> { using type = Result(Args...) &; };
+
+		template<typename Result, typename... Args>
+		struct remove_noexcept<Result(Args...) const & noexcept> { using type = Result(Args...) const &; };
+
+		template<typename Result, typename... Args>
+		struct remove_noexcept<Result(Args...) && noexcept> { using type = Result(Args...) &&; };
+
+		template<typename Result, typename... Args>
+		struct remove_noexcept<Result(Args...) const && noexcept> { using type = Result(Args...) const &&; };
+
+		template<typename Signature>
+		using remove_noexcept_t = typename remove_noexcept<Signature>::type;
+
+
+		template<typename Signature, typename F>
+		inline
+		constexpr
+		bool can_copy_unwrap_v{std::is_same_v<remove_cvref_t<F>, function<policy::copyable, Signature>> ||
+		                       std::is_same_v<remove_cvref_t<F>, function<policy::copyable, add_noexcept_t<Signature>>>};
+
+		template<policy Policy, typename Signature, typename F>
+		inline
+		constexpr
+		bool can_move_unwrap_v{
+			std::is_same_v<F, function<policy::copyable, Signature>> ||
+			std::is_same_v<F, function<policy::copyable, add_noexcept_t<Signature>>> || (
+				Policy == policy::move_only && (
+					std::is_same_v<F, function<policy::move_only, Signature>> ||
+					std::is_same_v<F, function<policy::move_only, add_noexcept_t<Signature>>>
+				)
+			)
+		};
+
+
 		template<policy Policy, typename Signature>
 		class function<Policy, Signature> final : function_call<function<Policy, Signature>, Signature> {
 			using traits_t = traits<Signature>;
-			using vtable_t = vtable<traits_t>;
+			using vtable_t = vtable<typename traits_t::dispatch_type>;
 			friend function_call<function, Signature>;
-			friend function<Policy == policy::copyable ? policy::move_only : policy::copyable, Signature>;
+
+			template<policy P, typename... S>
+			friend
+			class function;
 
 			const vtable_t * vptr;
 			storage_t storage;
@@ -371,30 +445,30 @@ namespace ptl {
 			function(F && func) {
 				using VT = std::decay_t<F>;
 				static_assert(std::is_constructible_v<VT, F>);
-				if constexpr(Policy == policy::move_only && std::is_same_v<F, function<policy::copyable, Signature>>) { //prevent double-wrapping (moving)
+				if constexpr(can_move_unwrap_v<Policy, Signature, F>) { //prevent double-wrapping (moving)
 					vptr = func.vptr;
 					func.vptr->destructive_move(&func.storage, &storage);
 					func.vptr = vtable_t::init_empty();
-				} else if constexpr(Policy == policy::move_only && std::is_same_v<remove_cvref_t<F>, function<policy::copyable, Signature>>) { //prevent double-wrapping (copying)
+				} else if constexpr(can_copy_unwrap_v<Signature, F>) { //prevent double-wrapping (copying)
 					vptr = func.vptr;
 					func.vptr->copy(&func.storage, &storage);
 				} else if constexpr(std::is_function_v<std::remove_pointer_t<F>> || std::is_member_pointer_v<F> || is_function_specialization_v<remove_cvref_t<F>>) {
-					vptr = func ? vtable_t::template init_functor<Policy, VT>(storage, std::forward<F>(func)) : vtable_t::init_empty();
-				} else vptr = vtable_t::template init_functor<Policy, VT>(storage, std::forward<F>(func));
+					vptr = func ? vtable_t::template init_functor<Policy, traits_t, VT>(storage, std::forward<F>(func)) : vtable_t::init_empty();
+				} else vptr = vtable_t::template init_functor<Policy, traits_t, VT>(storage, std::forward<F>(func));
 			}
 
 			template<typename T, typename... A, typename = std::enable_if_t<(std::is_constructible_v<std::decay_t<T>, A &&...> && traits_t::template is_callable_from<std::decay_t<T>>)>> //TODO: [C++20] replace with concepts/requires-clause
 			explicit
 			function(std::in_place_type_t<T>, A &&... args) {
 				static_assert(std::is_same_v<T, std::decay_t<T>>);
-				vptr = vtable_t::template init_functor<Policy, T>(storage, std::forward<A>(args)...);
+				vptr = vtable_t::template init_functor<Policy, traits_t, T>(storage, std::forward<A>(args)...);
 			}
 
 			template<typename T, typename U, typename... A, typename = std::enable_if_t<(std::is_constructible_v<std::decay_t<T>, std::initializer_list<U> &, A &&...> && traits_t::template is_callable_from<std::decay_t<T>>)>> //TODO: [C++20] replace with concepts/requires-clause
 			explicit
 			function(std::in_place_type_t<T>, std::initializer_list<U> ilist, A &&... args) {
 				static_assert(std::is_same_v<T, std::decay_t<T>>);
-				vptr = vtable_t::template init_functor<Policy, T>(storage, ilist, std::forward<A>(args)...);
+				vptr = vtable_t::template init_functor<Policy, traits_t, T>(storage, ilist, std::forward<A>(args)...);
 			}
 
 			function(const function & other) {

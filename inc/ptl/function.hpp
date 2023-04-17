@@ -102,12 +102,6 @@ namespace ptl {
 		template<bool Const, bool Noexcept, bool Move, typename Result, typename... Args>
 		class invoker {
 			template<typename T>
-			using const_ = std::conditional_t<Const, const T, T>;
-
-			template<typename T>
-			using move_ = std::conditional_t<Move, T &&, T &>;
-
-			template<typename T>
 			static
 			auto move(T && t) noexcept -> decltype(auto) {
 				if constexpr(Move) return std::move(t);
@@ -116,13 +110,20 @@ namespace ptl {
 
 			template<typename T, bool SBO>
 			static
-			auto get(const_<storage_t> * ctx) noexcept -> move_<const_<T>> { return move(*reinterpret_cast<const_<T> *>(SBO ? ctx->sbo : ctx->ptr)); }
-		public:
-			using dispatch_type = Result(*)(const_<storage_t> *, Args...); //no conditional noexcept-qualifier to support efficient rebinding of vtables from noexcept to throwing...
+			auto ref(const storage_t * ctx) noexcept -> decltype(auto) {
+				if constexpr(Const) return (*reinterpret_cast<const T *>(SBO ? ctx->sbo : ctx->ptr));
+				else return (*reinterpret_cast<T *>(const_cast<void *>(SBO ? ctx->sbo : ctx->ptr)));
+			}
 
 			template<typename T, bool SBO>
 			static
-			auto functor(const_<storage_t> * ctx, Args... args) noexcept(Noexcept) -> Result { return invoke_r<Result>(get<T, SBO>(ctx), std::forward<Args>(args)...); }
+			auto get(const storage_t * ctx) noexcept -> decltype(auto) { return move(ref<T, SBO>(ctx)); }
+		public:
+			using dispatch_type = Result(*)(const storage_t *, Args...); //no conditional const- or noexcept-qualifier to support rebinding of vtables between compatible functions
+
+			template<typename T, bool SBO>
+			static
+			auto functor(const storage_t * ctx, Args... args) noexcept(Noexcept) -> Result { return invoke_r<Result>(get<T, SBO>(ctx), std::forward<Args>(args)...); }
 		};
 
 
@@ -330,16 +331,21 @@ namespace ptl {
 		class function;
 
 
-		template<typename>
+		template<policy, typename>
 		struct is_function_specialization : std::false_type {};
 
 		template<policy Policy, typename... Ts>
-		struct is_function_specialization<function<Policy, Ts...>> : std::true_type {};
+		struct is_function_specialization<Policy, function<Policy, Ts...>> : std::true_type {};
+
+		template<policy Policy, typename T>
+		inline
+		constexpr
+		bool is_function_specialization_v{is_function_specialization<Policy, T>::value};
 
 		template<typename T>
 		inline
 		constexpr
-		bool is_function_specialization_v{is_function_specialization<T>::value};
+		bool is_a_function_specialization_v{is_function_specialization_v<policy::move_only, T> || is_function_specialization_v<policy::copyable, T>};
 
 
 		template<typename>
@@ -352,75 +358,6 @@ namespace ptl {
 		inline
 		constexpr
 		bool is_in_place_type_t_specialization_v{is_in_place_type_t_specialization<T>::value};
-
-
-		template<typename Signature>
-		struct add_noexcept { using type = Signature; };
-
-		template<typename Result, typename... Args>
-		struct add_noexcept<Result(Args...)> { using type = Result(Args...) noexcept; };
-
-		template<typename Result, typename... Args>
-		struct add_noexcept<Result(Args...) const> { using type = Result(Args...) const noexcept; };
-
-		template<typename Result, typename... Args>
-		struct add_noexcept<Result(Args...) &> { using type = Result(Args...) & noexcept; };
-
-		template<typename Result, typename... Args>
-		struct add_noexcept<Result(Args...) const &> { using type = Result(Args...) const & noexcept; };
-
-		template<typename Result, typename... Args>
-		struct add_noexcept<Result(Args...) &&> { using type = Result(Args...) && noexcept; };
-
-		template<typename Result, typename... Args>
-		struct add_noexcept<Result(Args...) const &&> { using type = Result(Args...) const && noexcept; };
-
-
-		template<typename Signature>
-		using add_noexcept_t = typename add_noexcept<Signature>::type;
-
-
-		template<typename Signature>
-		struct remove_noexcept { using type = Signature; };
-
-		template<typename Result, typename... Args>
-		struct remove_noexcept<Result(Args...) noexcept> { using type = Result(Args...); };
-
-		template<typename Result, typename... Args>
-		struct remove_noexcept<Result(Args...) const noexcept> { using type = Result(Args...) const; };
-
-		template<typename Result, typename... Args>
-		struct remove_noexcept<Result(Args...) & noexcept> { using type = Result(Args...) &; };
-
-		template<typename Result, typename... Args>
-		struct remove_noexcept<Result(Args...) const & noexcept> { using type = Result(Args...) const &; };
-
-		template<typename Result, typename... Args>
-		struct remove_noexcept<Result(Args...) && noexcept> { using type = Result(Args...) &&; };
-
-		template<typename Result, typename... Args>
-		struct remove_noexcept<Result(Args...) const && noexcept> { using type = Result(Args...) const &&; };
-
-		template<typename Signature>
-		using remove_noexcept_t = typename remove_noexcept<Signature>::type;
-
-
-		template<typename F, policy Policy, typename Signature>
-		inline
-		constexpr
-		bool is_compatible_function_v{std::is_same_v<F, function<policy::copyable, Signature>> || std::is_same_v<F, function<policy::copyable, add_noexcept_t<Signature>>>}; //TODO: further cases?!
-
-
-
-		template<typename Signature, typename F>
-		inline
-		constexpr
-		bool can_copy_unwrap_v{is_compatible_function_v<F, policy::copyable, Signature>};
-
-		template<policy Policy, typename Signature, typename F>
-		inline
-		constexpr
-		bool can_move_unwrap_v{is_compatible_function_v<F, policy::copyable, Signature> || (Policy == policy::move_only && is_compatible_function_v<F, policy::move_only, Signature>)};
 
 
 		template<policy Policy, typename Signature>
@@ -443,14 +380,15 @@ namespace ptl {
 			function(F && func) {
 				using VT = std::decay_t<F>;
 				static_assert(std::is_constructible_v<VT, F>);
-				if constexpr(can_move_unwrap_v<Policy, Signature, F>) { //prevent double-wrapping (moving)
+				if constexpr(is_a_function_specialization_v<F>) { //prevent double-wrapping (moving)
+					static_assert(Policy == policy::move_only || is_function_specialization_v<policy::copyable, F>); //cannot convert from move_only to copyable!
 					vptr = func.vptr;
 					func.vptr->destructive_move(&func.storage, &storage);
 					func.vptr = vtable_t::init_empty();
-				} else if constexpr(can_copy_unwrap_v<Signature, remove_cvref_t<F>>) { //prevent double-wrapping (copying)
+				} else if constexpr(is_function_specialization_v<policy::copyable, remove_cvref_t<F>>) { //prevent double-wrapping (copying)
 					vptr = func.vptr;
 					func.vptr->copy(&func.storage, &storage);
-				} else if constexpr(std::is_function_v<std::remove_pointer_t<F>> || std::is_member_pointer_v<F> || is_function_specialization_v<remove_cvref_t<F>>) {
+				} else if constexpr(std::is_function_v<std::remove_pointer_t<F>> || std::is_member_pointer_v<F> || is_a_function_specialization_v<remove_cvref_t<F>>) {
 					vptr = func ? vtable_t::template init_functor<Policy, traits_t, VT>(storage, std::forward<F>(func)) : vtable_t::init_empty();
 				} else vptr = vtable_t::template init_functor<Policy, traits_t, VT>(storage, std::forward<F>(func));
 			}

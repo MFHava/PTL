@@ -405,24 +405,22 @@ namespace ptl {
 		using remove_noexcept_t = typename remove_noexcept<Signature>::type;
 
 
+		template<typename F, policy Policy, typename Signature>
+		inline
+		constexpr
+		bool is_compatible_function_v{std::is_same_v<F, function<policy::copyable, Signature>> || std::is_same_v<F, function<policy::copyable, add_noexcept_t<Signature>>>}; //TODO: further cases?!
+
+
+
 		template<typename Signature, typename F>
 		inline
 		constexpr
-		bool can_copy_unwrap_v{std::is_same_v<remove_cvref_t<F>, function<policy::copyable, Signature>> ||
-		                       std::is_same_v<remove_cvref_t<F>, function<policy::copyable, add_noexcept_t<Signature>>>};
+		bool can_copy_unwrap_v{is_compatible_function_v<F, policy::copyable, Signature>};
 
 		template<policy Policy, typename Signature, typename F>
 		inline
 		constexpr
-		bool can_move_unwrap_v{
-			std::is_same_v<F, function<policy::copyable, Signature>> ||
-			std::is_same_v<F, function<policy::copyable, add_noexcept_t<Signature>>> || (
-				Policy == policy::move_only && (
-					std::is_same_v<F, function<policy::move_only, Signature>> ||
-					std::is_same_v<F, function<policy::move_only, add_noexcept_t<Signature>>>
-				)
-			)
-		};
+		bool can_move_unwrap_v{is_compatible_function_v<F, policy::copyable, Signature> || (Policy == policy::move_only && is_compatible_function_v<F, policy::move_only, Signature>)};
 
 
 		template<policy Policy, typename Signature>
@@ -449,7 +447,7 @@ namespace ptl {
 					vptr = func.vptr;
 					func.vptr->destructive_move(&func.storage, &storage);
 					func.vptr = vtable_t::init_empty();
-				} else if constexpr(can_copy_unwrap_v<Signature, F>) { //prevent double-wrapping (copying)
+				} else if constexpr(can_copy_unwrap_v<Signature, remove_cvref_t<F>>) { //prevent double-wrapping (copying)
 					vptr = func.vptr;
 					func.vptr->copy(&func.storage, &storage);
 				} else if constexpr(std::is_function_v<std::remove_pointer_t<F>> || std::is_member_pointer_v<F> || is_function_specialization_v<remove_cvref_t<F>>) {

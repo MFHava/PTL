@@ -56,7 +56,7 @@ TEST_CASE("optional move", "[optional]") {
 	REQUIRE( var2->moved);
 }
 
-TEST_CASE("optional value", "[optional") {
+TEST_CASE("optional value", "[optional]") {
 	ptl::optional<int> op1;
 	REQUIRE(!op1.has_value());
 	REQUIRE(op1.value_or(10) == 10);

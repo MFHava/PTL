@@ -10,7 +10,6 @@
 #include <ostream>
 #include <numeric>
 #include <algorithm>
-#include <functional>
 #include <type_traits>
 
 namespace ptl {
@@ -192,7 +191,7 @@ namespace ptl {
 
 		constexpr
 		auto operator&=(const bitset & other) noexcept -> bitset & {
-			if constexpr(Size != 0) std::transform(values, values + sizeof(values), other.values, values, std::bit_and{});
+			if constexpr(Size != 0) std::transform(values, values + sizeof(values), other.values, values, [](const auto & lhs, const auto & rhs) { return static_cast<unsigned char>(lhs & rhs); });
 			return *this;
 		}
 		friend
@@ -204,7 +203,7 @@ namespace ptl {
 
 		constexpr
 		auto operator|=(const bitset & other) noexcept -> bitset & {
-			if constexpr(Size != 0) std::transform(values, values + sizeof(values), other.values, values, std::bit_or{});
+			if constexpr(Size != 0) std::transform(values, values + sizeof(values), other.values, values, [](const auto & lhs, const auto & rhs) { return static_cast<unsigned char>(lhs | rhs); });
 			return *this;
 		}
 		friend
@@ -216,7 +215,7 @@ namespace ptl {
 
 		constexpr
 		auto operator^=(const bitset & other) noexcept -> bitset & {
-			if constexpr(Size != 0) std::transform(values, values + sizeof(values), other.values, values, std::bit_xor{});
+			if constexpr(Size != 0) std::transform(values, values + sizeof(values), other.values, values, [](const auto & lhs, const auto & rhs) { return static_cast<unsigned char>(lhs ^ rhs); });
 			return *this;
 		}
 		friend
@@ -277,7 +276,7 @@ namespace ptl {
 		constexpr
 		auto set() noexcept -> bitset & {
 			if constexpr(Size != 0) {
-				std::fill_n(values, sizeof(values), 255);
+				std::fill_n(values, sizeof(values), static_cast<unsigned char>(255));
 				clear_trailing_bits();
 			}
 			return *this;
@@ -295,7 +294,7 @@ namespace ptl {
 
 		constexpr
 		auto reset() noexcept -> bitset & {
-			if constexpr(Size != 0) std::fill_n(values, sizeof(values), 0);
+			if constexpr(Size != 0) std::fill_n(values, sizeof(values), static_cast<unsigned char>(0));
 			return *this;
 		}
 		constexpr
@@ -311,7 +310,7 @@ namespace ptl {
 		constexpr
 		auto flip() noexcept -> bitset & {
 			if constexpr(Size != 0) {
-				std::transform(values, values + sizeof(values), values, std::bit_not{});
+				std::transform(values, values + sizeof(values), values, [](const auto & val) { return static_cast<unsigned char>(~val); });
 				clear_trailing_bits();
 			}
 			return *this;

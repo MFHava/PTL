@@ -69,7 +69,7 @@ namespace ptl {
 			using Dispatch = Result*(*)(const Storage &) noexcept;
 			constexpr Dispatch dispatch[]{+[](const Storage & storage) noexcept -> Result * {
 				if constexpr(auto ptr{storage.template get<Indices>()}; std::is_same_v<Result *, decltype(ptr)>) return ptr;
-				else std::terminate(); //TODO: [C++23] use std::unreachable
+				else (void)ptr, std::terminate(); //TODO: [C++23] use std::unreachable
 			}...};
 			return dispatch[type](storage);
 		}

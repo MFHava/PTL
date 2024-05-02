@@ -40,8 +40,8 @@ namespace ptl {
 		template<typename Dispatch>
 		struct vtable final {
 			void (*manage)(storage_t *, storage_t *, mode);
-			Dispatch dispatch;
 			bool noexcept_copyable;
+			Dispatch dispatch;
 
 			void dtor(storage_t * self) const noexcept { manage(self, nullptr, mode::dtor); }
 			void destructive_move(storage_t * from, storage_t * to) const noexcept { manage(from, to, mode::destructive_move); }
@@ -85,15 +85,15 @@ namespace ptl {
 							}
 						}
 					},
+					sbo<T> && std::is_nothrow_copy_constructible_v<T>,
 					&Traits::template functor<T, sbo<T>>,
-					sbo<T> && std::is_nothrow_copy_constructible_v<T>
 				};
 				return &vtable;
 			}
 
 			static
 			auto init_empty() noexcept -> const vtable * {
-				static constexpr vtable vtable{+[](storage_t *, storage_t *, mode) {}, nullptr, true};
+				static constexpr vtable vtable{+[](storage_t *, storage_t *, mode) {}, true, nullptr};
 				return &vtable;
 			}
 		};

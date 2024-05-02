@@ -47,14 +47,12 @@ namespace ptl {
 			void destructive_move(storage_t * from, storage_t * to) const noexcept { manage(from, to, mode::destructive_move); }
 			void copy(const storage_t * from, storage_t * to) const { manage(const_cast<storage_t *>(from), to, mode::copy); }
 
-			template<policy Policy, typename Traits, typename T, typename... A>
+			template<policy Policy, typename Traits, typename T>
 			static
-			auto init_functor(storage_t & storage, A &&... args) -> const vtable * {
+			auto create_stateful() -> const vtable * {
 				static_assert(Policy == policy::move_only || std::is_copy_constructible_v<T>);
 				static_assert(std::is_nothrow_destructible_v<T>);
 
-				if constexpr(sbo<T>) new(storage.sbo) T{std::forward<A>(args)...};
-				else storage.ptr = new T{std::forward<A>(args)...};
 				static constexpr vtable vtable{
 					+[](storage_t * from, storage_t * to, mode m) {
 						if constexpr(sbo<T>) {
@@ -92,8 +90,8 @@ namespace ptl {
 			}
 
 			static
-			auto init_empty() noexcept -> const vtable * {
-				static constexpr vtable vtable{+[](storage_t *, storage_t *, mode) {}, true, nullptr};
+			auto create_empty() noexcept -> const vtable * {
+				static constexpr vtable vtable{+[](storage_t *, storage_t *, mode) {}, true};
 				return &vtable;
 			}
 		};
@@ -372,8 +370,14 @@ namespace ptl {
 
 			const vtable_t * vptr;
 			storage_t storage;
+
+			template<typename T, typename... Args>
+			void init_storage(Args &&... args) {
+				if constexpr(sbo<T>) new(storage.sbo) T{std::forward<Args>(args)...};
+				else storage.ptr = new T{std::forward<Args>(args)...};
+			}
 		public:
-			function() noexcept : vptr{vtable_t::init_empty()} {}
+			function() noexcept : vptr{vtable_t::create_empty()} {}
 			function(std::nullptr_t) noexcept : function{} {}
 
 			template<typename F, typename = std::enable_if_t<(!std::is_same_v<function, remove_cvref_t<F>> && !is_in_place_type_t_specialization_v<remove_cvref_t<F>> && traits_t::template is_callable_from<std::decay_t<F>>)>> //TODO: [C++20] replace with concepts/requires-clause
@@ -384,27 +388,33 @@ namespace ptl {
 					static_assert(Policy == policy::move_only || is_function_specialization_v<policy::copyable, F>); //cannot convert from move_only to copyable!
 					vptr = func.vptr;
 					func.vptr->destructive_move(&func.storage, &storage);
-					func.vptr = vtable_t::init_empty();
+					func.vptr = vtable_t::create_empty();
 				} else if constexpr(is_function_specialization_v<policy::copyable, remove_cvref_t<F>>) { //prevent double-wrapping (copying)
 					vptr = func.vptr;
 					func.vptr->copy(&func.storage, &storage);
 				} else if constexpr(std::is_function_v<std::remove_pointer_t<F>> || std::is_member_pointer_v<F> || is_a_function_specialization_v<remove_cvref_t<F>>) {
-					vptr = func ? vtable_t::template init_functor<Policy, traits_t, VT>(storage, std::forward<F>(func)) : vtable_t::init_empty();
-				} else vptr = vtable_t::template init_functor<Policy, traits_t, VT>(storage, std::forward<F>(func));
+					init_storage<VT>(std::forward<F>(func));
+					vptr = func ? vtable_t::template create_stateful<Policy, traits_t, VT>() : vtable_t::create_empty();
+				} else {
+					init_storage<VT>(std::forward<F>(func));
+					vptr = vtable_t::template create_stateful<Policy, traits_t, VT>();
+				}
 			}
 
 			template<typename T, typename... A, typename = std::enable_if_t<(std::is_constructible_v<std::decay_t<T>, A &&...> && traits_t::template is_callable_from<std::decay_t<T>>)>> //TODO: [C++20] replace with concepts/requires-clause
 			explicit
 			function(std::in_place_type_t<T>, A &&... args) {
 				static_assert(std::is_same_v<T, std::decay_t<T>>);
-				vptr = vtable_t::template init_functor<Policy, traits_t, T>(storage, std::forward<A>(args)...);
+				init_storage<T>(std::forward<A>(args)...);
+				vptr = vtable_t::template create_stateful<Policy, traits_t, T>();
 			}
 
 			template<typename T, typename U, typename... A, typename = std::enable_if_t<(std::is_constructible_v<std::decay_t<T>, std::initializer_list<U> &, A &&...> && traits_t::template is_callable_from<std::decay_t<T>>)>> //TODO: [C++20] replace with concepts/requires-clause
 			explicit
 			function(std::in_place_type_t<T>, std::initializer_list<U> ilist, A &&... args) {
 				static_assert(std::is_same_v<T, std::decay_t<T>>);
-				vptr = vtable_t::template init_functor<Policy, traits_t, T>(storage, ilist, std::forward<A>(args)...);
+				init_storage<T>(ilist, std::forward<A>(args)...);
+				vptr = vtable_t::template create_stateful<Policy, traits_t, T>();
 			}
 
 			function(const function & other) {
@@ -417,7 +427,7 @@ namespace ptl {
 			function(function && other) noexcept {
 				vptr = other.vptr;
 				other.vptr->destructive_move(&other.storage, &storage);
-				other.vptr = vtable_t::init_empty();
+				other.vptr = vtable_t::create_empty();
 			}
 
 			auto operator=(const function & other) -> function & {
@@ -443,14 +453,14 @@ namespace ptl {
 					vptr->dtor(&storage);
 					vptr = other.vptr;
 					other.vptr->destructive_move(&other.storage, &storage);
-					other.vptr = vtable_t::init_empty();
+					other.vptr = vtable_t::create_empty();
 				}
 				return *this;
 			}
 			auto operator=(std::nullptr_t) noexcept -> function & {
 				if(*this) {
 					vptr->dtor(&storage);
-					vptr = vtable_t::init_empty();
+					vptr = vtable_t::create_empty();
 				}
 				return *this;
 			}

@@ -4,19 +4,11 @@
 #    (See accompanying file LICENSE_1_0.txt or copy at
 #          http://www.boost.org/LICENSE_1_0.txt)
 
-cmake_minimum_required(VERSION 3.23)
+cmake_minimum_required(VERSION 3.26)
 project(PTL)
 
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
-
 add_library(ptl INTERFACE)
+	target_compile_features(ptl INTERFACE cxx_std_17)
 	target_include_directories(ptl INTERFACE "inc")
 	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 		target_compile_options(ptl INTERFACE -Wall -Wextra -Wpedantic -Wconversion)
@@ -50,14 +42,15 @@ if(PTL_BUILD_TESTS)
 	enable_testing()
 
 	add_executable(test-ptl)
-		file(GLOB_RECURSE PTL "inc/*")
+		file(GLOB_RECURSE PTL CONFIGURE_DEPENDS "inc/*")
 			source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/inc FILES ${PTL})
-		file(GLOB_RECURSE PTL_TEST "test/*")
-			source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/test FILES ${PTL_TEST})
-		target_sources(test-ptl PRIVATE ${PTL} ${PTL_TEST}) #including PTL sources here to have them included in IDEs
+			target_sources(test-ptl PRIVATE ${PTL}) #including PTL sources here to have them included in IDEs
+		file(GLOB_RECURSE PTL CONFIGURE_DEPENDS "test/*")
+			source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/test FILES ${PTL})
+			target_sources(test-ptl PRIVATE ${PTL})
 		target_link_libraries(test-ptl PRIVATE ptl Catch2::Catch2 Catch2::Catch2WithMain)
 
-	file(GLOB CLASSES "inc/ptl/*")
+	file(GLOB CLASSES CONFIGURE_DEPENDS "inc/ptl/*")
 	foreach(CLASS ${CLASSES})
 		add_test(NAME ${CLASS} COMMAND test-ptl "-n ${CLASS}")
 	endforeach()

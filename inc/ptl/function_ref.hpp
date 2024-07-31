@@ -64,7 +64,7 @@ namespace ptl {
 
 			template<typename T>
 			static
-			auto functor(const storage_t * ctx, Args... args) noexcept(Noexcept) -> Result { return invoke_r<Result>(ctx->template get<T>(), std::forward<Args>(args)...); }
+			auto functor(const storage_t * ctx, Args... args) noexcept(Noexcept) -> Result { return internal_function_ref::invoke_r<Result>(ctx->template get<T>(), std::forward<Args>(args)...); }
 
 			constexpr
 			auto operator()(Args... args) const noexcept(Noexcept) -> Result { //TODO: [C++23] use deducing this instead of CRTP

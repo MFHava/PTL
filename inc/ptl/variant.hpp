@@ -26,6 +26,7 @@ namespace ptl {
 
 			constexpr
 			storage_t() noexcept {} //content uninitialized!
+			~storage_t() noexcept {} //TODO: [C++??] precondition(val is uninitialized)
 
 			template<std::size_t I>
 			constexpr

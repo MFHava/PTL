@@ -17,7 +17,6 @@ add_library(ptl INTERFACE)
 			# warning flags
 			/W4 # enable all sensible warnings
 			/wd4003 # ignore not enough parameters for function macro
-			/wd4099 # ignore mixing struct and class keyword for same type
 			/wd4456 # ignore local shadowing
 			/wd4457 # ignore function parameter shadowing
 			/wd4458 # ignore class member shadowing

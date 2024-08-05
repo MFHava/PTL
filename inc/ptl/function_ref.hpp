@@ -102,7 +102,7 @@ namespace ptl {
 
 		template<typename, bool, bool, typename, typename...>
 		friend
-		class internal_function_ref::invoker;
+		struct internal_function_ref::invoker;
 
 		internal_function_ref::storage_t storage;
 		typename traits::dispatch_type dispatch;

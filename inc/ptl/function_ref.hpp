@@ -52,6 +52,10 @@ namespace ptl {
 
 		template<typename Impl, bool Const, bool Noexcept, typename Result, typename... Args>
 		struct invoker {
+#ifndef PTL_ENABLE_THROWING_FUNCTION_REF
+			static_assert(Noexcept, "define PTL_ENABLE_THROWING_FUNCTION_REF to enable support for throwing function_refs");
+#endif
+
 			template<typename T>
 			static
 			constexpr
@@ -92,7 +96,7 @@ namespace ptl {
 
 	//! @brief non-owning reference to a function (either a plain function or a functor)
 	//! @tparam Signature function signature of the referenced functor (including potential const and noexcept qualifiers)
-	//! @attention throwing an exception across ABI boundaries is undefined, so consider always using the noexcept-qualifier
+	//! @attention support for throwing is disabled by default (as exception handling is not portable), but can be enabled by defining PTL_ENABLE_THROWING_FUNCTION_REF
 	template<typename... Signature>
 	struct function_ref;
 

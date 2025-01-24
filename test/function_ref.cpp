@@ -5,6 +5,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <catch2/catch_all.hpp> //TODO: use more specific headers
+#define PTL_ENABLE_THROWING_FUNCTION_REF
 #include <ptl/function_ref.hpp>
 
 static_assert(sizeof(ptl::function_ref<int()>) == sizeof(void *) * 2);

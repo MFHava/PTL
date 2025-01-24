@@ -6,7 +6,7 @@
 
 #include <cstring>
 #include <sstream>
-#include <catch.hpp>
+#include <catch2/catch_all.hpp> //TODO: use more specific headers
 #include <ptl/string.hpp>
 #include "utils.hpp"
 

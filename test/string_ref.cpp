@@ -5,7 +5,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <sstream>
-#include <catch.hpp>
+#include <catch2/catch_all.hpp> //TODO: use more specific headers
 #include <ptl/string_ref.hpp>
 
 using namespace std::string_literals;

@@ -7,7 +7,7 @@
 #include <bitset>
 #include <numeric>
 #include <sstream>
-#include <catch.hpp>
+#include <catch2/catch_all.hpp> //TODO: use more specific headers
 #include <ptl/bitset.hpp>
 
 namespace ptl{

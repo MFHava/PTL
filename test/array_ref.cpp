@@ -6,7 +6,7 @@
 
 #include <array>
 #include <vector>
-#include <catch.hpp>
+#include <catch2/catch_all.hpp> //TODO: use more specific headers
 #include <ptl/array_ref.hpp>
 
 TEST_CASE("array_ref ctor", "[array_ref]") {

@@ -47,7 +47,7 @@ if(PTL_BUILD_TESTS)
 		file(GLOB_RECURSE PTL CONFIGURE_DEPENDS "test/*")
 			source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/test FILES ${PTL})
 			target_sources(test-ptl PRIVATE ${PTL})
-		target_link_libraries(test-ptl PRIVATE ptl Catch2::Catch2 Catch2::Catch2WithMain)
+		target_link_libraries(test-ptl PRIVATE ptl Catch2::Catch2WithMain)
 
 	file(GLOB CLASSES CONFIGURE_DEPENDS "inc/ptl/*")
 	foreach(CLASS ${CLASSES})

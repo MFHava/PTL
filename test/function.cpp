@@ -6,6 +6,7 @@
 
 #include <numeric>
 #include <catch2/catch_all.hpp> //TODO: use more specific headers
+#define PTL_ENABLE_THROWING_FUNCTION
 #include "ptl/function.hpp"
 
 namespace {

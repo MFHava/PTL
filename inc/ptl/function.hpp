@@ -99,6 +99,9 @@ namespace ptl {
 
 		template<bool Const, bool Noexcept, bool Move, typename Result, typename... Args>
 		class invoker {
+#ifndef PTL_ENABLE_THROWING_FUNCTION
+			static_assert(Noexcept, "define PTL_ENABLE_THROWING_FUNCTION to enable support for throwing functions");
+#endif
 			template<typename T>
 			static
 			auto move(T && t) noexcept -> decltype(auto) {
@@ -503,14 +506,14 @@ namespace ptl {
 
 	//! @brief move-only function wrapper
 	//! @tparam Signature function signature of the contained functor (including potential const-, ref- and noexcept-qualifiers)
-	//! @attention throwing an exception across ABI boundaries is undefined, so consider always using the noexcept-qualifier
+	//! @attention support for throwing is disabled by default (as exception handling is not portable), but can be enabled by defining PTL_ENABLE_THROWING_FUNCTION
 	template<typename... Signature>
 	using function = internal_function::function<internal_function::policy::move_only, Signature...>;
 
 
 	//! @brief copyable function wrapper
 	//! @tparam Signature function signature of the contained functor (including potential const-, ref- and noexcept-qualifiers)
-	//! @attention throwing an exception across ABI boundaries is undefined, so consider always using the noexcept-qualifier
+	//! @attention support for throwing is disabled by default (as exception handling is not portable), but can be enabled by defining PTL_ENABLE_THROWING_FUNCTION
 	template<typename... Signature>
 	using copyable_function = internal_function::function<internal_function::policy::copyable, Signature...>;
 }

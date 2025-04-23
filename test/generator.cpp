@@ -10,7 +10,8 @@
 //TODO: add unit tests for generator
 
 static_assert(!std::is_copy_constructible_v<decltype(std::declval<ptl::generator<int>>().begin())>);
-
+static_assert(std::is_move_constructible_v<ptl::generator<int>>);
+static_assert(std::is_move_assignable_v<ptl::generator<int>>);
 
 auto flipflop() -> ptl::generator<int> {
 	for(int i = 0; i < 8; ++i) {
@@ -44,6 +45,7 @@ TEST_CASE("generator fib", "[generator]") {
 		if(i > 1000) break;
 		std::printf("%d ", i);
 	}
+	std::printf("\n");
 
 	//auto it{fib.begin()};
 	//*it;

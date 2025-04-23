@@ -11,42 +11,50 @@
 
 namespace ptl {
 	namespace internal_generator {
+		//! @note contrary to @c std::coroutine_handle this class is owning
+		template<typename Promise>
 		class coroutine_handle final {
-			enum class mode { promise, done, resume, destroy, };
+			enum class operation { done, resume, destroy, };
+			using func_t = bool(*)(Promise *, operation) /*noexcept*/;
 
-			void*(*func)(void *, mode) /*noexcept*/;
-			void * ptr{nullptr};
+			func_t fptr{nullptr};
+			Promise * ptr{nullptr};
 		public:
 			coroutine_handle() noexcept =default;
 
-			template<typename Promise>
 			coroutine_handle(std::coroutine_handle<Promise> handle) noexcept {
 				if(!handle) return;
 
-				func = +[](void * ptr, mode m) /*noexcept*/ -> void * {
-					const auto handle{std::coroutine_handle<Promise>::from_address(ptr)};
-					switch (m) {
-						case mode::promise: return &handle.promise();
-						case mode::done: {
-							int dummy;
-							return handle.done() ? &dummy : nullptr;
-						}
-						case mode::resume: handle.resume(); break;
-						case mode::destroy: handle.destroy(); break;
+				fptr = +[](Promise * ptr, operation op) /*noexcept*/ -> bool {
+					const auto handle{std::coroutine_handle<Promise>::from_promise(*ptr)};
+					switch(op) {
+						case operation::done: return handle.done();
+						case operation::resume: handle.resume(); break;
+						case operation::destroy: handle.destroy(); break;
 					}
-					return nullptr;
+					return false;
 				};
-				ptr = handle.address();
+				ptr = std::addressof(handle.promise());
 			}
 
-			auto promise() const noexcept -> void * { return func(ptr, mode::promise); }
+			coroutine_handle(const coroutine_handle &) =delete;
+			coroutine_handle(coroutine_handle && other) noexcept : fptr{std::exchange(other.fptr, {})}, ptr{std::exchange(other.ptr, {})} {}
+			auto operator=(coroutine_handle other) noexcept -> coroutine_handle & {
+				swap(other);
+				return *this;
+			}
+			~coroutine_handle() noexcept { if(ptr) fptr(ptr, operation::destroy); }
 
-			auto done() const noexcept -> bool { return func(ptr, mode::done) != nullptr; }
-			void resume() const /*noexcept*/ { func(ptr, mode::resume); }
-			void destroy() const noexcept { if(ptr) func(ptr, mode::destroy); }
+			auto promise() const noexcept -> Promise & { return *ptr; } //TODO: [C++??] precondition(*this);
 
-			void swap(coroutine_handle other) noexcept {
-				std::swap(func, other.func);
+			auto done() const noexcept -> bool { return fptr(ptr, operation::done); } //TODO: [C++??] precondition(*this);
+			void resume() const /*noexcept*/ { fptr(ptr, operation::resume); } //TODO: [C++??] precondition(*this);
+
+			explicit
+			operator bool() const noexcept { return ptr != nullptr; }
+
+			void swap(coroutine_handle & other) noexcept {
+				std::swap(fptr, other.fptr);
 				std::swap(ptr, other.ptr);
 			}
 		};
@@ -98,15 +106,24 @@ namespace ptl {
 				return awaitable{lval};
 			}
 
+			static
 			void await_transform() =delete;
-
 			static
 			void return_void() noexcept {}
 			static
-			void unhandled_exception() { throw; }
+			void unhandled_exception() { throw; }//TODO: potentially re-throwing across ABI-boundary... (idea: make support for throwing opt-in via additional template parameter?)
 		};
+
+		//TODO: way to check validity?
+
+		auto begin() -> iterator { return std::move(handle); } //TODO: [C++??] precondition(handle);
+		auto end() const noexcept -> std::default_sentinel_t { return std::default_sentinel; }
 	private:
-		internal_generator::coroutine_handle handle;
+		friend promise_type;
+		generator(std::coroutine_handle<promise_type> handle) : handle{handle} {}
+
+		using handle_type = internal_generator::coroutine_handle<promise_type>;
+		handle_type handle;
 
 		struct iterator final {
 			using value_type = value;
@@ -120,7 +137,7 @@ namespace ptl {
 
 			auto operator*() const noexcept(std::is_nothrow_copy_constructible_v<reference>) -> reference {
 				//TODO: [C++??] precondition(!handle.done());
-				return static_cast<reference>(*static_cast<promise_type *>(handle.promise())->ptr);
+				return static_cast<reference>(*handle.promise().ptr);
 			}
 
 			auto operator++() -> iterator & {
@@ -131,34 +148,13 @@ namespace ptl {
 			void operator++(int) { ++*this; }
 
 			friend
-			auto operator==(const iterator & i, std::default_sentinel_t) -> bool {
-				return i.handle.done();
-			}
+			auto operator==(const iterator & i, std::default_sentinel_t) noexcept -> bool { return i.handle.done(); }
 		private:
 			friend generator;
-			iterator(internal_generator::coroutine_handle handle) noexcept : handle{handle} {}
+			iterator(handle_type && handle) noexcept : handle{std::move(handle)} { this->handle.resume(); }
 
-			internal_generator::coroutine_handle handle;
+			handle_type handle;
 		};
-	public:
-		generator(const generator &) =delete;
-		generator(generator && other) noexcept : handle{std::exchange(other.handle, {})} {}
-
-		auto operator=(generator other) noexcept -> generator & {
-			handle.swap(other.handle);
-			return *this;
-		}
-
-		~generator() noexcept { handle.destroy(); }
-
-		auto begin() -> iterator {
-			//TODO: [C++??] precondition(handle­ refers to a coroutine suspended at its initial suspend point);
-			handle.resume();
-			return handle;
-		}
-		auto end() const noexcept -> std::default_sentinel_t { return std::default_sentinel; }
-	private:
-		friend promise_type;
-		generator(std::coroutine_handle<promise_type> handle) : handle{handle} {}
 	};
 }
+

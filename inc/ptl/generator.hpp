@@ -12,10 +12,10 @@
 namespace ptl {
 	namespace internal_generator {
 		//! @note contrary to @c std::coroutine_handle this class is owning
-		template<typename Promise>
+		template<typename Promise, bool Noexcept>
 		class coroutine_handle final {
 			enum class operation { done, resume, destroy, };
-			using func_t = bool(*)(Promise *, operation) /*noexcept*/;
+			using func_t = bool(*)(Promise *, operation) noexcept(Noexcept);
 
 			func_t fptr{nullptr};
 			Promise * ptr{nullptr};
@@ -25,7 +25,7 @@ namespace ptl {
 			coroutine_handle(std::coroutine_handle<Promise> handle) noexcept {
 				if(!handle) return;
 
-				fptr = +[](Promise * ptr, operation op) /*noexcept*/ -> bool {
+				fptr = +[](Promise * ptr, operation op) noexcept(Noexcept) -> bool {
 					const auto handle{std::coroutine_handle<Promise>::from_promise(*ptr)};
 					switch(op) {
 						case operation::done: return handle.done();
@@ -37,9 +37,7 @@ namespace ptl {
 				ptr = std::addressof(handle.promise());
 			}
 
-			coroutine_handle(const coroutine_handle &) =delete;
 			coroutine_handle(coroutine_handle && other) noexcept : fptr{std::exchange(other.fptr, {})}, ptr{std::exchange(other.ptr, {})} {}
-			auto operator=(const coroutine_handle &) -> coroutine_handle & =delete;
 			auto operator=(coroutine_handle && other) noexcept -> coroutine_handle & {
 				std::swap(fptr, other.fptr);
 				std::swap(ptr, other.ptr);
@@ -50,18 +48,21 @@ namespace ptl {
 			auto promise() const noexcept -> Promise & { return *ptr; } //TODO: [C++??] precondition(*this);
 
 			auto done() const noexcept -> bool { return fptr(ptr, operation::done); } //TODO: [C++??] precondition(*this);
-			void resume() const /*noexcept*/ { fptr(ptr, operation::resume); } //TODO: [C++??] precondition(*this);
+			void resume() const noexcept(Noexcept) { fptr(ptr, operation::resume); } //TODO: [C++??] precondition(*this);
 
 			explicit
-			operator bool() const noexcept { return ptr != nullptr; }
+			operator bool() const noexcept { return ptr; }
 		};
 	}
 
 	//! @brief lazy view of elements yielded by a coroutine
 	//! @tparam Type element type yielded when iterating over the view
+	//! @tparam Noexcept enable support for throwing from coroutines
 	//! @attention throwing an exception across ABI boundaries is undefined
-	template<typename Type>
+	template<typename Type, bool Noexcept = true>
 	class generator final : public std::ranges::view_interface<generator<Type>> {
+		static_assert(Noexcept, "throwing across ABI boundaries is undefined, therefore this is currently unsupported");
+
 		using reference = Type &&;
 		using value = std::remove_cvref_t<Type>;
 		static_assert(std::is_object_v<value>);
@@ -108,19 +109,21 @@ namespace ptl {
 			static
 			void return_void() noexcept {}
 			static
-			void unhandled_exception() { throw; }//TODO: potentially re-throwing across ABI-boundary... (idea: make support for throwing opt-in via additional template parameter?)
+			void unhandled_exception() noexcept(Noexcept) {
+				if constexpr(Noexcept) std::terminate();
+				else throw;
+			}
 		};
 
-		explicit
-		operator bool() const noexcept { return static_cast<bool>(handle); }
+		auto valueless() const noexcept -> bool { return !handle; }
 
-		auto begin() -> iterator { return std::move(handle); } //TODO: [C++??] precondition(*this);
+		auto begin() -> iterator { return std::move(handle); } //TODO: [C++??] precondition(not valueless());
 		auto end() const noexcept -> std::default_sentinel_t { return std::default_sentinel; }
 	private:
 		friend promise_type;
 		generator(std::coroutine_handle<promise_type> handle) : handle{handle} {}
 
-		using handle_type = internal_generator::coroutine_handle<promise_type>;
+		using handle_type = internal_generator::coroutine_handle<promise_type, Noexcept>;
 		handle_type handle;
 
 		//! @attention becomes owner of coroutine on construction
@@ -128,26 +131,20 @@ namespace ptl {
 			using value_type = value;
 			using difference_type = std::ptrdiff_t;
 
-			iterator(iterator && other) noexcept : handle{std::exchange(other.handle, {})} {}
-			auto operator=(iterator && other) noexcept -> iterator & {
-				handle = std::exchange(other.handle, {});
-				return *this;
-			}
-
 			auto operator*() const noexcept(std::is_nothrow_copy_constructible_v<reference>) -> reference {
-				//TODO: [C++??] precondition(!handle.done());
+				//TODO: [C++??] precondition(handle && !handle.done());
 				return static_cast<reference>(*handle.promise().ptr);
 			}
 
 			auto operator++() -> iterator & {
-				//TODO: [C++??] precondition(!handle.done());
+				//TODO: [C++??] precondition(handle && !handle.done());
 				handle.resume();
 				return *this;
 			}
 			void operator++(int) { ++*this; }
 
 			friend
-			auto operator==(const iterator & i, std::default_sentinel_t) noexcept -> bool { return i.handle.done(); }
+			auto operator==(const iterator & self, std::default_sentinel_t) noexcept -> bool { return self.handle.done(); } //TODO: [C++??] precondition(i.handle);
 		private:
 			friend generator;
 			iterator(handle_type && handle) noexcept : handle{std::move(handle)} { this->handle.resume(); }

@@ -41,11 +41,13 @@ auto fibonacci() -> ptl::generator<int> {
 
 TEST_CASE("generator fib", "[generator]") {
 	auto fib{fibonacci()};
-	for(auto i : fibonacci()) {
+	REQUIRE(fib);
+	for(auto i : fib) {
 		if(i > 1000) break;
 		std::printf("%d ", i);
 	}
 	std::printf("\n");
+	REQUIRE(not fib);
 
 	//auto it{fib.begin()};
 	//*it;

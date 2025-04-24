@@ -39,8 +39,10 @@ namespace ptl {
 
 			coroutine_handle(const coroutine_handle &) =delete;
 			coroutine_handle(coroutine_handle && other) noexcept : fptr{std::exchange(other.fptr, {})}, ptr{std::exchange(other.ptr, {})} {}
-			auto operator=(coroutine_handle other) noexcept -> coroutine_handle & {
-				swap(other);
+			auto operator=(const coroutine_handle &) -> coroutine_handle & =delete;
+			auto operator=(coroutine_handle && other) noexcept -> coroutine_handle & {
+				std::swap(fptr, other.fptr);
+				std::swap(ptr, other.ptr);
 				return *this;
 			}
 			~coroutine_handle() noexcept { if(ptr) fptr(ptr, operation::destroy); }
@@ -52,11 +54,6 @@ namespace ptl {
 
 			explicit
 			operator bool() const noexcept { return ptr != nullptr; }
-
-			void swap(coroutine_handle & other) noexcept {
-				std::swap(fptr, other.fptr);
-				std::swap(ptr, other.ptr);
-			}
 		};
 	}
 
@@ -114,9 +111,10 @@ namespace ptl {
 			void unhandled_exception() { throw; }//TODO: potentially re-throwing across ABI-boundary... (idea: make support for throwing opt-in via additional template parameter?)
 		};
 
-		//TODO: way to check validity?
+		explicit
+		operator bool() const noexcept { return static_cast<bool>(handle); }
 
-		auto begin() -> iterator { return std::move(handle); } //TODO: [C++??] precondition(handle);
+		auto begin() -> iterator { return std::move(handle); } //TODO: [C++??] precondition(*this);
 		auto end() const noexcept -> std::default_sentinel_t { return std::default_sentinel; }
 	private:
 		friend promise_type;
@@ -125,6 +123,7 @@ namespace ptl {
 		using handle_type = internal_generator::coroutine_handle<promise_type>;
 		handle_type handle;
 
+		//! @attention becomes owner of coroutine on construction
 		struct iterator final {
 			using value_type = value;
 			using difference_type = std::ptrdiff_t;

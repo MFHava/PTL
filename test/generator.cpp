@@ -4,72 +4,64 @@
 //    (See accompanying file ../LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <catch.hpp>
+#include <algorithm>
+#include <catch2/catch_all.hpp> //TODO: use more specific headers
 #include <ptl/generator.hpp>
-
-//TODO: add unit tests for generator
 
 static_assert(!std::is_copy_constructible_v<decltype(std::declval<ptl::generator<int>>().begin())>);
 static_assert(std::is_move_constructible_v<ptl::generator<int>>);
 static_assert(std::is_move_assignable_v<ptl::generator<int>>);
 static_assert(not std::is_copy_constructible_v<ptl::generator<int>>);
 static_assert(not std::is_copy_assignable_v<ptl::generator<int>>);
-static_assert(std::is_move_constructible_v<ptl::generator<int>::iterator>);
-static_assert(std::is_move_assignable_v<ptl::generator<int>::iterator>);
-static_assert(not std::is_copy_constructible_v<ptl::generator<int>::iterator>);
-static_assert(not std::is_copy_assignable_v<ptl::generator<int>::iterator>);
 
-auto flipflop() -> ptl::generator<int> {
-	for(int i = 0; i < 8; ++i) {
-		co_yield i % 2;
-	}
-	std::printf("\n");
+TEST_CASE("generator valueless", "[generator]") {
+	auto g{[]() -> ptl::generator<int> { co_return; }()};
+	REQUIRE(not g.valueless());
+	const auto it{g.begin()};
+	REQUIRE(g.valueless());
 }
 
-auto iota() -> ptl::generator<int> {
-	//co_yield ptl::ranges::elements_of(flipflop());
+TEST_CASE("generator ownership", "[generator]") {
+	auto it{[] {
+		auto g{[]() -> ptl::generator<int> {
+			for(int i{0};; ++i) co_yield i;
+		}()};
+		return g.begin();
+	}()};
 
-	for(int i = 0; i < 10; ++i) {
-		co_yield i;
-	}
-	std::printf("\n");
-}
-
-auto fibonacci() -> ptl::generator<const int &> {
-	//co_yield ptl::ranges::elements_of{iota()};
-
-	auto a = 0, b = 1;
-	for (;;) {
-		co_yield std::exchange(a, std::exchange(b, a + b));
-	}
-	std::printf("\n");
-}
-
-TEST_CASE("generator fib", "[generator]") {
-	auto fib{fibonacci()};
-	REQUIRE(not fib.valueless());
-	for(auto i : fib) {
-		if(i > 1000) break;
-		std::printf("%d ", i);
-	}
-	std::printf("\n");
-	REQUIRE(fib.valueless());
-
-	//auto it{fib.begin()};
-	//*it;
-
-
-#if 0
-	auto it{fib.begin()};
 	REQUIRE(*it == 0);
+	++it;
 	REQUIRE(*it == 1);
-	REQUIRE(*it == 1);
+	++it;
 	REQUIRE(*it == 2);
-	REQUIRE(*it == 3);
-	REQUIRE(*it == 5);
-	REQUIRE(*it == 8);
-	REQUIRE(*it == 13);
-	REQUIRE(*it == 21);
-	REQUIRE(*it == 34);
-#endif
+}
+
+TEST_CASE("generator iteration value", "[generator]") {
+	auto g{[]() -> ptl::generator<int> {
+		for(auto i{0}; i < 10; ++i)
+			co_yield i;
+	}()};
+
+	const int vals[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+	REQUIRE(std::ranges::equal(g, vals));
+}
+
+TEST_CASE("generator iteration ref", "[generator]") {
+	auto g{[]() -> ptl::generator<int &> {
+		for(auto i{0}; i < 10; ++i)
+			co_yield i;
+	}()};
+
+	const int vals[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+	REQUIRE(std::ranges::equal(g, vals));
+}
+
+TEST_CASE("generator iteration cref", "[generator]") {
+	auto g{[]() -> ptl::generator<const int &> {
+		for(auto i{0}; i < 10; ++i)
+			co_yield i;
+	}()};
+
+	const int vals[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+	REQUIRE(std::ranges::equal(g, vals));
 }

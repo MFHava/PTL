@@ -5,7 +5,6 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include <ranges>
 #include <concepts>
 #include <coroutine>
 
@@ -14,7 +13,7 @@ namespace ptl {
 	//! @tparam Type element type yielded when iterating over the view
 	//! @tparam Noexcept enable support for throwing from coroutines
 	template<typename Type, bool Noexcept = true>
-	class generator final : public std::ranges::view_interface<generator<Type>> {
+	class generator final {
 		static_assert(Noexcept, "throwing across ABI boundaries is undefined, therefore this is currently unsupported");
 
 		using reference = Type &&;
@@ -112,15 +111,18 @@ namespace ptl {
 			operator bool() const noexcept { return ptr; }
 		};
 
-		handle_type handle;
-	public:
-		struct iterator final {
+		class iterator final {
+			friend generator;
+			iterator(handle_type && handle) noexcept : handle{std::move(handle)} { this->handle.resume(); }
+
+			handle_type handle;
+		public:
 			using value_type = value;
 			using difference_type = std::ptrdiff_t;
 
 			auto operator*() const noexcept(std::is_nothrow_copy_constructible_v<reference>) -> reference {
 				//TODO: [C++??] precondition(handle && !handle.done());
-				return handle.value();//static_cast<reference>(*handle.promise().ptr);
+				return handle.value();
 			}
 
 			auto operator++() -> iterator & {
@@ -132,13 +134,10 @@ namespace ptl {
 
 			friend
 			auto operator==(const iterator & self, std::default_sentinel_t) noexcept -> bool { return self.handle.done(); } //TODO: [C++??] precondition(self.handle);
-		private:
-			friend generator;
-			iterator(handle_type && handle) noexcept : handle{std::move(handle)} { this->handle.resume(); }
-
-			handle_type handle;
 		};
 
+		handle_type handle;
+	public:
 		auto valueless() const noexcept -> bool { return !handle; }
 
 		//! @attention @c this becomes @b valueless and ownership of the managed coroutine is passed to the returned iterator

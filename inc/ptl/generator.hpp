@@ -10,51 +10,6 @@
 #include <coroutine>
 
 namespace ptl {
-	namespace internal_generator {
-		//! @note contrary to @c std::coroutine_handle this class is owning
-		template<typename Promise, bool Noexcept>
-		class coroutine_handle final {
-			enum class operation { done, resume, destroy, };
-			using func_t = bool(*)(Promise *, operation) noexcept(Noexcept);
-
-			func_t fptr{nullptr};
-			Promise * ptr{nullptr};
-		public:
-			coroutine_handle() noexcept =default;
-
-			coroutine_handle(std::coroutine_handle<Promise> handle) noexcept {
-				if(!handle) return;
-
-				fptr = +[](Promise * ptr, operation op) noexcept(Noexcept) -> bool {
-					const auto handle{std::coroutine_handle<Promise>::from_promise(*ptr)};
-					switch(op) {
-						case operation::done: return handle.done();
-						case operation::resume: handle.resume(); break;
-						case operation::destroy: handle.destroy(); break;
-					}
-					return false;
-				};
-				ptr = std::addressof(handle.promise());
-			}
-
-			coroutine_handle(coroutine_handle && other) noexcept : fptr{std::exchange(other.fptr, {})}, ptr{std::exchange(other.ptr, {})} {}
-			auto operator=(coroutine_handle && other) noexcept -> coroutine_handle & {
-				std::swap(fptr, other.fptr);
-				std::swap(ptr, other.ptr);
-				return *this;
-			}
-			~coroutine_handle() noexcept { if(ptr) fptr(ptr, operation::destroy); }
-
-			auto promise() const noexcept -> Promise & { return *ptr; } //TODO: [C++??] precondition(*this);
-
-			auto done() const noexcept -> bool { return fptr(ptr, operation::done); } //TODO: [C++??] precondition(*this);
-			void resume() const noexcept(Noexcept) { fptr(ptr, operation::resume); } //TODO: [C++??] precondition(*this);
-
-			explicit
-			operator bool() const noexcept { return ptr; }
-		};
-	}
-
 	//! @brief lazy view of elements yielded by a coroutine
 	//! @tparam Type element type yielded when iterating over the view
 	//! @tparam Noexcept enable support for throwing from coroutines
@@ -72,10 +27,10 @@ namespace ptl {
 		static_assert(std::common_reference_with<reference &&, rref &&>);
 		static_assert(std::common_reference_with<rref &&, const value &>);
 
-		struct iterator;
+		class handle_type;
 	public:
 		class promise_type final {
-			friend iterator;
+			friend handle_type;
 
 			std::add_pointer_t<reference> ptr{nullptr};
 		public:
@@ -91,7 +46,7 @@ namespace ptl {
 				return {};
 			}
 
-			auto yield_value(const std::remove_reference_t<reference> & lval) requires std::is_rvalue_reference_v<reference> && std::constructible_from<std::remove_cvref_t<reference>, const std::remove_reference_t<reference> &> {
+			auto yield_value(const std::remove_reference_t<reference> & lval) requires std::is_rvalue_reference_v<reference> and std::constructible_from<std::remove_cvref_t<reference>, const std::remove_reference_t<reference> &> {
 				struct awaitable final {
 					std::remove_cvref_t<reference> val;
 
@@ -114,18 +69,50 @@ namespace ptl {
 				else throw;
 			}
 		};
-
-		auto valueless() const noexcept -> bool { return !handle; }
-
-		auto begin() -> iterator { return std::move(handle); } //TODO: [C++??] precondition(not valueless());
-		auto end() const noexcept -> std::default_sentinel_t { return std::default_sentinel; }
+		struct iterator; //TODO: remove
 	private:
-		friend promise_type;
-		generator(std::coroutine_handle<promise_type> handle) : handle{handle} {}
+		//! @note contrary to @c std::coroutine_handle this class is owning
+		class handle_type final {
+			enum class operation { done, resume, destroy, };
+			using func_t = bool(*)(promise_type *, operation) noexcept(Noexcept);
 
-		using handle_type = internal_generator::coroutine_handle<promise_type, Noexcept>;
-		handle_type handle;
+			func_t fptr{nullptr};
+			promise_type * ptr{nullptr};
+		public:
+			handle_type() noexcept =default;
 
+			handle_type(std::coroutine_handle<promise_type> handle) noexcept {
+				if(!handle) return;
+
+				fptr = +[](promise_type * ptr, operation op) noexcept(Noexcept) -> bool {
+					const auto handle{std::coroutine_handle<promise_type>::from_promise(*ptr)};
+					switch(op) {
+						case operation::done: return handle.done();
+						case operation::resume: handle.resume(); break;
+						case operation::destroy: handle.destroy(); break;
+					}
+					return false;
+				};
+				ptr = std::addressof(handle.promise());
+			}
+
+			handle_type(handle_type && other) noexcept : fptr{std::exchange(other.fptr, {})}, ptr{std::exchange(other.ptr, {})} {}
+			auto operator=(handle_type && other) noexcept -> handle_type & {
+				std::swap(fptr, other.fptr);
+				std::swap(ptr, other.ptr);
+				return *this;
+			}
+			~handle_type() noexcept { if(ptr) fptr(ptr, operation::destroy); }
+
+			auto value() const noexcept -> reference { return static_cast<reference>(*ptr->ptr); } //TODO: [C++??] precondition(*this);
+
+			auto done() const noexcept -> bool { return fptr(ptr, operation::done); } //TODO: [C++??] precondition(*this);
+			void resume() const noexcept(Noexcept) { fptr(ptr, operation::resume); } //TODO: [C++??] precondition(*this);
+
+			explicit
+			operator bool() const noexcept { return ptr; }
+		};
+	public:
 		//! @attention becomes owner of coroutine on construction
 		struct iterator final {
 			using value_type = value;
@@ -133,7 +120,7 @@ namespace ptl {
 
 			auto operator*() const noexcept(std::is_nothrow_copy_constructible_v<reference>) -> reference {
 				//TODO: [C++??] precondition(handle && !handle.done());
-				return static_cast<reference>(*handle.promise().ptr);
+				return handle.value();//static_cast<reference>(*handle.promise().ptr);
 			}
 
 			auto operator++() -> iterator & {
@@ -151,6 +138,16 @@ namespace ptl {
 
 			handle_type handle;
 		};
+
+		friend promise_type;
+		generator(std::coroutine_handle<promise_type> handle) : handle{handle} {}
+
+		handle_type handle;
+	public:
+		auto valueless() const noexcept -> bool { return !handle; }
+
+		auto begin() -> iterator { return std::move(handle); } //TODO: [C++??] precondition(not valueless());
+		auto end() const noexcept -> std::default_sentinel_t { return std::default_sentinel; }
 	};
 }
 

@@ -12,6 +12,12 @@
 static_assert(!std::is_copy_constructible_v<decltype(std::declval<ptl::generator<int>>().begin())>);
 static_assert(std::is_move_constructible_v<ptl::generator<int>>);
 static_assert(std::is_move_assignable_v<ptl::generator<int>>);
+static_assert(not std::is_copy_constructible_v<ptl::generator<int>>);
+static_assert(not std::is_copy_assignable_v<ptl::generator<int>>);
+static_assert(std::is_move_constructible_v<ptl::generator<int>::iterator>);
+static_assert(std::is_move_assignable_v<ptl::generator<int>::iterator>);
+static_assert(not std::is_copy_constructible_v<ptl::generator<int>::iterator>);
+static_assert(not std::is_copy_assignable_v<ptl::generator<int>::iterator>);
 
 auto flipflop() -> ptl::generator<int> {
 	for(int i = 0; i < 8; ++i) {
@@ -29,7 +35,7 @@ auto iota() -> ptl::generator<int> {
 	std::printf("\n");
 }
 
-auto fibonacci() -> ptl::generator<int> {
+auto fibonacci() -> ptl::generator<const int &> {
 	//co_yield ptl::ranges::elements_of{iota()};
 
 	auto a = 0, b = 1;

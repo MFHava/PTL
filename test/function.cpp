@@ -123,37 +123,37 @@ namespace {
 	template<template<typename...> typename Function>
 	void test_move_ctor() {
 		//EMPTY
-		ptl::copyable_function<int() const> mf0;
+		Function<int() const> mf0;
 		REQUIRE(!mf0);
-		ptl::copyable_function<int() const> f0{std::move(mf0)};
+		Function<int() const> f0{std::move(mf0)};
 		REQUIRE(!f0);
 		REQUIRE(!mf0);
 
 		//FREE FUNC
-		ptl::copyable_function<int() const> mf1{func1};
+		Function<int() const> mf1{func1};
 		REQUIRE(mf1);
-		ptl::copyable_function<int() const> f1{std::move(mf1)};
+		Function<int() const> f1{std::move(mf1)};
 		REQUIRE(f1);
 		REQUIRE(!mf1);
 
 		//FREE FUNC PTR
-		ptl::copyable_function<int() const> mf2{&func1};
+		Function<int() const> mf2{&func1};
 		REQUIRE(mf2);
-		ptl::copyable_function<int() const> f2{std::move(mf2)};
+		Function<int() const> f2{std::move(mf2)};
 		REQUIRE(f2);
 		REQUIRE(!mf2);
 
 		//SOO
-		ptl::copyable_function<int() const> mf3{std::in_place_type<small_func>, 123};
+		Function<int() const> mf3{std::in_place_type<small_func>, 123};
 		REQUIRE(mf3);
-		ptl::copyable_function<int() const> f3{std::move(mf3)};
+		Function<int() const> f3{std::move(mf3)};
 		REQUIRE(f3);
 		REQUIRE(!mf3);
 
 		//noSOO
-		ptl::copyable_function<int() const> mf4{std::in_place_type<big_func>, 123};
+		Function<int() const> mf4{std::in_place_type<big_func>, 123};
 		REQUIRE(mf4);
-		ptl::copyable_function<int() const> f4{std::move(mf4)};
+		Function<int() const> f4{std::move(mf4)};
 		REQUIRE(f4);
 		REQUIRE(!mf4);
 	}
@@ -161,45 +161,45 @@ namespace {
 	template<template<typename...> typename Function>
 	void test_move_assign() {
 		//EMPTY
-		ptl::copyable_function<int() const> mf0;
+		Function<int() const> mf0;
 		REQUIRE(!mf0);
-		ptl::copyable_function<int() const> f0;
+		Function<int() const> f0;
 		REQUIRE(!f0);
 		f0 = std::move(mf0);
 		REQUIRE(!f0);
 		REQUIRE(!mf0);
 
 		//FREE FUNC
-		ptl::copyable_function<int() const> mf1{func1};
+		Function<int() const> mf1{func1};
 		REQUIRE(mf1);
-		ptl::copyable_function<int() const> f1;
+		Function<int() const> f1;
 		REQUIRE(!f1);
 		f1 = std::move(mf1);
 		REQUIRE(f1);
 		REQUIRE(!mf1);
 
 		//FREE FUNC PTR
-		ptl::copyable_function<int() const> mf2{&func1};
+		Function<int() const> mf2{&func1};
 		REQUIRE(mf2);
-		ptl::copyable_function<int() const> f2;
+		Function<int() const> f2;
 		REQUIRE(!f2);
 		f2 = std::move(mf2);
 		REQUIRE(f2);
 		REQUIRE(!mf2);
 
 		//SOO
-		ptl::copyable_function<int() const> mf3{std::in_place_type<small_func>, 123};
+		Function<int() const> mf3{std::in_place_type<small_func>, 123};
 		REQUIRE(mf3);
-		ptl::copyable_function<int() const> f3;
+		Function<int() const> f3;
 		REQUIRE(!f3);
 		f3 = std::move(mf3);
 		REQUIRE(f3);
 		REQUIRE(!mf3);
 
 		//noSOO
-		ptl::copyable_function<int() const> mf4{std::in_place_type<big_func>, 123};
+		Function<int() const> mf4{std::in_place_type<big_func>, 123};
 		REQUIRE(mf4);
-		ptl::copyable_function<int() const> f4;
+		Function<int() const> f4;
 		REQUIRE(!f4);
 		f4 = std::move(mf4);
 		REQUIRE(f4);

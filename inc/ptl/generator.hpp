@@ -13,7 +13,6 @@ namespace ptl {
 	//! @brief lazy view of elements yielded by a coroutine
 	//! @tparam Type element type yielded when iterating over the view
 	//! @tparam Noexcept enable support for throwing from coroutines
-	//! @attention throwing an exception across ABI boundaries is undefined
 	template<typename Type, bool Noexcept = true>
 	class generator final : public std::ranges::view_interface<generator<Type>> {
 		static_assert(Noexcept, "throwing across ABI boundaries is undefined, therefore this is currently unsupported");
@@ -69,9 +68,10 @@ namespace ptl {
 				else throw;
 			}
 		};
-		struct iterator; //TODO: remove
 	private:
-		//! @note contrary to @c std::coroutine_handle this class is owning
+		friend promise_type;
+		generator(std::coroutine_handle<promise_type> handle) : handle{handle} {}
+
 		class handle_type final {
 			enum class operation { done, resume, destroy, };
 			using func_t = bool(*)(promise_type *, operation) noexcept(Noexcept);
@@ -80,7 +80,6 @@ namespace ptl {
 			promise_type * ptr{nullptr};
 		public:
 			handle_type() noexcept =default;
-
 			handle_type(std::coroutine_handle<promise_type> handle) noexcept {
 				if(!handle) return;
 
@@ -112,8 +111,9 @@ namespace ptl {
 			explicit
 			operator bool() const noexcept { return ptr; }
 		};
+
+		handle_type handle;
 	public:
-		//! @attention becomes owner of coroutine on construction
 		struct iterator final {
 			using value_type = value;
 			using difference_type = std::ptrdiff_t;
@@ -131,7 +131,7 @@ namespace ptl {
 			void operator++(int) { ++*this; }
 
 			friend
-			auto operator==(const iterator & self, std::default_sentinel_t) noexcept -> bool { return self.handle.done(); } //TODO: [C++??] precondition(i.handle);
+			auto operator==(const iterator & self, std::default_sentinel_t) noexcept -> bool { return self.handle.done(); } //TODO: [C++??] precondition(self.handle);
 		private:
 			friend generator;
 			iterator(handle_type && handle) noexcept : handle{std::move(handle)} { this->handle.resume(); }
@@ -139,15 +139,10 @@ namespace ptl {
 			handle_type handle;
 		};
 
-		friend promise_type;
-		generator(std::coroutine_handle<promise_type> handle) : handle{handle} {}
-
-		handle_type handle;
-	public:
 		auto valueless() const noexcept -> bool { return !handle; }
 
+		//! @attention @c this becomes @b valueless and ownership of the managed coroutine is passed to the returned iterator
 		auto begin() -> iterator { return std::move(handle); } //TODO: [C++??] precondition(not valueless());
 		auto end() const noexcept -> std::default_sentinel_t { return std::default_sentinel; }
 	};
 }
-
